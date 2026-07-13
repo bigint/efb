@@ -1,0 +1,16 @@
+node_modules/
+.expo/
+.turbo/
+coverage/
+dist/
+build/
+.DS_Store
+*.log
+*.local
+.env
+.env.*
+!.env.example
+apps/mobile/ios/Pods/
+apps/mobile/android/.gradle/
+.maestro/tests/*.png
+
