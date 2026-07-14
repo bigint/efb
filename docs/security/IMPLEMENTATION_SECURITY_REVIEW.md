@@ -69,6 +69,11 @@ None found.
 
 ### SEC-003 — Moderate upstream `uuid` advisory exists in Expo build tooling
 
+- **Remediation status (2026-07-14):** Resolved after this review. pnpm 11's workspace override
+  pins the transitive package to `uuid@11.1.1`. The package loads from `xcode@3.0.1`'s actual
+  dependency scope, Expo public-config evaluation and Doctor pass, and the production audit is
+  clean. The full TypeScript/lint/test and iOS JavaScript export gates also pass.
+
 - **Rule:** dependency and supply-chain hygiene
 - **Severity:** Low for this candidate's runtime; registry rating is Moderate
 - **Location:** `pnpm-lock.yaml:5700,9812,9914`
@@ -84,6 +89,10 @@ None found.
   and monitor the Expo/xcode dependency update.
 - **False-positive notes:** `pnpm audit --audit-level high` passes. The advisory remains real;
   only its reachable impact is currently low.
+
+The historical evidence and disposition above are retained to explain why the cross-major
+override exists. Removing it requires a dependency update that resolves to a non-vulnerable
+version and the same compatibility gates.
 
 ## Controls observed
 
@@ -106,6 +115,10 @@ None found.
 - `pnpm audit --json` — one Moderate advisory recorded above
 - `pnpm verify` — passed before this report
 - Expo Doctor — 20/20 checks passed before this report
+
+Remediation verification on 2026-07-14: `pnpm audit --prod` reports no known vulnerabilities,
+the Xcode-scoped UUID v4/v5 API smoke check passes with `uuid@11.1.1`, Expo public config
+evaluates, and Expo Doctor remains 20/20.
 
 ## Required follow-up
 
