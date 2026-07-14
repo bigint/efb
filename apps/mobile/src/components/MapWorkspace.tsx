@@ -26,6 +26,11 @@ import {
   calculateMapMeasurement,
   type MapMeasurementPoints,
 } from '@/domain/map-measurement';
+import {
+  defaultMapLayerVisibility,
+  toggleMapLayer,
+  type MapLayerId,
+} from '@/domain/map-layers';
 import { useDevicePower } from '@/hooks/use-device-power';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
@@ -60,6 +65,8 @@ export function MapWorkspace() {
   const devicePower = useDevicePower();
   const theme = useDriftlineTheme();
   const [measureEnabled, setMeasureEnabled] = useState(false);
+  const [layerPanelOpen, setLayerPanelOpen] = useState(false);
+  const [layers, setLayers] = useState(defaultMapLayerVisibility);
   const [measurementPoints, setMeasurementPoints] = useState<MapMeasurementPoints>([]);
   const [orientationMode, setOrientationMode] = useState<MapOrientationMode>('north-up');
   const activeLegIndex = useFlightStore((state) => state.activeLegIndex);
@@ -235,14 +242,16 @@ export function MapWorkspace() {
           initialViewState={{ center: [77.6, 13.4], zoom: 5.7 }}
           {...(mapCamera.kind === 'track-up' ? { center: mapCamera.center } : {})}
         />
-        <GeoJSONSource data={graticule} id="graticule">
-          <Layer
-            id="grid-lines"
-            paint={{ 'line-color': theme.separator, 'line-opacity': 0.58, 'line-width': 1 }}
-            type="line"
-          />
-        </GeoJSONSource>
-        {routeAirports.length >= 2 && (
+        {layers['demo-grid'] && (
+          <GeoJSONSource data={graticule} id="graticule">
+            <Layer
+              id="grid-lines"
+              paint={{ 'line-color': theme.separator, 'line-opacity': 0.58, 'line-width': 1 }}
+              type="line"
+            />
+          </GeoJSONSource>
+        )}
+        {layers['route-backdrop'] && routeAirports.length >= 2 && (
           <GeoJSONSource data={routeGeoJson} id="route">
             <Layer
               id="route-shadow"
@@ -322,32 +331,33 @@ export function MapWorkspace() {
             </View>
           </Marker>
         ))}
-        {demoAirports.map((airport) => (
-          <Marker
-            anchor="center"
-            id={airport.icao}
-            key={airport.icao}
-            lngLat={[airport.position.longitude, airport.position.latitude]}
-            onPress={() => {
-              selectAirport(airport.icao);
-              setWorkspace('places');
-            }}
-          >
-            <View
-              accessibilityLabel={`${airport.icao}, fictional demonstration airport`}
-              accessibilityRole="button"
-              accessible
-              style={[
-                styles.airportMarker,
-                { backgroundColor: theme.panelRaised, borderColor: theme.accent },
-              ]}
+        {layers.airports &&
+          demoAirports.map((airport) => (
+            <Marker
+              anchor="center"
+              id={airport.icao}
+              key={airport.icao}
+              lngLat={[airport.position.longitude, airport.position.latitude]}
+              onPress={() => {
+                selectAirport(airport.icao);
+                setWorkspace('places');
+              }}
             >
-              <Text style={[styles.airportMarkerText, { color: theme.primary }]}>
-                {airport.icao}
-              </Text>
-            </View>
-          </Marker>
-        ))}
+              <View
+                accessibilityLabel={`${airport.icao}, fictional demonstration airport`}
+                accessibilityRole="button"
+                accessible
+                style={[
+                  styles.airportMarker,
+                  { backgroundColor: theme.panelRaised, borderColor: theme.accent },
+                ]}
+              >
+                <Text style={[styles.airportMarkerText, { color: theme.primary }]}>
+                  {airport.icao}
+                </Text>
+              </View>
+            </Marker>
+          ))}
         {ownship !== null && ownshipOrigin !== null && (
           <Marker anchor="center" id="ownship" lngLat={[ownship.longitude, ownship.latitude]}>
             <OwnshipGlyph
@@ -398,6 +408,22 @@ export function MapWorkspace() {
           </Pressable>
           <Pressable
             accessibilityLabel={
+              layerPanelOpen ? 'Close map layers and legend' : 'Open map layers and legend'
+            }
+            accessibilityRole="button"
+            onPress={() => setLayerPanelOpen((current) => !current)}
+            style={({ pressed }) => [
+              styles.orientationControl,
+              { backgroundColor: theme.panelRaised, borderColor: theme.separator },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={[styles.orientationText, { color: theme.primary }]}>
+              {layerPanelOpen ? 'CLOSE LAYERS' : 'LAYERS · LEGEND'}
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel={
               measureEnabled ? 'Disable and clear map measurement' : 'Enable map measurement'
             }
             accessibilityRole="button"
@@ -437,6 +463,38 @@ export function MapWorkspace() {
             </Pressable>
           )}
         </View>
+        {layerPanelOpen && (
+          <View style={[styles.layerPanel, { backgroundColor: theme.panelRaised }]}>
+            <Text style={[styles.mapChipPrimary, { color: theme.primary }]}>
+              DISPLAY LAYERS · SESSION ONLY
+            </Text>
+            <View style={styles.layerActions}>
+              {(
+                [
+                  ['demo-grid', 'Demo grid'],
+                  ['airports', 'Airports'],
+                  ['route-backdrop', 'Stored route'],
+                ] as const satisfies readonly (readonly [MapLayerId, string])[]
+              ).map(([id, label]) => (
+                <LayerToggle
+                  enabled={layers[id]}
+                  key={id}
+                  label={label}
+                  onPress={() => setLayers((current) => toggleMapLayer(current, id))}
+                />
+              ))}
+            </View>
+            <Text style={[styles.legendCopy, { color: theme.secondary }]}>
+              LEGEND · accent solid = active leg · attention dashed = direct-to · attention thin
+              = measure · outlined labels = fictional airports · directional/ring ownship =
+              course known/unknown
+            </Text>
+            <Text style={[styles.legendCopy, { color: theme.attention }]}>
+              No chart, airspace, terrain, obstacle, navaid, or weather-overlay data loaded.
+              Guidance and ownship layers cannot be hidden here.
+            </Text>
+          </View>
+        )}
         {measureEnabled && (
           <View style={[styles.measureChip, { backgroundColor: theme.panelRaised }]}>
             <Text style={[styles.mapChipPrimary, { color: theme.attention }]}>
@@ -664,6 +722,41 @@ function NavValue({
   );
 }
 
+function LayerToggle({
+  enabled,
+  label,
+  onPress,
+}: {
+  readonly enabled: boolean;
+  readonly label: string;
+  readonly onPress: () => void;
+}) {
+  const theme = useDriftlineTheme();
+  return (
+    <Pressable
+      accessibilityLabel={`${label} layer ${enabled ? 'visible' : 'hidden'}`}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: enabled }}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.layerToggle,
+        {
+          backgroundColor: enabled ? theme.accent : theme.background,
+          borderColor: enabled ? theme.accent : theme.separator,
+        },
+        pressed && styles.pressed,
+      ]}
+    >
+      <Text
+        style={[styles.orientationText, { color: enabled ? theme.onAccent : theme.secondary }]}
+      >
+        {enabled ? '✓ ' : ''}
+        {label.toUpperCase()}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   airportMarker: {
     alignItems: 'center',
@@ -697,6 +790,23 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     justifyContent: 'flex-end',
   },
+  layerActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  layerPanel: {
+    alignSelf: 'flex-end',
+    borderRadius: radii.control,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+    maxWidth: 480,
+    padding: spacing.md,
+  },
+  layerToggle: {
+    borderRadius: radii.control,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: cockpitTarget,
+    paddingHorizontal: spacing.md,
+  },
+  legendCopy: { fontFamily: typography.body, fontSize: 11, lineHeight: 16 },
   measureChip: {
     alignSelf: 'flex-end',
     borderRadius: radii.control,

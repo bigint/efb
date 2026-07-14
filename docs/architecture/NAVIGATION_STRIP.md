@@ -59,6 +59,14 @@ in the control label. If position or course becomes unavailable, the requested m
 visible but the camera returns to north with `TRACK UP UNAVAILABLE · NORTH FALLBACK`; it does
 not hold a stale rotation. Returning to north-up removes automatic centring.
 
+## Layers and legend
+
+An explicit session-only panel can hide the fictional airport markers, demonstration grid, and
+stored-route backdrop independently. It cannot hide ownship, active-leg, direct-to, measurement,
+or source-status evidence. The adjacent legend names every rendered line/symbol class and states
+that no chart, airspace, terrain, obstacle, navaid, or weather-overlay dataset is loaded. Layer
+switches expose checked accessibility state and keep the cockpit touch-target minimum.
+
 ## Transient measure tool
 
 Measurement is off by default. After explicit activation, two long presses create labelled A/B
