@@ -1,5 +1,6 @@
 import { radii, spacing, typography } from '@driftline/design-system';
-import { useMemo, useState } from 'react';
+import { useSQLiteContext } from 'expo-sqlite';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { demoAirports, searchAirports } from '@driftline/aviation-domain';
@@ -7,13 +8,21 @@ import { classifyDataCurrency } from '@driftline/data-contracts';
 
 import { evaluatePosition } from '@/domain/position-source';
 import { calculateRelativePosition } from '@/domain/relative-position';
+import {
+  listAirportFavourites,
+  setAirportFavourite,
+} from '@/database/airport-favourite-repository';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
 
 import { Action, Card, PanelHeader, panelStyles } from './PanelPrimitives';
 
 export function PlacesWorkspace() {
+  const database = useSQLiteContext();
   const theme = useDriftlineTheme();
+  const [favouriteError, setFavouriteError] = useState<string | null>(null);
+  const [favouriteIdentifiers, setFavouriteIdentifiers] = useState<readonly string[]>([]);
+  const [savingFavourite, setSavingFavourite] = useState(false);
   const [query, setQuery] = useState('');
   const addWaypoint = useFlightStore((state) => state.addWaypoint);
   const positionSample = useFlightStore((state) => state.positionSample);
@@ -33,6 +42,40 @@ export function PlacesWorkspace() {
     selected === undefined
       ? null
       : calculateRelativePosition(evaluatedPosition, selected.position);
+
+  const reloadFavourites = useCallback(async () => {
+    try {
+      setFavouriteIdentifiers(await listAirportFavourites(database));
+      setFavouriteError(null);
+    } catch {
+      setFavouriteIdentifiers([]);
+      setFavouriteError('Favourites unavailable; airport browsing remains available.');
+    }
+  }, [database]);
+
+  useEffect(() => {
+    void reloadFavourites();
+  }, [reloadFavourites]);
+
+  const toggleFavourite = async () => {
+    if (selected === undefined) return;
+    setSavingFavourite(true);
+    try {
+      await setAirportFavourite(
+        database,
+        selected.icao,
+        !favouriteIdentifiers.includes(selected.icao),
+        new Date().toISOString(),
+      );
+      await reloadFavourites();
+    } catch (caught) {
+      setFavouriteError(
+        caught instanceof Error ? caught.message : 'Unable to change airport favourite.',
+      );
+    } finally {
+      setSavingFavourite(false);
+    }
+  };
 
   return (
     <ScrollView
@@ -61,7 +104,9 @@ export function PlacesWorkspace() {
         <View style={styles.results}>
           {results.map((airport) => (
             <Pressable
+              accessibilityLabel={`${airport.icao}, ${airport.name}${favouriteIdentifiers.includes(airport.icao) ? ', favourite' : ''}`}
               accessibilityRole="button"
+              accessibilityState={{ selected: selected?.icao === airport.icao }}
               key={airport.icao}
               onPress={() => selectAirport(airport.icao)}
               style={({ pressed }) => [
@@ -80,6 +125,7 @@ export function PlacesWorkspace() {
                   { color: selected?.icao === airport.icao ? theme.onAccent : theme.primary },
                 ]}
               >
+                {favouriteIdentifiers.includes(airport.icao) ? '★ ' : ''}
                 {airport.icao}
               </Text>
               <Text
@@ -181,9 +227,28 @@ export function PlacesWorkspace() {
               </Card>
             ))}
             <View style={styles.actions}>
+              <Action
+                disabled={savingFavourite}
+                label={
+                  savingFavourite
+                    ? 'Saving favourite…'
+                    : favouriteIdentifiers.includes(selected.icao)
+                      ? 'Remove favourite'
+                      : 'Add favourite'
+                }
+                onPress={() => void toggleFavourite()}
+              />
               <Action label="Add to route" onPress={() => addWaypoint(selected.icao)} />
               <Action primary label="Show map" onPress={() => setWorkspace('map')} />
             </View>
+            {favouriteError !== null && (
+              <Text
+                accessibilityRole="alert"
+                style={[styles.favouriteError, { color: theme.danger }]}
+              >
+                {favouriteError}
+              </Text>
+            )}
           </View>
         )}
       </View>
@@ -216,6 +281,7 @@ const styles = StyleSheet.create({
   fact: { gap: 4, minWidth: 130 },
   facts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, marginTop: spacing.lg },
   factValue: { fontSize: 12, maxWidth: 240 },
+  favouriteError: { fontFamily: typography.body, fontSize: 13, marginTop: spacing.md },
   layout: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, marginTop: spacing.lg },
   pressed: { opacity: 0.7 },
   result: { borderRadius: radii.control, borderWidth: 1, minHeight: 70, padding: spacing.md },

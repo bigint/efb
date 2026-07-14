@@ -50,6 +50,7 @@ describe('user database migration plan', () => {
       'document_bookmarks',
       'logbook_entries',
       'logbook_entry_attachments',
+      'airport_favourites',
     ]) {
       expect(schema).toContain(`CREATE TABLE ${table}`);
     }
@@ -154,6 +155,25 @@ describe('user database migration plan', () => {
         1,
       ),
     ).not.toThrow();
+    database.close();
+  });
+
+  it('keeps airport favourites normalized and independent from dataset rows', () => {
+    const database = new DatabaseSync(':memory:');
+    for (const migration of userDatabaseMigrations) {
+      for (const statement of migration.statements) database.exec(statement);
+    }
+    database
+      .prepare(`INSERT INTO airport_favourites (identifier, created_at) VALUES (?, ?)`)
+      .run('DVL1', '2026-07-14T10:00:00.000Z');
+    expect(() =>
+      database
+        .prepare(`INSERT INTO airport_favourites (identifier, created_at) VALUES (?, ?)`)
+        .run('dvl2', '2026-07-14T10:01:00.000Z'),
+    ).toThrow(/CHECK constraint failed/u);
+    expect(database.prepare(`SELECT identifier FROM airport_favourites`).all()).toEqual([
+      { identifier: 'DVL1' },
+    ]);
     database.close();
   });
 

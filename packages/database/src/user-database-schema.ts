@@ -1,4 +1,4 @@
-export const USER_DATABASE_VERSION = 6;
+export const USER_DATABASE_VERSION = 7;
 
 export interface UserDatabaseMigration {
   readonly statements: readonly string[];
@@ -286,6 +286,18 @@ export const userDatabaseMigrations: readonly UserDatabaseMigration[] = [
       `CREATE UNIQUE INDEX checklist_one_open_run_idx
         ON checklist_runs ((1))
         WHERE completed_at IS NULL AND abandoned_at IS NULL`,
+    ],
+  },
+  {
+    version: 7,
+    statements: [
+      `CREATE TABLE airport_favourites (
+        identifier TEXT PRIMARY KEY NOT NULL
+          CHECK (length(identifier) BETWEEN 1 AND 16 AND identifier = upper(identifier)),
+        created_at TEXT NOT NULL
+      ) STRICT`,
+      `CREATE INDEX airport_favourites_created_at_idx
+        ON airport_favourites (created_at DESC, identifier)`,
     ],
   },
 ] as const;
