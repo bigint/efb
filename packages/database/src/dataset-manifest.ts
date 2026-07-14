@@ -22,7 +22,10 @@ const boundedDisplayText = (maximum: number) =>
 export const datasetFileSchema = z
   .object({
     byteLength: z.number().int().nonnegative(),
-    mediaType: z.string().regex(/^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/u),
+    mediaType: z
+      .string()
+      .max(100)
+      .regex(/^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/u),
     path: z
       .string()
       .regex(/^[a-z0-9._/-]{1,512}$/u, 'Dataset path contains unsupported characters')

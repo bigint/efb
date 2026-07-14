@@ -84,5 +84,10 @@ describe('dataset manifest bounds', () => {
     expect(() =>
       datasetManifestSchema.parse(manifest([{ ...file('safe.bin'), mediaType: 'not a mime' }])),
     ).toThrow();
+    expect(() =>
+      datasetManifestSchema.parse(
+        manifest([{ ...file('safe.bin'), mediaType: `application/${'x'.repeat(100)}` }]),
+      ),
+    ).toThrow();
   });
 });
