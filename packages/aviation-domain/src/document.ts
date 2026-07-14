@@ -71,6 +71,17 @@ export const documentRecordSchema = z
           path: ['bookmarks', index, 'pageIndex'],
         });
       }
+      if (
+        Date.parse(bookmark.createdAt) < Date.parse(document.importedAt) ||
+        (document.deletedAt !== null &&
+          Date.parse(bookmark.createdAt) > Date.parse(document.deletedAt))
+      ) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Bookmark time must fall within the document lifecycle',
+          path: ['bookmarks', index, 'createdAt'],
+        });
+      }
     });
     if (
       document.lastOpenedAt !== null &&
@@ -90,6 +101,17 @@ export const documentRecordSchema = z
         code: 'custom',
         message: 'Deletion time cannot precede import',
         path: ['deletedAt'],
+      });
+    }
+    if (
+      document.deletedAt !== null &&
+      document.lastOpenedAt !== null &&
+      Date.parse(document.lastOpenedAt) > Date.parse(document.deletedAt)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Last-opened time cannot follow deletion',
+        path: ['lastOpenedAt'],
       });
     }
   });

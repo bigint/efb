@@ -95,6 +95,8 @@ performance data.
   URIs, identifiers, kinds, and byte counts before producing System audit output.
 - Checklist runs cannot predate the immutable template revision captured in their history
   snapshot; restored records are rechecked by the same schema.
+- Document bookmarks and last-opened metadata must fall within the imported-to-deleted
+  lifecycle; repository reads reapply these chronology checks.
 - Separate versioned user and control SQLite schemas now migrate before app render. Executable
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,

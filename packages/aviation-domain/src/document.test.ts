@@ -54,6 +54,12 @@ describe('document domain', () => {
     expect(() => record({ lastOpenedAt: '2026-07-14T09:00:00.000Z' })).toThrow(
       'cannot precede',
     );
+    expect(() =>
+      record({
+        deletedAt: '2026-07-14T11:00:00.000Z',
+        lastOpenedAt: '2026-07-14T11:00:01.000Z',
+      }),
+    ).toThrow('follow deletion');
   });
 
   it('adds unique in-range bookmarks', () => {
@@ -70,5 +76,8 @@ describe('document domain', () => {
     expect(() =>
       addDocumentBookmark(record({ pageCount: 2 }), 2, 'Outside', '2026-07-14T11:00:00.000Z'),
     ).toThrow('outside');
+    expect(() =>
+      addDocumentBookmark(record({ pageCount: 2 }), 1, 'Too early', '2026-07-14T09:59:59.000Z'),
+    ).toThrow('lifecycle');
   });
 });
