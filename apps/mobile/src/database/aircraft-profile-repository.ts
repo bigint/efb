@@ -85,3 +85,31 @@ export const insertAircraftProfile = async (
     profile.revision,
   );
 };
+
+export const replaceAircraftProfile = async (
+  database: SQLiteDatabase,
+  expectedRevision: number,
+  source: AircraftProfile,
+): Promise<void> => {
+  const profile = aircraftProfileSchema.parse(source);
+  if (!Number.isInteger(expectedRevision) || profile.revision !== expectedRevision + 1) {
+    throw new Error('Aircraft profile revision transition is invalid.');
+  }
+  const result = await database.runAsync(
+    `UPDATE aircraft_profiles SET
+      updated_at = ?, registration = ?, type_designator = ?, display_name = ?,
+      units_json = ?, performance_json = ?, notes = ?, revision = ?
+     WHERE id = ? AND revision = ? AND deleted_at IS NULL`,
+    profile.updatedAt,
+    profile.registration,
+    profile.typeDesignator,
+    profile.displayName,
+    JSON.stringify(profile.units),
+    JSON.stringify(profile.planning),
+    profile.notes,
+    profile.revision,
+    profile.id,
+    expectedRevision,
+  );
+  if (result.changes !== 1) throw new Error('Aircraft profile changed on another writer.');
+};

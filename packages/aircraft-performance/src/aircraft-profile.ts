@@ -78,3 +78,36 @@ export const aircraftProfileSchema = z
   });
 
 export type AircraftProfile = z.infer<typeof aircraftProfileSchema>;
+
+export interface AircraftProfileRevision {
+  readonly displayName: AircraftProfile['displayName'];
+  readonly notes: AircraftProfile['notes'];
+  readonly planning: AircraftProfile['planning'];
+  readonly registration: AircraftProfile['registration'];
+  readonly typeDesignator: AircraftProfile['typeDesignator'];
+}
+
+export const reviseAircraftProfile = (
+  source: AircraftProfile,
+  changes: AircraftProfileRevision,
+  updatedAt: string,
+): AircraftProfile => {
+  const profile = aircraftProfileSchema.parse(source);
+  if (
+    !Number.isFinite(Date.parse(updatedAt)) ||
+    Date.parse(updatedAt) < Date.parse(profile.updatedAt)
+  ) {
+    throw new Error('Aircraft profile revision time cannot precede the current revision.');
+  }
+  return aircraftProfileSchema.parse({
+    ...profile,
+    ...changes,
+    createdAt: profile.createdAt,
+    id: profile.id,
+    revision: profile.revision + 1,
+    source: profile.source,
+    units: profile.units,
+    updatedAt,
+    verificationStatus: profile.verificationStatus,
+  });
+};

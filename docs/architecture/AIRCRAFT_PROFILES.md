@@ -22,6 +22,11 @@ malformed profile stops the Aircraft library instead of partially trusting store
 inserts use bound SQLite parameters. Reads are capped at 100 active profiles so a corrupted or
 unbounded collection cannot create an unbounded mobile render.
 
+User fields can be loaded back into the form and saved as exactly the next profile revision.
+Identity, creation time, fixed units, user-entered provenance, and unverified status are
+preserved. SQLite updates use `WHERE id = ? AND revision = ?`; a concurrent writer conflict
+reloads current storage, clears the stale editor, and does not overwrite the newer record.
+
 ## Validation
 
 Identifiers are bounded and normalized, numeric values must be finite and within broad storage
@@ -41,10 +46,9 @@ This summary deliberately returns no envelope result. The UI says `CG ENVELOPE N
 until bounded envelope geometry and source/revision provenance are modeled. The separate
 built-in polygon sandbox remains fictional.
 
-Profile editing, deletion, selection by a saved flight, envelope authoring, fuel-density
-conversion, take-off and landing models, source-document links, and conflict-safe revision
-updates remain open. Native persistence recovery and visual/accessibility validation are release
-blockers.
+Profile deletion, revision history/rollback, envelope authoring, fuel-density conversion,
+take-off and landing models, source-document links, and editing profile notes remain open.
+Native persistence recovery and visual/accessibility validation are release blockers.
 
 Checklist authoring can link a validated local profile UUID and derives the template label from
 its normalized registration. This is referential organization only; it does not verify the

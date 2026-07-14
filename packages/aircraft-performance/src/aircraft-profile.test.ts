@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { aircraftProfileSchema } from './aircraft-profile';
+import { aircraftProfileSchema, reviseAircraftProfile } from './aircraft-profile';
 
 const fixture = () => ({
   createdAt: '2026-07-14T10:00:00.000Z',
@@ -65,5 +65,48 @@ describe('aircraft profile', () => {
     expect(() =>
       aircraftProfileSchema.parse({ ...fixture(), displayName: 'Trainer\nN999XX' }),
     ).toThrow('control characters');
+  });
+
+  it('revises user fields while preserving identity, provenance, and units', () => {
+    const profile = aircraftProfileSchema.parse(fixture());
+    expect(
+      reviseAircraftProfile(
+        profile,
+        {
+          displayName: 'Updated trainer',
+          notes: profile.notes,
+          planning: profile.planning,
+          registration: 'N456DL',
+          typeDesignator: profile.typeDesignator,
+        },
+        '2026-07-14T10:01:00.000Z',
+      ),
+    ).toMatchObject({
+      createdAt: profile.createdAt,
+      displayName: 'Updated trainer',
+      id: profile.id,
+      registration: 'N456DL',
+      revision: 2,
+      source: 'user-entered',
+      units: profile.units,
+      verificationStatus: 'unverified',
+    });
+  });
+
+  it('rejects an aircraft revision timestamp older than the current record', () => {
+    const profile = aircraftProfileSchema.parse(fixture());
+    expect(() =>
+      reviseAircraftProfile(
+        profile,
+        {
+          displayName: profile.displayName,
+          notes: profile.notes,
+          planning: profile.planning,
+          registration: profile.registration,
+          typeDesignator: profile.typeDesignator,
+        },
+        '2026-07-14T09:59:59.000Z',
+      ),
+    ).toThrow('cannot precede');
   });
 });

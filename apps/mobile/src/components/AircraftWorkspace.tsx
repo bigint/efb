@@ -8,6 +8,7 @@ import {
   aircraftProfileSchema,
   calculateLoadingSummary,
   calculateWeightBalance,
+  reviseAircraftProfile,
   type AircraftProfile,
 } from '@driftline/aircraft-performance';
 import { kilograms, metres } from '@driftline/data-contracts';
@@ -15,6 +16,7 @@ import { kilograms, metres } from '@driftline/data-contracts';
 import {
   insertAircraftProfile,
   listAircraftProfiles,
+  replaceAircraftProfile,
 } from '@/database/aircraft-profile-repository';
 import { useDriftlineTheme } from '@/theme';
 
@@ -62,10 +64,36 @@ const requiredNumber = (value: string, label: string): number => {
   return parsed;
 };
 
+const profileFormFromRecord = (profile: AircraftProfile): ProfileForm => ({
+  cruiseSpeedKt: String(profile.planning.cruiseSpeedKt),
+  displayName: profile.displayName,
+  emptyArmM: String(profile.planning.emptyArmM),
+  emptyMassKg: String(profile.planning.emptyMassKg),
+  fuelArmM: String(profile.planning.fuelArmM),
+  fuelBurnLitresPerHour: String(profile.planning.fuelBurnLitresPerHour),
+  maximumMassKg: String(profile.planning.maximumMassKg),
+  occupantArmM: String(profile.planning.occupantArmM),
+  registration: profile.registration,
+  typeDesignator: profile.typeDesignator,
+  usableFuelLitres: String(profile.planning.usableFuelLitres),
+});
+
+const planningFromForm = (form: ProfileForm): AircraftProfile['planning'] => ({
+  cruiseSpeedKt: requiredNumber(form.cruiseSpeedKt, 'Cruise speed'),
+  emptyArmM: requiredNumber(form.emptyArmM, 'Empty arm'),
+  emptyMassKg: requiredNumber(form.emptyMassKg, 'Empty mass'),
+  fuelArmM: requiredNumber(form.fuelArmM, 'Fuel arm'),
+  fuelBurnLitresPerHour: requiredNumber(form.fuelBurnLitresPerHour, 'Fuel burn'),
+  maximumMassKg: requiredNumber(form.maximumMassKg, 'Maximum mass'),
+  occupantArmM: requiredNumber(form.occupantArmM, 'Occupant arm'),
+  usableFuelLitres: requiredNumber(form.usableFuelLitres, 'Usable fuel'),
+});
+
 export function AircraftWorkspace() {
   const database = useSQLiteContext();
   const theme = useDriftlineTheme();
   const [profiles, setProfiles] = useState<readonly AircraftProfile[]>([]);
+  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [profileForm, setProfileForm] = useState<ProfileForm>(profileDefaults);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [readBlocked, setReadBlocked] = useState(false);
@@ -136,10 +164,12 @@ export function AircraftWorkspace() {
       setProfiles(await listAircraftProfiles(database));
       setProfileError(null);
       setReadBlocked(false);
+      return true;
     } catch {
       setProfiles([]);
       setProfileError('Aircraft library unavailable: stored profiles failed integrity checks.');
       setReadBlocked(true);
+      return false;
     }
   }, [database]);
 
@@ -151,34 +181,54 @@ export function AircraftWorkspace() {
     setSaving(true);
     try {
       const now = new Date().toISOString();
-      const profile = aircraftProfileSchema.parse({
-        createdAt: now,
-        displayName: profileForm.displayName,
-        id: randomUUID(),
-        notes: '',
-        planning: {
-          cruiseSpeedKt: requiredNumber(profileForm.cruiseSpeedKt, 'Cruise speed'),
-          emptyArmM: requiredNumber(profileForm.emptyArmM, 'Empty arm'),
-          emptyMassKg: requiredNumber(profileForm.emptyMassKg, 'Empty mass'),
-          fuelArmM: requiredNumber(profileForm.fuelArmM, 'Fuel arm'),
-          fuelBurnLitresPerHour: requiredNumber(profileForm.fuelBurnLitresPerHour, 'Fuel burn'),
-          maximumMassKg: requiredNumber(profileForm.maximumMassKg, 'Maximum mass'),
-          occupantArmM: requiredNumber(profileForm.occupantArmM, 'Occupant arm'),
-          usableFuelLitres: requiredNumber(profileForm.usableFuelLitres, 'Usable fuel'),
-        },
-        registration: profileForm.registration,
-        revision: 1,
-        source: 'user-entered',
-        typeDesignator: profileForm.typeDesignator,
-        units: { arm: 'm', fuel: 'l', mass: 'kg', speed: 'kt' },
-        updatedAt: now,
-        verificationStatus: 'unverified',
-      });
-      await insertAircraftProfile(database, profile);
+      const planning = planningFromForm(profileForm);
+      const editingProfile =
+        editingProfileId === null
+          ? null
+          : (profiles.find(({ id }) => id === editingProfileId) ?? null);
+      if (editingProfileId !== null && editingProfile === null) {
+        throw new Error('Selected aircraft profile is no longer available.');
+      }
+      if (editingProfile === null) {
+        const profile = aircraftProfileSchema.parse({
+          createdAt: now,
+          displayName: profileForm.displayName,
+          id: randomUUID(),
+          notes: '',
+          planning,
+          registration: profileForm.registration,
+          revision: 1,
+          source: 'user-entered',
+          typeDesignator: profileForm.typeDesignator,
+          units: { arm: 'm', fuel: 'l', mass: 'kg', speed: 'kt' },
+          updatedAt: now,
+          verificationStatus: 'unverified',
+        });
+        await insertAircraftProfile(database, profile);
+      } else {
+        const next = reviseAircraftProfile(
+          editingProfile,
+          {
+            displayName: profileForm.displayName,
+            notes: editingProfile.notes,
+            planning,
+            registration: profileForm.registration,
+            typeDesignator: profileForm.typeDesignator,
+          },
+          now,
+        );
+        await replaceAircraftProfile(database, editingProfile.revision, next);
+      }
       setProfileForm(profileDefaults());
+      setEditingProfileId(null);
       await reload();
     } catch (caught) {
-      setProfileError(caught instanceof Error ? caught.message : 'Unable to save aircraft.');
+      const message = caught instanceof Error ? caught.message : 'Unable to save aircraft.';
+      if (message === 'Aircraft profile changed on another writer.') {
+        setEditingProfileId(null);
+        setProfileForm(profileDefaults());
+      }
+      if (await reload()) setProfileError(message);
     } finally {
       setSaving(false);
     }
@@ -208,6 +258,10 @@ export function AircraftWorkspace() {
         profiles.map((profile) => (
           <SavedProfile
             key={profile.id}
+            onEdit={() => {
+              setEditingProfileId(profile.id);
+              setProfileForm(profileFormFromRecord(profile));
+            }}
             onUse={() => setSelectedProfileId(profile.id)}
             profile={profile}
             selected={profile.id === selectedProfileId}
@@ -260,7 +314,7 @@ export function AircraftWorkspace() {
         </>
       )}
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
-        New profile
+        {editingProfileId === null ? 'New profile' : 'Edit unverified profile'}
       </Text>
       <Card>
         <View style={styles.inputs}>
@@ -342,10 +396,26 @@ export function AircraftWorkspace() {
         <View style={styles.save}>
           <Action
             disabled={saving || readBlocked}
-            label={saving ? 'Saving…' : 'Save offline'}
+            label={
+              saving
+                ? 'Saving…'
+                : editingProfileId === null
+                  ? 'Save offline'
+                  : 'Update revision'
+            }
             onPress={() => void saveProfile()}
             primary
           />
+          {editingProfileId !== null && (
+            <Action
+              disabled={saving}
+              label="Cancel edit"
+              onPress={() => {
+                setEditingProfileId(null);
+                setProfileForm(profileDefaults());
+              }}
+            />
+          )}
         </View>
       </Card>
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
@@ -443,10 +513,12 @@ function ProfileInput({
 }
 
 function SavedProfile({
+  onEdit,
   onUse,
   profile,
   selected,
 }: {
+  readonly onEdit: () => void;
   readonly onUse: () => void;
   readonly profile: AircraftProfile;
   readonly selected: boolean;
@@ -469,6 +541,7 @@ function SavedProfile({
           label={selected ? 'Selected' : 'Use for loading'}
           onPress={onUse}
         />
+        <Action label="Edit values" onPress={onEdit} />
       </View>
     </View>
   );
@@ -541,8 +614,20 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   outputValue: { fontFamily: 'Menlo', fontSize: 16, fontWeight: '800' },
-  profileAction: { alignItems: 'flex-start', marginTop: spacing.sm },
-  save: { alignItems: 'flex-start', marginTop: spacing.lg },
+  profileAction: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  save: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
   savedProfile: { borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: spacing.lg },
   scroll: { paddingBottom: spacing.xxl },
   section: { marginTop: spacing.xl },
