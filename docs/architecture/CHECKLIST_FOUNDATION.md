@@ -18,6 +18,10 @@ normal, abnormal, or emergency procedure content. Every template and active run 
   stale views roll back and reload instead of overwriting newer completion state.
 - Changed completion rows are inserted or removed inside the same exclusive transaction while
   unchanged item timestamps are preserved.
+- The Library exposes at most 20 recently completed runs as read-only locked snapshots. History
+  rows and their relational completions are read in one exclusive transaction, decoded through
+  the same domain boundary as an active run, and a malformed historical row disables only the
+  history view rather than hiding otherwise valid templates or the open run.
 
 ## Migration
 
@@ -29,6 +33,6 @@ Executable migration tests verify the preserved snapshot.
 ## Open release work
 
 Physical-device process-death and concurrent-view tests, template revision/edit UI, explicit run
-abandonment, export/backup, VoiceOver sequencing, Dynamic Type, and comparison against approved
-aircraft material remain open. A saved checklist is not approved merely because every box is
-checked.
+abandonment, detailed history inspection, export/backup, VoiceOver sequencing, Dynamic Type, and
+comparison against approved aircraft material remain open. A saved checklist is not approved
+merely because every box is checked.

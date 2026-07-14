@@ -43,6 +43,27 @@ interface ChecklistCompletionRow {
   readonly item_sequence: number;
 }
 
+export interface ChecklistRunCompletionRow extends ChecklistCompletionRow {
+  readonly run_id: string;
+}
+
+export const decodeChecklistRuns = (
+  rows: readonly ChecklistRunRow[],
+  completionRows: readonly ChecklistRunCompletionRow[],
+): readonly ChecklistRun[] => {
+  const runIds = new Set(rows.map(({ id }) => id));
+  const completionsByRun = new Map<string, ChecklistCompletionRow[]>();
+  for (const completion of completionRows) {
+    if (!runIds.has(completion.run_id)) {
+      throw new Error('Checklist completion references an unavailable run');
+    }
+    const current = completionsByRun.get(completion.run_id) ?? [];
+    current.push(completion);
+    completionsByRun.set(completion.run_id, current);
+  }
+  return rows.map((row) => decodeChecklistRun(row, completionsByRun.get(row.id) ?? []));
+};
+
 export const decodeChecklistTemplates = (
   rows: readonly ChecklistTemplateRow[],
   itemRows: readonly ChecklistItemRow[],
@@ -210,6 +231,45 @@ export const loadLatestOpenChecklistRun = async (
     row.id,
   );
   return decodeChecklistRun(row, completions);
+};
+
+export const listRecentCompletedChecklistRuns = async (
+  database: SQLiteDatabase,
+  limit = 20,
+): Promise<readonly ChecklistRun[]> => {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
+    throw new RangeError('Checklist history limit must be between 1 and 50');
+  }
+  let decoded: readonly ChecklistRun[] = [];
+  await database.withExclusiveTransactionAsync(async (transaction) => {
+    const rows = await transaction.getAllAsync<ChecklistRunRow>(
+      `SELECT id, template_id, template_revision, started_at, completed_at,
+        item_count, template_snapshot_json, state_revision
+       FROM checklist_runs
+       WHERE completed_at IS NOT NULL
+       ORDER BY completed_at DESC, id DESC
+       LIMIT ?`,
+      limit,
+    );
+    if (rows.length === 0) {
+      decoded = [];
+      return;
+    }
+    const completions = await transaction.getAllAsync<ChecklistRunCompletionRow>(
+      `SELECT run_id, item_sequence
+       FROM checklist_completions
+       WHERE run_id IN (
+         SELECT id FROM checklist_runs
+         WHERE completed_at IS NOT NULL
+         ORDER BY completed_at DESC, id DESC
+         LIMIT ?
+       )
+       ORDER BY run_id, item_sequence`,
+      limit,
+    );
+    decoded = decodeChecklistRuns(rows, completions);
+  });
+  return decoded;
 };
 
 export const persistChecklistRunTransition = async (

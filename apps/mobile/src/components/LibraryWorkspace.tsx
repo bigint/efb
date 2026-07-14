@@ -16,6 +16,7 @@ import {
   createChecklistRun,
   insertChecklistTemplate,
   listChecklistTemplates,
+  listRecentCompletedChecklistRuns,
   loadLatestOpenChecklistRun,
   persistChecklistRunTransition,
 } from '@/database/checklist-repository';
@@ -50,6 +51,8 @@ export function LibraryWorkspace() {
   const [activeRun, setActiveRun] = useState<ChecklistRun | null>(null);
   const [category, setCategory] = useState<ChecklistCategory>('normal');
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<readonly ChecklistRun[]>([]);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [readBlocked, setReadBlocked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [templates, setTemplates] = useState<readonly ChecklistTemplate[]>([]);
@@ -76,9 +79,22 @@ export function LibraryWorkspace() {
     }
   }, [database]);
 
+  const reloadHistory = useCallback(async () => {
+    try {
+      setHistory(await listRecentCompletedChecklistRuns(database));
+      setHistoryError(null);
+    } catch {
+      setHistory([]);
+      setHistoryError(
+        'Checklist history unavailable: stored runs did not pass integrity checks.',
+      );
+    }
+  }, [database]);
+
   useEffect(() => {
     void reload();
-  }, [reload]);
+    void reloadHistory();
+  }, [reload, reloadHistory]);
 
   const saveTemplate = handleSubmit(async (form) => {
     setSaving(true);
@@ -136,6 +152,7 @@ export function LibraryWorkspace() {
       await persistChecklistRunTransition(database, activeRun, next, changedAt);
       setActiveRun(next);
       setError(null);
+      if (next.completedAt !== null) await reloadHistory();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to update checklist.');
       await reload();
@@ -170,6 +187,34 @@ export function LibraryWorkspace() {
           onToggle={(sequence) => void toggle(sequence)}
           run={activeRun}
         />
+      )}
+
+      <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
+        Recent completed runs
+      </Text>
+      {historyError !== null && (
+        <Text style={[styles.error, { color: theme.danger }]}>{historyError}</Text>
+      )}
+      {history.length === 0 && historyError === null ? (
+        <Card>
+          <Text style={[panelStyles.copy, { color: theme.secondary }]}>No completed runs.</Text>
+        </Card>
+      ) : (
+        history.map((run) => (
+          <View key={run.id} style={[styles.history, { borderColor: theme.separator }]}>
+            <Text style={[styles.templateTitle, { color: theme.primary }]}>
+              {run.templateSnapshot.title}
+            </Text>
+            <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+              {run.templateSnapshot.aircraftLabel} · {run.templateSnapshot.category} ·{' '}
+              {run.itemCount} items
+            </Text>
+            <Text style={[styles.historyMeta, { color: theme.secondary }]}>
+              LOCKED SNAPSHOT · REV {run.templateRevision} ·{' '}
+              {new Date(run.completedAt ?? run.startedAt).toLocaleString()}
+            </Text>
+          </View>
+        ))
       )}
 
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
@@ -442,6 +487,17 @@ const styles = StyleSheet.create({
   },
   formField: { gap: spacing.xs },
   formGap: { marginTop: spacing.md },
+  history: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+  },
+  historyMeta: {
+    fontFamily: typography.mono,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
   input: {
     borderRadius: radii.control,
     borderWidth: 1,
