@@ -66,6 +66,13 @@ describe('saved flight plan', () => {
     expect(() =>
       savedFlightPlanSchema.parse({ ...fixture(), notes: 'Unsafe\u0000note' }),
     ).toThrow('unsupported controls');
+    const source = fixture();
+    expect(() =>
+      savedFlightPlanSchema.parse({
+        ...source,
+        waypoints: [{ ...source.waypoints[0], sourceRef: 'Unsafe\nsource' }],
+      }),
+    ).toThrow('source reference');
   });
 
   it('blocks loading when the active dataset no longer matches the saved waypoint snapshot', () => {

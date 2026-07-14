@@ -27,6 +27,9 @@ export const decodeSavedFlightPlans = (
   rows: readonly FlightRow[],
   waypointRows: readonly FlightWaypointRow[],
 ): readonly SavedFlightPlan[] => {
+  if (rows.length > 200 || waypointRows.length > 20_000) {
+    throw new Error('Saved flight library exceeds supported limits.');
+  }
   const byFlight = new Map<string, FlightWaypointRow[]>();
   for (const waypoint of waypointRows) {
     const current = byFlight.get(waypoint.flight_id) ?? [];
@@ -34,6 +37,9 @@ export const decodeSavedFlightPlans = (
     byFlight.set(waypoint.flight_id, current);
   }
   const knownIds = new Set(rows.map(({ id }) => id));
+  if (knownIds.size !== rows.length) {
+    throw new Error('Saved flight library contains duplicate plans.');
+  }
   if (waypointRows.some(({ flight_id }) => !knownIds.has(flight_id))) {
     throw new Error('Stored waypoint has no loaded flight owner.');
   }

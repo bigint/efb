@@ -42,6 +42,7 @@ describe('saved flight SQLite read boundary', () => {
 
   it('fails closed on a sequence gap', () => {
     expect(() => decodeSavedFlightPlans([flight], [waypoint(1, 'DVL2')])).toThrow('contiguous');
+    expect(() => decodeSavedFlightPlans([flight, flight], [])).toThrow('duplicate plans');
   });
 
   it('fails closed when a waypoint owner is outside the loaded collection', () => {

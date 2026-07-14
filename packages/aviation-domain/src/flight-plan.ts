@@ -21,7 +21,12 @@ export const flightWaypointSchema = z
     latitude: z.number().finite().min(-90).max(90),
     longitude: z.number().finite().min(-180).max(180),
     sequence: z.number().int().min(0).max(99),
-    sourceRef: z.string().trim().min(1).max(256),
+    sourceRef: z
+      .string()
+      .trim()
+      .min(1)
+      .max(256)
+      .refine(hasNoControlCharacters, 'Waypoint source reference has control characters'),
   })
   .strict();
 
