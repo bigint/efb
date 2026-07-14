@@ -21,6 +21,7 @@ import {
 
 import {
   insertSavedFlightPlan,
+  listArchivedSavedFlightPlans,
   listSavedFlightPlans,
   replaceSavedFlightPlan,
 } from '@/database/flight-plan-repository';
@@ -35,6 +36,7 @@ export function PlanWorkspace() {
   const theme = useDriftlineTheme();
   const [aircraft, setAircraft] = useState<readonly AircraftProfile[]>([]);
   const [aircraftError, setAircraftError] = useState<string | null>(null);
+  const [archivedPlans, setArchivedPlans] = useState<readonly SavedFlightPlan[]>([]);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [savedPlans, setSavedPlans] = useState<readonly SavedFlightPlan[]>([]);
@@ -99,11 +101,17 @@ export function PlanWorkspace() {
 
   const reloadSavedPlans = useCallback(async () => {
     try {
-      setSavedPlans(await listSavedFlightPlans(database));
+      const [active, archived] = await Promise.all([
+        listSavedFlightPlans(database),
+        listArchivedSavedFlightPlans(database),
+      ]);
+      setArchivedPlans(archived);
+      setSavedPlans(active);
       setPersistenceError(null);
       setReadBlocked(false);
       return true;
     } catch {
+      setArchivedPlans([]);
       setSavedPlans([]);
       setPersistenceError('Saved flights unavailable: stored routes failed integrity checks.');
       setReadBlocked(true);
@@ -449,6 +457,31 @@ export function PlanWorkspace() {
             })
           )}
         </View>
+        <Text style={[panelStyles.label, styles.archivedHeading, { color: theme.secondary }]}>
+          Archived drafts · {archivedPlans.length}
+        </Text>
+        {archivedPlans.length === 0 ? (
+          <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+            No archived flights.
+          </Text>
+        ) : (
+          archivedPlans.map((plan) => (
+            <View key={plan.id} style={[styles.savedPlan, { borderColor: theme.separator }]}>
+              <View style={styles.routeCopy}>
+                <Text style={[styles.identifier, { color: theme.primary }]}>{plan.title}</Text>
+                <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+                  {plan.waypoints.map(({ identifier }) => identifier).join(' → ')} · revision{' '}
+                  {plan.revision} · archived
+                </Text>
+              </View>
+              <Action
+                disabled={saving}
+                label="Restore as draft"
+                onPress={() => void revisePlan(plan, { status: 'draft' })}
+              />
+            </View>
+          ))
+        )}
       </Card>
 
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
@@ -637,6 +670,7 @@ const styles = StyleSheet.create({
   },
   aircraftChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   aircraftLabel: { marginBottom: spacing.sm, marginTop: spacing.md },
+  archivedHeading: { marginBottom: spacing.sm, marginTop: spacing.xl },
   assumptionCopy: { marginTop: spacing.md },
   assumptionWarning: {
     fontFamily: typography.mono,

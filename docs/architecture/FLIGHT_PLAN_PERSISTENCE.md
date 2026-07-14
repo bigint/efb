@@ -27,7 +27,8 @@ claim otherwise.
 Saved drafts can be renamed and archived. Each action creates exactly the next revision and uses
 the same compare-and-swap update boundary; a conflict reloads current storage before reporting
 the error. Archive requires native destructive confirmation, hides the record from the active
-list, and retains its row and waypoint snapshot locally.
+list, and retains its row and waypoint snapshot locally. A separately bounded archived list can
+restore that record as a draft through another next-revision compare-and-swap update.
 
 New drafts may optionally reference one of at most 100 validated local aircraft profiles. The
 profile UUID is protected by SQLite's foreign key and the saved-flight list resolves the current
@@ -61,8 +62,8 @@ geometry under the same identifier.
 
 ## Current limitations
 
-The editor can create, load, rename, replace routes, and archive drafts. Archived-plan restore,
-plan selection across the whole shell, revising an existing aircraft assignment,
-altitude/departure editing, assumption snapshots, outbox sync, richer conflict UI, and native
+The editor can create, load, rename, replace routes, archive, and restore drafts. Plan selection
+across the whole shell, revising an existing aircraft assignment, altitude/departure editing,
+assumption snapshots, outbox sync, richer conflict UI, and native
 process-death/visual/accessibility evidence remain open. The included waypoints are fictional
 and unverified, so saved routes are not suitable for navigation.

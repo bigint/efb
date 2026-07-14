@@ -62,18 +62,20 @@ export const decodeSavedFlightPlans = (
   );
 };
 
-export const listSavedFlightPlans = async (
+const listSavedFlightPlansByState = async (
   database: SQLiteDatabase,
+  archived: boolean,
 ): Promise<readonly SavedFlightPlan[]> => {
+  const predicate = archived ? `= 'archived'` : `<> 'archived'`;
   const [rows, waypointRows] = await Promise.all([
     database.getAllAsync<FlightRow>(
-      `SELECT * FROM flights WHERE status <> 'archived' ORDER BY updated_at DESC LIMIT 101`,
+      `SELECT * FROM flights WHERE status ${predicate} ORDER BY updated_at DESC LIMIT 101`,
     ),
     database.getAllAsync<FlightWaypointRow>(
       `SELECT waypoint.*
        FROM flight_waypoints AS waypoint
        JOIN flights AS flight ON flight.id = waypoint.flight_id
-       WHERE flight.status <> 'archived'
+       WHERE flight.status ${predicate}
        ORDER BY waypoint.flight_id, waypoint.sequence
        LIMIT 10000`,
     ),
@@ -83,6 +85,14 @@ export const listSavedFlightPlans = async (
   }
   return decodeSavedFlightPlans(rows, waypointRows);
 };
+
+export const listSavedFlightPlans = (
+  database: SQLiteDatabase,
+): Promise<readonly SavedFlightPlan[]> => listSavedFlightPlansByState(database, false);
+
+export const listArchivedSavedFlightPlans = (
+  database: SQLiteDatabase,
+): Promise<readonly SavedFlightPlan[]> => listSavedFlightPlansByState(database, true);
 
 const insertWaypoints = async (
   database: SQLiteDatabase,
