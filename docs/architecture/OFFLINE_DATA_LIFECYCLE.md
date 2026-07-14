@@ -43,9 +43,11 @@ before reporting a package. Recent transfer attempts are revalidated for bounded
 counts, status/failure consistency, required candidate IDs, and timestamp order.
 
 Registry queries and manifests are bounded to 100 active packages, 10,000 active file rows, and
-20 GiB aggregate package size. Excess collections fail closed. The manager states that the
-filesystem has not been rehashed: registry metadata is not equivalent to a current filesystem
-integrity check.
+20 GiB aggregate package size. File paths are relative, traversal-free, restricted to a bounded
+portable character set, and paired with a canonical bounded media type. Manifest source,
+version, and jurisdiction labels are bounded single-line display text. Excess or unsafe metadata
+fails closed. The manager states that the filesystem has not been rehashed: registry metadata is
+not equivalent to a current filesystem integrity check.
 
 The manager independently reads native total and available device-storage bytes. Values must be
 positive/non-negative safe integers with available no greater than total before the UI derives

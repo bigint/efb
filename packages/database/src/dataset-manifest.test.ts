@@ -58,4 +58,25 @@ describe('dataset manifest bounds', () => {
       'traverse',
     );
   });
+
+  it('rejects unsafe or unbounded path and display metadata', () => {
+    expect(() => datasetManifestSchema.parse(manifest([file('unsafe path')]))).toThrow(
+      'unsupported characters',
+    );
+    expect(() =>
+      datasetManifestSchema.parse({
+        ...manifest([file('safe.bin')]),
+        source: 'Unsafe\nsource',
+      }),
+    ).toThrow('control characters');
+    expect(() =>
+      datasetManifestSchema.parse({
+        ...manifest([file('safe.bin')]),
+        sourceVersion: 'x'.repeat(129),
+      }),
+    ).toThrow();
+    expect(() =>
+      datasetManifestSchema.parse(manifest([{ ...file('safe.bin'), mediaType: 'not a mime' }])),
+    ).toThrow();
+  });
 });

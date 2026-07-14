@@ -4,14 +4,28 @@ export const MAX_DATASET_FILE_COUNT = 10_000;
 export const MAX_DATASET_TOTAL_BYTES = 20 * 1024 * 1024 * 1024;
 
 const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/u, 'Expected lowercase SHA-256 hex');
+const boundedDisplayText = (maximum: number) =>
+  z
+    .string()
+    .trim()
+    .min(1)
+    .max(maximum)
+    .refine(
+      (value) =>
+        [...value].every((character) => {
+          const code = character.codePointAt(0) ?? 0;
+          return code >= 32 && code !== 127;
+        }),
+      'Manifest display text has control characters',
+    );
 
 export const datasetFileSchema = z
   .object({
     byteLength: z.number().int().nonnegative(),
-    mediaType: z.string().min(1),
+    mediaType: z.string().regex(/^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/u),
     path: z
       .string()
-      .min(1)
+      .regex(/^[A-Za-z0-9._/-]{1,512}$/u, 'Dataset path contains unsupported characters')
       .refine(
         (value) =>
           !value.startsWith('/') &&
@@ -30,11 +44,11 @@ export const datasetManifestSchema = z
     files: z.array(datasetFileSchema).min(1).max(MAX_DATASET_FILE_COUNT),
     formatVersion: z.literal(1),
     generatedAt: z.iso.datetime(),
-    jurisdiction: z.string().min(1),
+    jurisdiction: boundedDisplayText(64),
     regionId: z.string().regex(/^[a-z0-9][a-z0-9-]{1,63}$/u),
     sequence: z.number().int().positive(),
-    source: z.string().min(1),
-    sourceVersion: z.string().min(1),
+    source: boundedDisplayText(240),
+    sourceVersion: boundedDisplayText(128),
   })
   .strict()
   .superRefine((manifest, context) => {
