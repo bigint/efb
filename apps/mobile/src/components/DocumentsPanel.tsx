@@ -12,6 +12,8 @@ import {
   setDocumentFavourite,
   setDocumentFolder,
 } from '@/database/document-repository';
+import { auditDocumentStorage } from '@/database/document-storage';
+import type { DocumentStorageAudit } from '@/domain/document-storage-audit';
 import { useDriftlineTheme } from '@/theme';
 
 import { Action, Card, panelStyles } from './PanelPrimitives';
@@ -22,6 +24,8 @@ export function DocumentsPanel() {
   const [busy, setBusy] = useState(false);
   const [documents, setDocuments] = useState<readonly DocumentRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [storageAudit, setStorageAudit] = useState<DocumentStorageAudit | null>(null);
+  const [storageAuditError, setStorageAuditError] = useState<string | null>(null);
   const [readBlocked, setReadBlocked] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [folder, setFolder] = useState('');
@@ -30,11 +34,21 @@ export function DocumentsPanel() {
 
   const reload = useCallback(async () => {
     try {
-      setDocuments(await listDocuments(database));
+      const storedDocuments = await listDocuments(database);
+      setDocuments(storedDocuments);
       setError(null);
       setReadBlocked(false);
+      try {
+        setStorageAudit(auditDocumentStorage(storedDocuments));
+        setStorageAuditError(null);
+      } catch {
+        setStorageAudit(null);
+        setStorageAuditError('Private document storage could not be audited on this device.');
+      }
     } catch {
       setDocuments([]);
+      setStorageAudit(null);
+      setStorageAuditError(null);
       setError('Document library unavailable: stored metadata did not pass integrity checks.');
       setReadBlocked(true);
     }
@@ -134,6 +148,30 @@ export function DocumentsPanel() {
           />
         </View>
         {error !== null && <Text style={[styles.error, { color: theme.danger }]}>{error}</Text>}
+        {storageAudit !== null && (
+          <View style={styles.audit}>
+            <Text
+              accessibilityRole={storageAudit.status === 'attention' ? 'alert' : undefined}
+              style={[
+                styles.status,
+                { color: storageAudit.status === 'healthy' ? theme.accent : theme.danger },
+              ]}
+            >
+              {storageAudit.status === 'healthy'
+                ? `STORAGE INDEX CONSISTENT · ${storageAudit.checkedDocuments} RECORDS`
+                : `STORAGE ATTENTION · ${storageAudit.missingDocumentIds.length} MISSING · ${storageAudit.sizeMismatchDocumentIds.length} SIZE CHANGED · ${storageAudit.unexpectedLocationDocumentIds.length} MISPLACED · ${storageAudit.orphanEntryCount} UNREGISTERED`}
+            </Text>
+            <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+              Non-destructive location and byte-length audit only. Stored SHA-256 digests are
+              not rehashed during library load.
+            </Text>
+          </View>
+        )}
+        {storageAuditError !== null && (
+          <Text accessibilityRole="alert" style={[styles.error, { color: theme.danger }]}>
+            {storageAuditError}
+          </Text>
+        )}
       </Card>
       {documents.map((document) => (
         <View key={document.id} style={[styles.document, { borderColor: theme.separator }]}>
@@ -253,6 +291,7 @@ function MetadataInput({
 
 const styles = StyleSheet.create({
   action: { alignItems: 'flex-start', marginTop: spacing.md },
+  audit: { gap: spacing.xs, marginTop: spacing.md },
   copy: { marginTop: spacing.xs },
   document: {
     borderBottomWidth: StyleSheet.hairlineWidth,

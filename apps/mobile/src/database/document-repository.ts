@@ -30,6 +30,9 @@ interface BookmarkRow {
   readonly page_index: number;
 }
 
+const MAX_LIBRARY_DOCUMENTS = 100;
+const MAX_LIBRARY_BOOKMARKS = MAX_LIBRARY_DOCUMENTS * 500;
+
 export const decodeDocumentRows = (
   rows: readonly DocumentRow[],
   bookmarkRows: readonly BookmarkRow[],
@@ -82,16 +85,21 @@ export const listDocuments = async (
         mime_type, source, deleted_at, storage_scope, folder, is_favourite,
         last_opened_at, page_count, text_index_status
        FROM documents WHERE deleted_at IS NULL
-       ORDER BY is_favourite DESC, COALESCE(last_opened_at, imported_at) DESC`,
+       ORDER BY is_favourite DESC, COALESCE(last_opened_at, imported_at) DESC
+       LIMIT ${MAX_LIBRARY_DOCUMENTS + 1}`,
     ),
     database.getAllAsync<BookmarkRow>(
       `SELECT bookmark.document_id, bookmark.page_index, bookmark.label, bookmark.created_at
        FROM document_bookmarks AS bookmark
        INNER JOIN documents AS document ON document.id = bookmark.document_id
        WHERE document.deleted_at IS NULL
-       ORDER BY bookmark.document_id, bookmark.page_index, bookmark.label`,
+       ORDER BY bookmark.document_id, bookmark.page_index, bookmark.label
+       LIMIT ${MAX_LIBRARY_BOOKMARKS + 1}`,
     ),
   ]);
+  if (rows.length > MAX_LIBRARY_DOCUMENTS || bookmarks.length > MAX_LIBRARY_BOOKMARKS) {
+    throw new Error('Document library exceeds supported collection limits');
+  }
   return decodeDocumentRows(rows, bookmarks);
 };
 

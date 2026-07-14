@@ -14,8 +14,8 @@ never participates in path construction.
    claim that the PDF is safe to render.
 5. SHA-256 the cache copy, copy it to the app document directory, read the destination, and
    require identical length and SHA-256 before inserting metadata.
-6. If validation or SQLite insertion fails, delete the destination on a best-effort basis.
-   Startup orphan reconciliation remains required because a platform deletion can itself fail.
+6. If validation or SQLite insertion fails, delete the destination on a best-effort basis. A
+   platform deletion can itself fail, so the Library performs a non-destructive audit on load.
 
 SQLite stores app-private scope, display name, byte length, digest, folder, favourite/recent
 metadata, optional page count, text-index state, and relational bookmarks. Every row and
@@ -34,12 +34,25 @@ key for cross-writer conflicts. Folder and bookmark labels reject control charac
 These actions update metadata only. They do not assert that a page exists when page count is
 unknown and do not mark the document recently opened.
 
+## Storage audit
+
+Each Library load compares at most 100 validated metadata records with at most 1,000 entries in
+the app-private `driftline-documents` directory. A registered document must use the
+deterministic `<uuid>.pdf` location, exist as a file, and have the recorded byte length.
+Missing, changed-size, misplaced, and unregistered entries are surfaced separately from SQLite
+integrity failures.
+
+The audit does not open PDFs, rehash stored bytes, alter metadata, or delete orphan entries.
+That keeps recovery observable without risking deletion during an in-flight import or after a
+partially restored backup. A future cleanup action needs explicit confirmation, a grace period,
+and native interruption evidence before it can remove bytes.
+
 ## Deliberately unavailable
 
 Native PDF rendering, text extraction/search, page-count discovery, annotations, sharing/export,
-deletion/reconciliation, malicious-PDF sandboxing, and backup/restore are not enabled. The
-mobile surface says `READER NOT VERIFIED` and does not open imported bytes. A container marker
-and digest make a file identifiable and complete; they do not make its content trusted.
+deletion/repair, malicious-PDF sandboxing, and backup/restore are not enabled. The mobile
+surface says `READER NOT VERIFIED` and does not open imported bytes. A container marker and
+digest make a file identifiable and complete; they do not make its content trusted.
 
 Implementation follows the Expo DocumentPicker immediate-read pattern, Expo FileSystem's
 app-local `File`/`Directory` APIs, and Expo Crypto SHA-256. Native malformed-file, memory,
