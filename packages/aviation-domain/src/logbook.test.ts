@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatLogbookDuration,
   logbookEntrySchema,
+  parseLogbookCount,
   parseLogbookDuration,
   summariseLogbook,
   type LogbookEntry,
@@ -37,6 +38,14 @@ const entry = (overrides: Partial<LogbookEntry> = {}): LogbookEntry =>
   });
 
 describe('logbook domain', () => {
+  it('parses bounded whole-number operation counts', () => {
+    expect(parseLogbookCount(' 0 ')).toBe(0);
+    expect(parseLogbookCount('100')).toBe(100);
+    expect(() => parseLogbookCount('01')).toThrow('whole number');
+    expect(() => parseLogbookCount('101')).toThrow('whole number');
+    expect(() => parseLogbookCount('1.5')).toThrow('whole number');
+  });
+
   it('parses and formats explicit H:MM durations', () => {
     expect(parseLogbookDuration(' 12:05 ')).toBe(725);
     expect(formatLogbookDuration(725)).toBe('12:05');

@@ -168,6 +168,16 @@ export const parseLogbookDuration = (value: string): number => {
   return total;
 };
 
+export const parseLogbookCount = (value: string): number => {
+  const normalized = value.trim();
+  if (!/^(?:0|[1-9]\d{0,2})$/u.test(normalized)) {
+    throw new Error('Logbook count must be a whole number from 0 to 100');
+  }
+  const count = Number(normalized);
+  if (count > 100) throw new Error('Logbook count must be a whole number from 0 to 100');
+  return count;
+};
+
 export const formatLogbookDuration = (minutes: number): string => {
   if (!Number.isSafeInteger(minutes) || minutes < 0) {
     throw new RangeError('Duration must be non-negative whole minutes');

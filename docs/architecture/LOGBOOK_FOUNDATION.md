@@ -3,14 +3,16 @@
 The Records workspace is an offline, device-local ledger backed by the user SQLite database. It
 captures date, aircraft registration, departure, arrival, block, flight, day, night, PIC, SIC,
 dual, instructor, instrument, approaches, landings, remarks, and relational document attachment
-references. The mobile form exposes a conservative subset plus saved-aircraft selection and up
-to 20 imported-document attachments; the schema retains the broader model for later editing and
-import workflows.
+references. The mobile form exposes each of those recorded fact fields plus saved-aircraft
+selection and up to 20 imported-document attachments. Editing, import, export, signatures, and
+regulatory interpretation remain separate future workflows.
 
 ## Integrity boundaries
 
 - Durations enter and display as explicit `H:MM` values and persist as non-negative whole
   minutes. Per-entry values are bounded; summaries use safe-integer accumulation.
+- Approach and day/night landing counts accept canonical whole numbers from 0 through 100. The
+  form does not derive or infer them from other fields.
 - Flight cannot exceed block. Day plus night and PIC plus SIC cannot exceed flight, and every
   other time category is individually bounded by flight time.
 - Calendar dates, UUIDs, station identifiers, timestamps, attachment uniqueness, and update
@@ -38,10 +40,10 @@ import workflows.
 ## Regulatory boundary
 
 Every entry has a jurisdiction label and the literal compliance state `not-evaluated`. The
-current UI uses `UNCLASSIFIED` and states that it does not determine regulator, licence,
-recency, endorsement, or retention compliance. Future jurisdiction modules may evaluate
-separately, but must never rewrite recorded flight facts or turn an unevaluated entry into a
-compliant claim by default.
+current UI uses `UNCLASSIFIED`, displays the recorded time/category facts on each loaded row,
+and states that it does not determine regulator, licence, recency, endorsement, or retention
+compliance. Future jurisdiction modules may evaluate separately, but must never rewrite recorded
+flight facts or turn an unevaluated entry into a compliant claim by default.
 
 Native process-death, migration interruption, backup/export, accessibility, and physical-device
 tests remain required before this module can pass a release gate. Historical rows are
