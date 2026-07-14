@@ -11,8 +11,11 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { demoAirports } from '@driftline/aviation-domain';
-import { knots } from '@driftline/data-contracts';
-import { calculateRoute, resolveRouteIdentifiers } from '@driftline/flight-planning';
+import {
+  calculateActiveLegNavigation,
+  resolveRouteIdentifiers,
+} from '@driftline/flight-planning';
+import { position as geospatialPosition } from '@driftline/geospatial';
 
 import { evaluatePosition } from '@/domain/position-source';
 import { useFlightStore } from '@/store/flight-store';
@@ -46,6 +49,7 @@ const graticule = {
 
 export function MapWorkspace() {
   const theme = useDriftlineTheme();
+  const activeLegIndex = useFlightStore((state) => state.activeLegIndex);
   const mapStyle = useMemo<StyleSpecification>(
     () => ({
       layers: [
@@ -79,17 +83,6 @@ export function MapWorkspace() {
           return airport;
         })
       : [];
-  const summary = useMemo(
-    () =>
-      calculateRoute(
-        routeAirports.map((airport) => ({
-          identifier: airport.icao,
-          position: airport.position,
-        })),
-        knots(118),
-      ),
-    [routeAirports],
-  );
   const routeGeoJson = {
     features: [
       {
@@ -114,6 +107,15 @@ export function MapWorkspace() {
         ? 'DEVICE'
         : 'SIM'
       : 'NO SOURCE';
+  const activeNavigation =
+    position.kind === 'available' && routeResolution.status === 'resolved'
+      ? calculateActiveLegNavigation({
+          activeLegIndex,
+          current: geospatialPosition(position.sample.latitude, position.sample.longitude),
+          groundspeedKnots: position.sample.groundspeedKnots,
+          waypoints: routeResolution.waypoints,
+        })
+      : null;
 
   return (
     <View style={styles.container}>
@@ -217,14 +219,58 @@ export function MapWorkspace() {
             unit={`FT ${positionUnit}`}
           />
           <NavValue
-            label="DIST"
-            value={summary.totalDistance?.toFixed(1) ?? '—'}
-            unit={summary.status === 'ready' ? 'NM ROUTE' : 'NO ROUTE'}
+            label="TRK"
+            value={
+              position.kind === 'available' && position.sample.trackDegrees !== null
+                ? position.sample.trackDegrees.toFixed(0).padStart(3, '0')
+                : '—'
+            }
+            unit={
+              position.kind === 'available' && position.sample.trackDegrees !== null
+                ? position.sample.trackReference === 'true'
+                  ? '°T'
+                  : '° PLATFORM'
+                : 'NO COURSE'
+            }
           />
           <NavValue
-            label="ETE"
-            value={summary.estimatedMinutes?.toFixed(0) ?? '—'}
-            unit={summary.status === 'ready' ? 'MIN · 118 KT CALM' : 'NO ROUTE'}
+            label="NEXT"
+            value={activeNavigation?.status === 'ready' ? activeNavigation.nextIdentifier : '—'}
+            unit={
+              activeNavigation?.status === 'ready'
+                ? `${activeNavigation.distanceToNext.toFixed(1)} NM`
+                : activeLegIndex === null
+                  ? 'SELECT LEG'
+                  : 'POSITION/ROUTE'
+            }
+          />
+          <NavValue
+            label="XTK"
+            value={
+              activeNavigation?.status === 'ready'
+                ? Math.abs(activeNavigation.crossTrack).toFixed(1)
+                : '—'
+            }
+            unit={
+              activeNavigation?.status === 'ready'
+                ? `NM ${activeNavigation.crossTrack < 0 ? 'LEFT' : activeNavigation.crossTrack > 0 ? 'RIGHT' : 'ON COURSE'}`
+                : 'NO ACTIVE LEG'
+            }
+          />
+          <NavValue
+            label="REM"
+            value={
+              activeNavigation?.status === 'ready'
+                ? activeNavigation.routeRemaining.toFixed(1)
+                : '—'
+            }
+            unit={
+              activeNavigation?.status === 'ready'
+                ? activeNavigation.estimatedMinutesRemaining === null
+                  ? 'NM · ETE —'
+                  : `NM · ${activeNavigation.estimatedMinutesRemaining.toFixed(0)} MIN`
+                : 'NO ACTIVE LEG'
+            }
           />
         </View>
         <Pressable
@@ -306,12 +352,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   navNumber: { fontFamily: typography.mono, fontSize: 21, fontWeight: '700', marginTop: 2 },
-  navStrip: { flexDirection: 'row', gap: spacing.xs, marginTop: 'auto' },
+  navStrip: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: 'auto' },
   navUnit: { fontFamily: typography.body, fontSize: 10, fontWeight: '700' },
   navValue: {
     borderRadius: radii.control,
     borderWidth: 1,
-    flex: 1,
+    flexBasis: 92,
+    flexGrow: 1,
     minHeight: 70,
     padding: spacing.sm,
   },

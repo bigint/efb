@@ -54,12 +54,14 @@ export function PlanWorkspace() {
   const [windFromTrue, setWindFromTrue] = useState('0');
   const [windSpeed, setWindSpeed] = useState('0');
   const addWaypoint = useFlightStore((state) => state.addWaypoint);
+  const activeLegIndex = useFlightStore((state) => state.activeLegIndex);
   const clearRoute = useFlightStore((state) => state.clearRoute);
   const removeWaypoint = useFlightStore((state) => state.removeWaypoint);
   const replaceRoute = useFlightStore((state) => state.replaceRoute);
   const reverseRoute = useFlightStore((state) => state.reverseRoute);
   const routeIdentifiers = useFlightStore((state) => state.routeIdentifiers);
   const setWorkspace = useFlightStore((state) => state.setWorkspace);
+  const setActiveLegIndex = useFlightStore((state) => state.setActiveLegIndex);
   const routeResolution = resolveRouteIdentifiers(
     routeIdentifiers,
     demoAirports.map((airport) => ({ identifier: airport.icao, position: airport.position })),
@@ -709,6 +711,16 @@ export function PlanWorkspace() {
                   </Text>
                 </View>
                 <Action label="Remove" onPress={() => removeWaypoint(identifier)} />
+                {index > 0 && (
+                  <Action
+                    disabled={activeLegIndex === index - 1}
+                    label={
+                      activeLegIndex === index - 1 ? 'Active leg' : `Activate to ${identifier}`
+                    }
+                    onPress={() => setActiveLegIndex(index - 1)}
+                    primary={activeLegIndex === index - 1}
+                  />
+                )}
               </View>
             </Card>
           );
@@ -731,6 +743,11 @@ export function PlanWorkspace() {
       </View>
       <View style={styles.actions}>
         <Action label="Reverse route" onPress={reverseRoute} />
+        <Action
+          disabled={activeLegIndex === null}
+          label="Clear active leg"
+          onPress={() => setActiveLegIndex(null)}
+        />
         <Action destructive label="Clear route" onPress={clearRoute} />
         <Action primary label="View on map" onPress={() => setWorkspace('map')} />
       </View>

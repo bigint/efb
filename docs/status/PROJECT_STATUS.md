@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 237 passed across thirty-five test files.
+- Unit tests: 239 passed across thirty-six test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,163 modules, 5.5 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -109,6 +109,10 @@ performance data.
   revise title, aircraft assignment, whole-foot cruise altitude, explicit UTC departure time,
   and notes atomically. MMKV no longer claims route durability; a native date/time picker and
   richer conflict UI remain open.
+- Plan now requires explicit transient active-leg selection; every route mutation clears it.
+  With a fresh position, the map derives next distance, true bearing, signed cross-track,
+  remaining distance, and groundspeed-based ETE through a pure spherical calculator. There is no
+  automatic sequencing, magnetic course, destination clock ETA, or certification claim.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated
