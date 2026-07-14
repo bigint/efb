@@ -31,7 +31,8 @@ const angularDistance = (from: Position, to: Position): Radians => {
     Math.sin(deltaLatitude / 2) ** 2 +
     Math.cos(fromLatitude) * Math.cos(toLatitude) * Math.sin(deltaLongitude / 2) ** 2;
   const boundedHaversine = clamp(haversine, 0, 1);
-  return radians(2 * Math.atan2(Math.sqrt(boundedHaversine), Math.sqrt(1 - boundedHaversine)));
+  const angle = 2 * Math.atan2(Math.sqrt(boundedHaversine), Math.sqrt(1 - boundedHaversine));
+  return radians(angle <= 1e-12 ? 0 : angle);
 };
 
 export const greatCircleDistanceMetres = (from: Position, to: Position): Metres =>
@@ -41,10 +42,11 @@ export const greatCircleDistance = (from: Position, to: Position): NauticalMiles
   metresToNauticalMiles(greatCircleDistanceMetres(from, to));
 
 export const initialTrueBearing = (from: Position, to: Position): TrueDegrees => {
-  if (from.latitude === to.latitude && from.longitude === to.longitude) {
+  const distance = angularDistance(from, to);
+  if (distance === 0) {
     throw new RangeError('Bearing is undefined for identical positions');
   }
-  if (Math.abs(Math.PI - angularDistance(from, to)) <= 1e-12) {
+  if (Math.abs(Math.PI - distance) <= 1e-12) {
     throw new RangeError('Bearing is undefined for antipodal positions');
   }
   const fromLatitude = toRadians(from.latitude);

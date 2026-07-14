@@ -48,4 +48,12 @@ describe('spherical great-circle calculations', () => {
     expect(Number.isFinite(distance)).toBe(true);
     expect(distance).toBeCloseTo((Math.PI * 6_371_008.8) / 1852, 8);
   });
+
+  it('treats equivalent antimeridian coordinates as one physical point', () => {
+    const east = position(0, 180);
+    const west = position(0, -180);
+    expect(greatCircleDistance(east, west)).toBe(0);
+    expect(() => initialTrueBearing(east, west)).toThrow('identical');
+    expect(() => trackOffset(east, west, position(1, 180))).toThrow('distinct');
+  });
 });
