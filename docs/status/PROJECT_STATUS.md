@@ -87,6 +87,8 @@ performance data.
   negative-clock, and malformed-coordinate histories before they reach the map renderer.
 - Guidance intent validates route cardinality and bounded, unique, normalized direct-to target
   collections before changing mutually exclusive navigation state.
+- Route reordering validates its bounded normalized identifier set, and direct-to navigation
+  uses the same 1,000 KT upper bound as active-leg ETE.
 - Separate versioned user and control SQLite schemas now migrate before app render. Executable
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,

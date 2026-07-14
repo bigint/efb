@@ -12,5 +12,13 @@ describe('route editing', () => {
   it('rejects out-of-range indexes and an ambiguous duplicate route', () => {
     expect(() => moveRouteWaypoint(['DVL1'], 0, 1)).toThrow('outside');
     expect(() => moveRouteWaypoint(['DVL1', 'DVL1'], 0, 1)).toThrow('unique');
+    expect(() => moveRouteWaypoint(['bad input'], 0, 0)).toThrow('identifier');
+    expect(() =>
+      moveRouteWaypoint(
+        Array.from({ length: 101 }, (_, index) => `W${index}`),
+        0,
+        1,
+      ),
+    ).toThrow('limit');
   });
 });

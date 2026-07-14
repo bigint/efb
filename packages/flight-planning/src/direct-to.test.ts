@@ -24,5 +24,12 @@ describe('direct-to navigation', () => {
         target: { identifier: 'DEST', position: position(12, 77) },
       }),
     ).toMatchObject({ distance: 0, estimatedMinutes: null, trueBearing: null });
+    expect(
+      calculateDirectToNavigation({
+        current: position(12, 77),
+        groundspeedKnots: 1_001,
+        target: { identifier: 'DEST', position: position(12, 78) },
+      }),
+    ).toMatchObject({ estimatedMinutes: null });
   });
 });

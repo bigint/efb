@@ -8,6 +8,8 @@ export interface DirectToNavigation {
   readonly trueBearing: TrueDegrees | null;
 }
 
+const MAXIMUM_GROUNDSPEED_KNOTS = 1_000;
+
 export const calculateDirectToNavigation = ({
   current,
   groundspeedKnots,
@@ -22,7 +24,10 @@ export const calculateDirectToNavigation = ({
   }
   const distance = greatCircleDistance(current, target.position);
   const validGroundspeed =
-    groundspeedKnots !== null && Number.isFinite(groundspeedKnots) && groundspeedKnots > 0
+    groundspeedKnots !== null &&
+    Number.isFinite(groundspeedKnots) &&
+    groundspeedKnots > 0 &&
+    groundspeedKnots <= MAXIMUM_GROUNDSPEED_KNOTS
       ? knots(groundspeedKnots)
       : null;
   return {

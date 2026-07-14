@@ -3,6 +3,10 @@ export const moveRouteWaypoint = (
   fromIndex: number,
   toIndex: number,
 ): readonly string[] => {
+  if (source.length > 100) throw new RangeError('Route exceeds the supported waypoint limit');
+  if (source.some((identifier) => !/^[A-Z0-9-]{1,16}$/u.test(identifier))) {
+    throw new RangeError('Route contains an invalid waypoint identifier');
+  }
   if (
     !Number.isInteger(fromIndex) ||
     !Number.isInteger(toIndex) ||
