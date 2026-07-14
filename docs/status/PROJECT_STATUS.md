@@ -83,6 +83,8 @@ performance data.
 - Simulation advance/hold, native location mapping, and availability evaluation share complete
   coordinate, telemetry, clock, and track-reference validation; malformed prior samples cannot
   survive a lifecycle hold or restart an advance.
+- Session trail append and geometry generation reject oversized, mixed-source, unordered,
+  negative-clock, and malformed-coordinate histories before they reach the map renderer.
 - Separate versioned user and control SQLite schemas now migrate before app render. Executable
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,

@@ -9,6 +9,25 @@ export interface PositionTrailPoint {
   readonly sampledAt: number;
 }
 
+const assertValidPositionTrail = (trail: readonly PositionTrailPoint[]): void => {
+  if (trail.length > 600) throw new RangeError('Position trail exceeds the supported limit');
+  let previous: PositionTrailPoint | undefined;
+  for (const point of trail) {
+    const origin: unknown = point.origin;
+    position(point.latitude, point.longitude);
+    if (
+      !Number.isFinite(point.sampledAt) ||
+      point.sampledAt < 0 ||
+      (origin !== 'device' && origin !== 'simulated') ||
+      (previous !== undefined &&
+        (point.origin !== previous.origin || point.sampledAt <= previous.sampledAt))
+    ) {
+      throw new RangeError('Position trail contains invalid or unordered points');
+    }
+    previous = point;
+  }
+};
+
 export const appendPositionTrail = (
   current: readonly PositionTrailPoint[],
   origin: PositionTrailPoint['origin'],
@@ -18,9 +37,14 @@ export const appendPositionTrail = (
   if (!Number.isInteger(limit) || limit < 2 || limit > 600) {
     throw new RangeError('Position trail limit must be an integer from 2 through 600');
   }
+  assertValidPositionTrail(current);
+  const runtimeOrigin: unknown = origin;
+  if (runtimeOrigin !== 'device' && runtimeOrigin !== 'simulated') {
+    throw new RangeError('Position trail origin is invalid');
+  }
   const coordinate = position(sample.latitude, sample.longitude);
-  if (!Number.isFinite(sample.sampledAt))
-    throw new RangeError('Trail sample time must be finite');
+  if (!Number.isFinite(sample.sampledAt) || sample.sampledAt < 0)
+    throw new RangeError('Trail sample time must be finite and non-negative');
   const point: PositionTrailPoint = {
     latitude: coordinate.latitude,
     longitude: coordinate.longitude,
@@ -54,6 +78,7 @@ export const buildPositionTrailGeometry = (
   coordinates: [number, number][][];
   type: 'MultiLineString';
 } => {
+  assertValidPositionTrail(trail);
   if (trail.length < 2) return { coordinates: [], type: 'MultiLineString' };
   const lines: [number, number][][] = [];
   let current: [number, number][] = [[trail[0]?.longitude ?? 0, trail[0]?.latitude ?? 0]];

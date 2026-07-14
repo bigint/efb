@@ -49,5 +49,18 @@ describe('session position trail', () => {
   it('rejects malformed coordinates and unsupported limits', () => {
     expect(() => appendPositionTrail([], 'device', sample(1, 91, 0))).toThrow(RangeError);
     expect(() => appendPositionTrail([], 'device', sample(1, 0, 0), 1)).toThrow(RangeError);
+    expect(() => appendPositionTrail([], 'device', sample(-1, 0, 0))).toThrow('non-negative');
+    expect(() =>
+      buildPositionTrailGeometry([
+        { latitude: 0, longitude: 0, origin: 'device', sampledAt: 2 },
+        { latitude: 0, longitude: 1, origin: 'device', sampledAt: 1 },
+      ]),
+    ).toThrow('unordered');
+    expect(() =>
+      buildPositionTrailGeometry([
+        { latitude: 0, longitude: 0, origin: 'unsafe' as never, sampledAt: 1 },
+        { latitude: 0, longitude: 1, origin: 'unsafe' as never, sampledAt: 2 },
+      ]),
+    ).toThrow('invalid');
   });
 });
