@@ -1,13 +1,19 @@
 import { z } from 'zod';
 
+const hasNoControlCharacters = (value: string): boolean =>
+  [...value].every((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code >= 32 && code !== 127;
+  });
+
 export const checklistCategorySchema = z.enum(['normal', 'abnormal', 'emergency']);
 export type ChecklistCategory = z.infer<typeof checklistCategorySchema>;
 
 const checklistItemSchema = z
   .object({
-    challenge: z.string().trim().min(1).max(240),
+    challenge: z.string().trim().min(1).max(240).refine(hasNoControlCharacters),
     isCritical: z.boolean(),
-    response: z.string().trim().min(1).max(240),
+    response: z.string().trim().min(1).max(240).refine(hasNoControlCharacters),
     sequence: z.number().int().min(0).max(99),
   })
   .strict();
@@ -15,14 +21,14 @@ const checklistItemSchema = z
 export const checklistTemplateSchema = z
   .object({
     aircraftId: z.uuid().nullable(),
-    aircraftLabel: z.string().trim().min(1).max(80),
+    aircraftLabel: z.string().trim().min(1).max(80).refine(hasNoControlCharacters),
     category: checklistCategorySchema,
     createdAt: z.iso.datetime(),
     id: z.uuid(),
     items: z.array(checklistItemSchema).min(1).max(100),
     revision: z.number().int().min(1),
     source: z.enum(['user-authored', 'generic-demonstration']),
-    title: z.string().trim().min(1).max(120),
+    title: z.string().trim().min(1).max(120).refine(hasNoControlCharacters),
     updatedAt: z.iso.datetime(),
     verificationStatus: z.literal('unverified'),
   })

@@ -105,7 +105,8 @@ performance data.
   render. Once all rows are loaded, a 2,000-entry-bounded CSV snapshot revalidates each entry,
   preserves integer facts, neutralizes spreadsheet formula prefixes, verifies its temporary
   file, and opens the native share sheet without claiming transfer success or regulatory
-  completeness.
+  completeness. Multiline remarks preserve normal whitespace but reject NUL and unsupported
+  control bytes at the domain boundary.
 - The Library now supports user-authored normal, abnormal, and emergency-labelled checklist
   templates without bundling aircraft procedures. Active runs retain immutable revision
   snapshots and use compare-and-swap state revisions for atomic completion updates. Templates
@@ -117,7 +118,7 @@ performance data.
   unchecked outcome. Open/history completion relations now use domain-sized sentinel limits
   before decoding to stop unbounded reads and silent truncation. Template/item reconstruction
   now uses one exclusive read snapshot; native concurrency, recovery, and accessibility evidence
-  are open.
+  are open. Template labels, titles, challenges, and responses reject embedded display controls.
 - PDF-only document import now validates UUID paths, MIME and bounded container markers; copies
   into app-private storage; verifies SHA-256 after the copy; and persists revalidated metadata
   and bookmark relations. The reader is explicitly disabled pending native malformed-file,
@@ -175,12 +176,12 @@ performance data.
   drifted. Drafts can link aircraft profiles, rename, replace route snapshots after
   confirmation, archive, and restore through compare-and-swap revisions. One detail editor can
   revise title, aircraft assignment, whole-foot cruise altitude, explicit UTC departure time,
-  and notes atomically. Saved records can be duplicated as independent revision-one drafts, and
-  ephemeral waypoints can move up/down with every route edit clearing active-leg selection. A
-  bounded current-route GPX snapshot revalidates geometry, escapes XML, verifies its cache
-  write, omits invented time/elevation, and stays explicitly fictional and unverified. MMKV no
-  longer claims route durability; drag editing, a native date/time picker, and richer conflict
-  UI remain open.
+  and notes atomically; multiline notes retain normal whitespace while rejecting unsupported
+  controls. Saved records can be duplicated as independent revision-one drafts, and ephemeral
+  waypoints can move up/down with every route edit clearing active-leg selection. A bounded
+  current-route GPX snapshot revalidates geometry, escapes XML, verifies its cache write, omits
+  invented time/elevation, and stays explicitly fictional and unverified. MMKV no longer claims
+  route durability; drag editing, a native date/time picker, and richer conflict UI remain open.
 - With a saved aircraft selected, Plan now derives a transient cruise-only litre estimate from
   wind-adjusted ETE and entered fuel burn, then compares it with entered usable fuel. The UI
   explicitly excludes taxi, climb, descent, contingency, alternate, and reserve fuel; scenario

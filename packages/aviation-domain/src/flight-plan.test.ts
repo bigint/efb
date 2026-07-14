@@ -63,6 +63,9 @@ describe('saved flight plan', () => {
     expect(() =>
       savedFlightPlanSchema.parse({ ...fixture(), title: 'Route\nArchive?' }),
     ).toThrow('control characters');
+    expect(() =>
+      savedFlightPlanSchema.parse({ ...fixture(), notes: 'Unsafe\u0000note' }),
+    ).toThrow('unsupported controls');
   });
 
   it('blocks loading when the active dataset no longer matches the saved waypoint snapshot', () => {

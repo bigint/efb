@@ -87,6 +87,7 @@ describe('logbook domain', () => {
     expect(() => entry({ attachmentIds: [attachment, attachment] })).toThrow(
       'Attachment references must be unique',
     );
+    expect(() => entry({ remarks: 'Unsafe\u0000remark' })).toThrow('unsupported controls');
   });
 
   it('summarises additive fields without implying regulatory compliance', () => {

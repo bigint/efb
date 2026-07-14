@@ -5,6 +5,11 @@ const hasNoControlCharacters = (value: string): boolean =>
     const code = character.codePointAt(0) ?? 0;
     return code >= 32 && code !== 127;
   });
+const hasNoUnsafeNoteCharacters = (value: string): boolean =>
+  [...value].every((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code === 9 || code === 10 || code === 13 || (code >= 32 && code !== 127);
+  });
 
 export const flightWaypointSchema = z
   .object({
@@ -27,7 +32,10 @@ export const savedFlightPlanSchema = z
     createdAt: z.iso.datetime(),
     departureTime: z.iso.datetime().nullable(),
     id: z.uuid(),
-    notes: z.string().max(10_000),
+    notes: z
+      .string()
+      .max(10_000)
+      .refine(hasNoUnsafeNoteCharacters, 'Saved flight notes have unsupported controls'),
     revision: z.number().int().min(1),
     status: z.enum(['active', 'archived', 'draft']),
     title: z

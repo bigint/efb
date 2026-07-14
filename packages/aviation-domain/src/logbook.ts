@@ -3,6 +3,11 @@ import { z } from 'zod';
 const MAX_ENTRY_MINUTES = 7 * 24 * 60;
 
 const minutesSchema = z.number().int().min(0).max(MAX_ENTRY_MINUTES);
+const hasNoUnsafeRemarkCharacters = (value: string): boolean =>
+  [...value].every((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code === 9 || code === 10 || code === 13 || (code >= 32 && code !== 127);
+  });
 
 export const logbookComplianceSchema = z
   .object({
@@ -45,7 +50,10 @@ export const logbookEntrySchema = z
     landingsNight: z.number().int().min(0).max(100),
     nightMinutes: minutesSchema,
     picMinutes: minutesSchema,
-    remarks: z.string().max(5_000),
+    remarks: z
+      .string()
+      .max(5_000)
+      .refine(hasNoUnsafeRemarkCharacters, 'Logbook remarks have unsupported controls'),
     sicMinutes: minutesSchema,
     updatedAt: z.iso.datetime(),
     arrivalIdentifier: z

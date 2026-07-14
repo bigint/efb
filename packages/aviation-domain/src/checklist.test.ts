@@ -43,6 +43,13 @@ describe('checklist domain', () => {
     expect(() =>
       checklistTemplateSchema.parse({ ...template(), verificationStatus: 'verified' }),
     ).toThrow();
+    expect(() =>
+      template({
+        items: [
+          { challenge: 'Unsafe\u0000item', isCritical: false, response: 'Test', sequence: 0 },
+        ],
+      }),
+    ).toThrow();
   });
 
   it('starts a run with an immutable template revision snapshot', () => {
