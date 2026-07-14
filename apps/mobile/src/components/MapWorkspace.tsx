@@ -20,12 +20,6 @@ import { useDriftlineTheme } from '@/theme';
 
 import { OwnshipGlyph } from './OwnshipGlyph';
 
-const offlineStyle: StyleSpecification = {
-  layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#17221F' } }],
-  sources: {},
-  version: 8,
-};
-
 const graticule = {
   features: Array.from({ length: 25 }, (_, index) => {
     const offset = index - 12;
@@ -52,6 +46,20 @@ const graticule = {
 
 export function MapWorkspace() {
   const theme = useDriftlineTheme();
+  const mapStyle = useMemo<StyleSpecification>(
+    () => ({
+      layers: [
+        {
+          id: 'background',
+          paint: { 'background-color': theme.mapLand },
+          type: 'background',
+        },
+      ],
+      sources: {},
+      version: 8,
+    }),
+    [theme.mapLand],
+  );
   const positionSample = useFlightStore((state) => state.positionSample);
   const positionScenario = useFlightStore((state) => state.positionScenario);
   const routeIdentifiers = useFlightStore((state) => state.routeIdentifiers);
@@ -113,7 +121,7 @@ export function MapWorkspace() {
         attribution={false}
         compass
         logo={false}
-        mapStyle={offlineStyle}
+        mapStyle={mapStyle}
         preferredFramesPerSecond={60}
         scaleBar
         style={StyleSheet.absoluteFill}
@@ -122,7 +130,7 @@ export function MapWorkspace() {
         <GeoJSONSource data={graticule} id="graticule">
           <Layer
             id="grid-lines"
-            paint={{ 'line-color': '#42534F', 'line-opacity': 0.42, 'line-width': 1 }}
+            paint={{ 'line-color': theme.separator, 'line-opacity': 0.58, 'line-width': 1 }}
             type="line"
           />
         </GeoJSONSource>
@@ -130,12 +138,12 @@ export function MapWorkspace() {
           <GeoJSONSource data={routeGeoJson} id="active-route">
             <Layer
               id="route-shadow"
-              paint={{ 'line-color': '#07100F', 'line-width': 8 }}
+              paint={{ 'line-color': theme.background, 'line-width': 8 }}
               type="line"
             />
             <Layer
               id="route-line"
-              paint={{ 'line-color': '#45C0C6', 'line-width': 4 }}
+              paint={{ 'line-color': theme.accent, 'line-width': 4 }}
               type="line"
             />
           </GeoJSONSource>

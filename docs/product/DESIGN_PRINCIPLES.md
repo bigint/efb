@@ -33,8 +33,10 @@ regulatory claim.
 - **Day:** high-luminance neutral canvas, dark text, subdued overlays, tested in direct sun.
 - **Night:** low-luminance near-black surfaces, no pure white large areas, brightness-safe
   charts and overlays.
-- **High contrast:** stronger borders and text contrast in both appearances, compatible with
-  system Increase Contrast.
+- **High contrast:** dedicated day and night palettes with stronger borders and at least 7:1
+  contrast for primary text, secondary text, and text on accent controls. The app follows iOS
+  Increase Contrast and Android High contrast text while it is running; physical-device review
+  remains required.
 - **Simulation:** persistent violet/hatched frame and `SIMULATION` wording on every workspace;
   cannot be hidden by themes or overlays.
 

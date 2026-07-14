@@ -3,7 +3,7 @@ import * as Location from 'expo-location';
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { useFlightStore } from '@/store/flight-store';
-import { useDriftlineTheme } from '@/theme';
+import { useDriftlineTheme, useHighContrastEnabled } from '@/theme';
 import { evaluatePosition } from '@/domain/position-source';
 
 import { Card, PanelHeader, panelStyles } from './PanelPrimitives';
@@ -11,6 +11,7 @@ import { OfflineDataPanel } from './OfflineDataPanel';
 
 export function SystemWorkspace() {
   const theme = useDriftlineTheme();
+  const highContrast = useHighContrastEnabled();
   const scenario = useFlightStore((state) => state.positionScenario);
   const sample = useFlightStore((state) => state.positionSample);
   const setGpsOutage = useFlightStore((state) => state.setGpsOutage);
@@ -77,7 +78,11 @@ export function SystemWorkspace() {
         <Status label="Airport dataset" value="demo-2026-07-14 · unverified" />
         <Status label="Map base" value="offline graticule · no chart data" />
         <Status label="Simulation profile" value="118 KT · 068° TRUE · lifecycle gaps pause" />
-        <Status label="Weather" value="AWC on-demand METAR · no cache · not a briefing" />
+        <Status label="Weather" value="AWC on-demand METAR/TAF · no cache · not a briefing" />
+        <Status
+          label="System contrast"
+          value={highContrast ? 'high-contrast palette active' : 'standard palette'}
+        />
         <Status
           label="Position"
           value={
