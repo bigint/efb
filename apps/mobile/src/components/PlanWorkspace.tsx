@@ -65,6 +65,13 @@ export function PlanWorkspace() {
           return airport;
         })
       : [];
+  const currentRouteSnapshot = airports.map((airport, sequence) => ({
+    identifier: airport.icao,
+    latitude: airport.position.latitude,
+    longitude: airport.position.longitude,
+    sequence,
+    sourceRef: `${airport.provenance.datasetVersion}:${airport.icao}`,
+  }));
   const summary = calculateRoute(
     airports.map((airport) => ({ identifier: airport.icao, position: airport.position })),
     null,
@@ -148,13 +155,7 @@ export function PlanWorkspace() {
         status: 'draft',
         title: saveTitle,
         updatedAt: now,
-        waypoints: airports.map((airport, sequence) => ({
-          identifier: airport.icao,
-          latitude: airport.position.latitude,
-          longitude: airport.position.longitude,
-          sequence,
-          sourceRef: `${airport.provenance.datasetVersion}:${airport.icao}`,
-        })),
+        waypoints: currentRouteSnapshot,
       });
       await insertSavedFlightPlan(database, plan);
       setSaveTitle('');
@@ -196,6 +197,22 @@ export function PlanWorkspace() {
           onPress: () => void revisePlan(plan, { status: 'archived' }),
           style: 'destructive',
           text: 'Archive',
+        },
+      ],
+    );
+  };
+
+  const confirmReplaceRoute = (plan: SavedFlightPlan) => {
+    if (routeResolution.status !== 'resolved' || airports.length < 2) return;
+    Alert.alert(
+      'Replace saved route?',
+      `${plan.title} will use the current ${currentRouteSnapshot.map(({ identifier }) => identifier).join(' → ')} route. Its previous waypoint snapshot is not retained.`,
+      [
+        { style: 'cancel', text: 'Cancel' },
+        {
+          onPress: () => void revisePlan(plan, { waypoints: currentRouteSnapshot }),
+          style: 'destructive',
+          text: 'Replace route',
         },
       ],
     );
@@ -375,6 +392,14 @@ export function PlanWorkspace() {
                         setEditingPlanId(plan.id);
                         setEditingTitle(plan.title);
                       }}
+                    />
+                    <Action
+                      destructive
+                      disabled={
+                        saving || routeResolution.status !== 'resolved' || airports.length < 2
+                      }
+                      label="Replace route"
+                      onPress={() => confirmReplaceRoute(plan)}
                     />
                     <Action
                       destructive

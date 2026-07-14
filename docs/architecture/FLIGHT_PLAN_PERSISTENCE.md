@@ -35,6 +35,11 @@ normalized registration for display. Profile retrieval failures do not hide rout
 block unassigned saves; they clear any transient selection and expose the reference as
 unavailable.
 
+A saved draft route can be replaced only from a current route with at least two resolved
+waypoints. Native destructive confirmation names the replacement sequence and warns that the
+prior waypoint snapshot is not retained. The replacement is re-snapshotted with coordinates and
+source references and committed through the same next-revision compare-and-swap transaction.
+
 ## Repository semantics
 
 Creation inserts the flight and all ordered waypoints in one exclusive SQLite transaction with
@@ -56,8 +61,8 @@ geometry under the same identifier.
 
 ## Current limitations
 
-The editor can create, load, rename, and archive drafts. Route replacement, archived-plan
-restore, plan selection across the whole shell, revising an existing aircraft assignment,
+The editor can create, load, rename, replace routes, and archive drafts. Archived-plan restore,
+plan selection across the whole shell, revising an existing aircraft assignment,
 altitude/departure editing, assumption snapshots, outbox sync, richer conflict UI, and native
 process-death/visual/accessibility evidence remain open. The included waypoints are fictional
 and unverified, so saved routes are not suitable for navigation.
