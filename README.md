@@ -24,7 +24,10 @@ education, pre-flight planning, and non-certified situational awareness.
   text, source/retrieval time, uncertainty, and unsupported groups remain visible; the result is
   explicitly supplemental and not a complete briefing
 - App-private PDF import with post-copy SHA-256 verification and non-destructive storage audit,
-  immutable checklist completion/abandonment history, and a bounded offline logbook dashboard
+  verified copy sharing, immutable checklist completion/abandonment history, and a bounded
+  offline logbook dashboard with neutralized CSV export
+- Bounded GPX route snapshots, explicit weather-cache deletion, session-only range rings and
+  breadcrumb trail, and fail-closed relational SQLite snapshot reads
 
 ## Run
 

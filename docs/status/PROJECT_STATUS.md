@@ -33,7 +33,9 @@ performance data.
 - ESLint and Prettier: passed.
 - Unit tests: 343 passed across sixty-three test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,206 modules, 5.7 MB
-  uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
+  uncompressed bundle artifact). Android production JavaScript/Hermes export passed (2,298
+  modules, 5.9 MB uncompressed bundle artifact). Pinned CI now compiles both exports after the
+  audit/test gate; native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
   generic typed weight-and-balance core. Independent re-review keeps Phase 1 blocked.
