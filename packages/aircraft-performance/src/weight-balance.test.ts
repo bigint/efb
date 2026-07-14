@@ -109,5 +109,17 @@ describe('generic weight and balance', () => {
         stations: [{ arm: metres(1), id: 'unsafe\nstation', mass: kilograms(1) }],
       }),
     ).toThrow('identifier');
+    expect(() =>
+      calculateLoadingSummary({
+        maximumMass: kilograms(100_001),
+        stations: validInput.stations,
+      }),
+    ).toThrow('100,000');
+    expect(() =>
+      calculateLoadingSummary({
+        maximumMass: validInput.maximumMass,
+        stations: [{ arm: 101 as never, id: 'oversized-arm', mass: kilograms(1) }],
+      }),
+    ).toThrow('100 M');
   });
 });

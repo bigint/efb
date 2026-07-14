@@ -48,6 +48,8 @@ export interface LoadingSummary {
 }
 
 const MAXIMUM_LOADING_STATIONS = 100;
+const MAXIMUM_MASS_KILOGRAMS = 100_000;
+const MAXIMUM_ABSOLUTE_ARM_METRES = 100;
 const hasSafeStationIdentifier = (value: string): boolean =>
   value.length > 0 &&
   value.length <= 80 &&
@@ -131,8 +133,14 @@ export const assertValidCgEnvelope = (envelope: readonly EnvelopePoint[]): void 
   const keys = new Set<string>();
   let twiceArea = 0;
   envelope.forEach((point, index) => {
-    if (!Number.isFinite(point.arm) || !Number.isFinite(point.mass) || point.mass <= 0) {
-      throw new RangeError('CG envelope points require finite arms and positive masses');
+    if (
+      !Number.isFinite(point.arm) ||
+      Math.abs(point.arm) > MAXIMUM_ABSOLUTE_ARM_METRES ||
+      !Number.isFinite(point.mass) ||
+      point.mass <= 0 ||
+      point.mass > MAXIMUM_MASS_KILOGRAMS
+    ) {
+      throw new RangeError('CG envelope points are outside supported arm or mass bounds');
     }
     const key = `${point.arm}:${point.mass}`;
     if (keys.has(key)) throw new RangeError('CG envelope points must be unique');
@@ -169,8 +177,12 @@ export const assertValidCgEnvelope = (envelope: readonly EnvelopePoint[]): void 
 };
 
 export const calculateLoadingSummary = (input: LoadingSummaryInput): LoadingSummary => {
-  if (!Number.isFinite(input.maximumMass) || input.maximumMass <= 0) {
-    throw new RangeError('Maximum mass must be finite and positive');
+  if (
+    !Number.isFinite(input.maximumMass) ||
+    input.maximumMass <= 0 ||
+    input.maximumMass > MAXIMUM_MASS_KILOGRAMS
+  ) {
+    throw new RangeError('Maximum mass must be finite and from above 0 through 100,000 KG');
   }
   if (input.stations.length > MAXIMUM_LOADING_STATIONS) {
     throw new RangeError('Loading scenario exceeds the supported station limit');
@@ -182,11 +194,15 @@ export const calculateLoadingSummary = (input: LoadingSummaryInput): LoadingSumm
     }
     if (ids.has(station.id))
       throw new RangeError(`Duplicate station identifier: ${station.id}`);
-    if (!Number.isFinite(station.mass) || station.mass < 0) {
-      throw new RangeError(`Station ${station.id} mass must be finite and non-negative`);
+    if (
+      !Number.isFinite(station.mass) ||
+      station.mass < 0 ||
+      station.mass > MAXIMUM_MASS_KILOGRAMS
+    ) {
+      throw new RangeError(`Station ${station.id} mass must be from 0 through 100,000 KG`);
     }
-    if (!Number.isFinite(station.arm)) {
-      throw new RangeError(`Station ${station.id} arm must be finite`);
+    if (!Number.isFinite(station.arm) || Math.abs(station.arm) > MAXIMUM_ABSOLUTE_ARM_METRES) {
+      throw new RangeError(`Station ${station.id} arm must be from -100 through 100 M`);
     }
     ids.add(station.id);
     return { ...station, moment: kilogramMetres(station.mass * station.arm) };

@@ -39,6 +39,9 @@ export const estimateDensityAltitude = ({
   outsideAirTemperatureCelsius,
 }: DensityAltitudeInput): DensityAltitudeEstimate => {
   if (
+    !Number.isFinite(altimeterHectopascals) ||
+    !Number.isFinite(fieldElevationFeet) ||
+    !Number.isFinite(outsideAirTemperatureCelsius) ||
     altimeterHectopascals < 850 ||
     altimeterHectopascals > 1_085 ||
     fieldElevationFeet < -1_500 ||

@@ -50,6 +50,13 @@ describe('density altitude rule-of-thumb estimate', () => {
         outsideAirTemperatureCelsius: celsius(60),
       }),
     ).toEqual({ kind: 'unavailable', reason: 'approximation-out-of-range' });
+    expect(
+      estimateDensityAltitude({
+        altimeterHectopascals: Number.NaN as never,
+        fieldElevationFeet: feet(0),
+        outsideAirTemperatureCelsius: celsius(15),
+      }),
+    ).toEqual({ kind: 'unavailable', reason: 'input-out-of-range' });
   });
 
   it('increases exactly 120 feet per Celsius degree at fixed pressure altitude', () => {

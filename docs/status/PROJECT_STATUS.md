@@ -76,6 +76,8 @@ performance data.
   destination bearings before performing trigonometric calculations.
 - Wind-triangle and runway-component entrypoints likewise revalidate branded true directions and
   finite bounded speeds at runtime.
+- Generic loading and density-altitude entrypoints enforce finite physical-domain bounds even
+  when branded numeric types are forged at a runtime boundary.
 - Separate versioned user and control SQLite schemas now migrate before app render. Executable
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,
