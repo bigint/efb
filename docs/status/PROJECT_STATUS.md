@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 287 passed across fifty-one test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,186 modules, 5.6 MB
+- Unit tests: 290 passed across fifty-two test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,187 modules, 5.6 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -165,6 +165,10 @@ performance data.
 - Outside measure mode, map long-press now inspects one validated coordinate and reports nearest
   fictional-airport great-circle distance/true bearing. It explicitly withholds chart, terrain,
   airspace, obstacle, and weather inspection; native gesture QA remains open.
+- Optional session-only 5/10/20 NM ownship range rings use bounded spherical geometry from a
+  fresh position and split antimeridian crossings to avoid world-spanning lines. They disappear
+  on position loss and explicitly carry no accuracy, terrain, chart-scale, radar, or airspace
+  meaning; native rendering remains unverified.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated

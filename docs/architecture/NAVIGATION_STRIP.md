@@ -61,11 +61,18 @@ not hold a stale rotation. Returning to north-up removes automatic centring.
 
 ## Layers and legend
 
-An explicit session-only panel can hide the fictional airport markers, demonstration grid, and
-stored-route backdrop independently. It cannot hide ownship, active-leg, direct-to, measurement,
-or source-status evidence. The adjacent legend names every rendered line/symbol class and states
-that no chart, airspace, terrain, obstacle, navaid, or weather-overlay dataset is loaded. Layer
-switches expose checked accessibility state and keep the cockpit touch-target minimum.
+An explicit session-only panel can hide the fictional airport markers, demonstration grid,
+ownship-centred distance rings, and stored-route backdrop independently. It cannot hide ownship,
+active-leg, direct-to, measurement, or source-status evidence. The adjacent legend names every
+rendered line/symbol class and states that no chart, airspace, terrain, obstacle, navaid, or
+weather-overlay dataset is loaded. Layer switches expose checked accessibility state and keep
+the cockpit touch-target minimum.
+
+When a fresh position is available, the optional fine-dashed rings show fixed spherical 5, 10,
+and 20 NM radii around ownship. Geometry is regenerated from the validated sample, splits at the
+antimeridian instead of drawing across the world, and disappears with position loss. The rings
+are distance references only: they do not encode accuracy, chart scale, terrain clearance, radar
+range, or airspace.
 
 ## Transient measure tool
 

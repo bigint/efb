@@ -8,6 +8,7 @@ describe('map layer visibility', () => {
     expect(next).toEqual({
       airports: false,
       'demo-grid': true,
+      'range-rings': true,
       'route-backdrop': true,
     });
     expect(defaultMapLayerVisibility.airports).toBe(true);

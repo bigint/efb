@@ -32,6 +32,7 @@ import {
   type MapLayerId,
 } from '@/domain/map-layers';
 import { inspectMapPoint, type MapInspection } from '@/domain/map-inspection';
+import { buildMapRangeRings } from '@/domain/map-range-rings';
 import { useDevicePower } from '@/hooks/use-device-power';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
@@ -151,6 +152,13 @@ export function MapWorkspace() {
   };
   const ownship = position.kind === 'available' ? position.sample : null;
   const ownshipOrigin = position.kind === 'available' ? position.origin : null;
+  const rangeRingGeoJson =
+    ownship === null
+      ? { features: [], type: 'FeatureCollection' as const }
+      : buildMapRangeRings(
+          geospatialPosition(ownship.latitude, ownship.longitude),
+          [5, 10, 20],
+        );
   const positionUnit =
     position.kind === 'available'
       ? position.origin === 'device'
@@ -290,6 +298,20 @@ export function MapWorkspace() {
             <Layer
               id="active-leg-line"
               paint={{ 'line-color': theme.accent, 'line-width': 6 }}
+              type="line"
+            />
+          </GeoJSONSource>
+        )}
+        {layers['range-rings'] && ownship !== null && (
+          <GeoJSONSource data={rangeRingGeoJson} id="range-rings">
+            <Layer
+              id="range-ring-lines"
+              paint={{
+                'line-color': theme.primary,
+                'line-dasharray': [2, 2],
+                'line-opacity': 0.54,
+                'line-width': 1.5,
+              }}
               type="line"
             />
           </GeoJSONSource>
@@ -522,6 +544,7 @@ export function MapWorkspace() {
                 [
                   ['demo-grid', 'Demo grid'],
                   ['airports', 'Airports'],
+                  ['range-rings', 'Ownship rings'],
                   ['route-backdrop', 'Stored route'],
                 ] as const satisfies readonly (readonly [MapLayerId, string])[]
               ).map(([id, label]) => (
@@ -535,8 +558,8 @@ export function MapWorkspace() {
             </View>
             <Text style={[styles.legendCopy, { color: theme.secondary }]}>
               LEGEND · accent solid = active leg · attention dashed = direct-to · attention thin
-              = measure · outlined labels = fictional airports · directional/ring ownship =
-              course known/unknown
+              = measure · fine dashed = 5/10/20 NM ownship rings · outlined labels = fictional
+              airports · directional/ring ownship = course known/unknown
             </Text>
             <Text style={[styles.legendCopy, { color: theme.attention }]}>
               No chart, airspace, terrain, obstacle, navaid, or weather-overlay data loaded.
