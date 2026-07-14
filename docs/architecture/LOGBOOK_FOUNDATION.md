@@ -17,10 +17,12 @@ import workflows.
   chronology are validated before parameterized SQLite writes and again when rows are read.
 - A malformed row in the loaded recent page or an invalid numeric aggregate blocks the ledger;
   neither is silently omitted from the current view.
-- The Records list loads at most the newest 100 domain-validated entries and 2,000 attachment
-  relations. All-time additive totals are computed by constant-memory SQLite aggregates, then
-  checked as non-negative safe integers before display. The heading states exactly how many
-  recent rows are shown out of the aggregate entry count.
+- The Records list loads domain-validated entries in deterministic pages of at most 100 and at
+  most 2,000 attachment relations per page. A validated `(flight_date, created_at, id)` keyset
+  cursor retrieves older entries without offset drift, and each row/attachment page shares one
+  exclusive read transaction. All-time additive totals are computed separately by
+  constant-memory SQLite aggregates, then checked as non-negative safe integers before display.
+  The heading states exactly how many rows are loaded out of the aggregate entry count.
 - Aircraft and document reference libraries load independently from logbook entries. Reference
   corruption disables selection and clears ephemeral selections without hiding valid ledger
   rows. A selected aircraft UUID must still exist in the loaded library and its registration
@@ -42,6 +44,6 @@ separately, but must never rewrite recorded flight facts or turn an unevaluated 
 compliant claim by default.
 
 Native process-death, migration interruption, backup/export, accessibility, and physical-device
-tests remain required before this module can pass a release gate. Paging beyond the newest 100
-entries and semantic revalidation of older rows during browsing also remain open; aggregate
-totals do not imply regulatory or semantic validation of every historical row.
+tests remain required before this module can pass a release gate. Historical rows are
+semantically revalidated only when their page is browsed; aggregate totals do not imply
+regulatory or semantic validation of every historical row.

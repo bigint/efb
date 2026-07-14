@@ -16,7 +16,12 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { listAircraftProfiles } from '@/database/aircraft-profile-repository';
 import { listDocuments } from '@/database/document-repository';
-import { insertLogbookEntry, loadLogbookDashboard } from '@/database/logbook-repository';
+import {
+  insertLogbookEntry,
+  listLogbookEntriesPage,
+  loadLogbookDashboard,
+  type LogbookPageCursor,
+} from '@/database/logbook-repository';
 import { useDriftlineTheme } from '@/theme';
 
 import { Action, Card, PanelHeader, panelStyles } from './PanelPrimitives';
@@ -79,6 +84,9 @@ export function RecordsWorkspace() {
   const [documents, setDocuments] = useState<readonly DocumentRecord[]>([]);
   const [entries, setEntries] = useState<readonly LogbookEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [nextCursor, setNextCursor] = useState<LogbookPageCursor | null>(null);
+  const [pageError, setPageError] = useState<string | null>(null);
   const [referenceError, setReferenceError] = useState<string | null>(null);
   const [readBlocked, setReadBlocked] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -92,16 +100,34 @@ export function RecordsWorkspace() {
     try {
       const dashboard = await loadLogbookDashboard(database);
       setEntries(dashboard.entries);
+      setNextCursor(dashboard.nextCursor);
+      setPageError(null);
       setSummary(dashboard.summary);
       setError(null);
       setReadBlocked(false);
     } catch {
       setEntries([]);
+      setNextCursor(null);
       setSummary(emptySummary);
       setError('Logbook unavailable: stored records did not pass integrity checks.');
       setReadBlocked(true);
     }
   }, [database]);
+
+  const loadOlder = async () => {
+    if (nextCursor === null || loadingOlder) return;
+    setLoadingOlder(true);
+    try {
+      const page = await listLogbookEntriesPage(database, nextCursor);
+      setEntries((current) => [...current, ...page.entries]);
+      setNextCursor(page.nextCursor);
+      setPageError(null);
+    } catch {
+      setPageError('Older entries unavailable: that page failed integrity checks.');
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
 
   useEffect(() => {
     void reload();
@@ -300,6 +326,20 @@ export function RecordsWorkspace() {
       ) : (
         entries.map((entry) => <LogbookRow entry={entry} key={entry.id} />)
       )}
+      {nextCursor !== null && (
+        <View style={styles.loadOlder}>
+          <Action
+            disabled={loadingOlder}
+            label={loadingOlder ? 'Loading…' : 'Load older entries'}
+            onPress={() => void loadOlder()}
+          />
+        </View>
+      )}
+      {pageError !== null && (
+        <Text accessibilityRole="alert" style={[styles.error, { color: theme.danger }]}>
+          {pageError}
+        </Text>
+      )}
     </ScrollView>
   );
 }
@@ -412,6 +452,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
+  loadOlder: { alignItems: 'flex-start', marginTop: spacing.lg },
   multiline: { minHeight: 84, textAlignVertical: 'top' },
   notice: { fontFamily: typography.mono, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
   noticeCopy: { marginTop: spacing.xs },

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   decodeLogbookRows,
   decodeLogbookSummary,
+  listLogbookEntriesPage,
   type LogbookAggregateRow,
   type LogbookRow,
 } from './logbook-repository';
@@ -93,5 +94,81 @@ describe('logbook SQLite read boundary', () => {
     expect(() =>
       decodeLogbookSummary({ ...aggregate, flight_minutes: Number.MAX_SAFE_INTEGER + 1 }, []),
     ).toThrow('aggregate is invalid');
+  });
+
+  it('uses a validated exclusive keyset cursor for older pages', async () => {
+    const calls: { params: readonly unknown[]; sql: string }[] = [];
+    const database = {
+      getAllAsync: (sql: string, ...params: readonly unknown[]) => {
+        calls.push({ params, sql });
+        return Promise.resolve([]);
+      },
+      withExclusiveTransactionAsync: (operation: (transaction: unknown) => Promise<void>) =>
+        operation(database),
+    };
+    await expect(
+      listLogbookEntriesPage(database as never, {
+        createdAt: row.created_at,
+        flightDate: row.flight_date,
+        id: row.id,
+      }),
+    ).resolves.toEqual({ entries: [], nextCursor: null });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.sql).toContain('flight_date < ?');
+    expect(calls[0]?.params).toEqual([
+      row.flight_date,
+      row.flight_date,
+      row.created_at,
+      row.flight_date,
+      row.created_at,
+      row.id,
+    ]);
+  });
+
+  it('rejects malformed paging cursors before querying storage', async () => {
+    let queried = false;
+    const database = {
+      getAllAsync: () => {
+        queried = true;
+        return Promise.resolve([]);
+      },
+      withExclusiveTransactionAsync: (operation: (transaction: unknown) => Promise<void>) =>
+        operation(database),
+    };
+    await expect(
+      listLogbookEntriesPage(database as never, {
+        createdAt: row.created_at,
+        flightDate: '2026-99-99',
+        id: row.id,
+      }),
+    ).rejects.toThrow();
+    expect(queried).toBe(false);
+  });
+
+  it('returns a cursor after 100 validated rows and bounds the attachment lookup', async () => {
+    const rows = Array.from({ length: 101 }, (_, index) => ({
+      ...row,
+      id: `019f5f42-a146-7c00-861d-${String(999_999_999_999 - index).padStart(12, '0')}`,
+    }));
+    const calls: { params: readonly unknown[]; sql: string }[] = [];
+    const database = {
+      getAllAsync: (sql: string, ...params: readonly unknown[]) => {
+        calls.push({ params, sql });
+        return Promise.resolve(calls.length === 1 ? rows : []);
+      },
+      withExclusiveTransactionAsync: (operation: (transaction: unknown) => Promise<void>) =>
+        operation(database),
+    };
+    const page = await listLogbookEntriesPage(database as never, {
+      createdAt: '2026-07-15T10:00:00.000Z',
+      flightDate: '2026-07-15',
+      id: '019f5f42-a146-7c00-861d-999999999999',
+    });
+    expect(page.entries).toHaveLength(100);
+    expect(page.nextCursor?.id).toBe(rows[99]?.id);
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.sql).toContain('LIMIT 2001');
+    expect(calls[1]?.params).toHaveLength(100);
+    expect(calls[1]?.params).not.toContain(rows[100]?.id);
   });
 });

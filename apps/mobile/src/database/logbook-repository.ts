@@ -6,6 +6,7 @@ import {
   type LogbookTotals,
 } from '@driftline/aviation-domain';
 import type { SQLiteDatabase } from 'expo-sqlite';
+import { z } from 'zod';
 
 export interface LogbookRow {
   readonly aircraft_id: string | null;
@@ -53,8 +54,23 @@ export interface LogbookAggregateRow {
   readonly sic_minutes: number;
 }
 
-const RECENT_LOGBOOK_ENTRY_LIMIT = 100;
-const RECENT_ATTACHMENT_LIMIT = RECENT_LOGBOOK_ENTRY_LIMIT * 20;
+const LOGBOOK_PAGE_LIMIT = 100;
+const PAGE_ATTACHMENT_LIMIT = LOGBOOK_PAGE_LIMIT * 20;
+
+const logbookPageCursorSchema = z
+  .object({
+    createdAt: z.iso.datetime(),
+    flightDate: z.iso.date(),
+    id: z.uuid(),
+  })
+  .strict();
+
+export type LogbookPageCursor = z.infer<typeof logbookPageCursorSchema>;
+
+export interface LogbookPage {
+  readonly entries: readonly LogbookEntry[];
+  readonly nextCursor: LogbookPageCursor | null;
+}
 
 const requireAggregateInteger = (value: number, label: string): number => {
   if (!Number.isSafeInteger(value) || value < 0) {
@@ -128,31 +144,70 @@ const parseRow = (
     updatedAt: row.updated_at,
   });
 
-export const listLogbookEntries = async (
+const queryLogbookPage = async (
   database: SQLiteDatabase,
-): Promise<readonly LogbookEntry[]> => {
-  const [rows, attachmentRows] = await Promise.all([
-    database.getAllAsync<LogbookRow>(
-      `SELECT * FROM logbook_entries
-       ORDER BY flight_date DESC, created_at DESC, id DESC
-       LIMIT ${RECENT_LOGBOOK_ENTRY_LIMIT}`,
-    ),
-    database.getAllAsync<AttachmentRow>(
-      `SELECT attachment.entry_id, attachment.document_id
-       FROM logbook_entry_attachments AS attachment
-       INNER JOIN (
-         SELECT id FROM logbook_entries
-         ORDER BY flight_date DESC, created_at DESC, id DESC
-         LIMIT ${RECENT_LOGBOOK_ENTRY_LIMIT}
-       ) AS recent ON recent.id = attachment.entry_id
-       ORDER BY attachment.entry_id, attachment.document_id
-       LIMIT ${RECENT_ATTACHMENT_LIMIT + 1}`,
-    ),
-  ]);
-  if (attachmentRows.length > RECENT_ATTACHMENT_LIMIT) {
-    throw new Error('Recent logbook attachments exceed supported limits');
+  sourceCursor: LogbookPageCursor | null,
+): Promise<LogbookPage> => {
+  const cursor = sourceCursor === null ? null : logbookPageCursorSchema.parse(sourceCursor);
+  const rows = await database.getAllAsync<LogbookRow>(
+    `SELECT * FROM logbook_entries
+     ${
+       cursor === null
+         ? ''
+         : `WHERE flight_date < ?
+            OR (flight_date = ? AND created_at < ?)
+            OR (flight_date = ? AND created_at = ? AND id < ?)`
+     }
+     ORDER BY flight_date DESC, created_at DESC, id DESC
+     LIMIT ${LOGBOOK_PAGE_LIMIT + 1}`,
+    ...(cursor === null
+      ? []
+      : [
+          cursor.flightDate,
+          cursor.flightDate,
+          cursor.createdAt,
+          cursor.flightDate,
+          cursor.createdAt,
+          cursor.id,
+        ]),
+  );
+  const pageRows = rows.slice(0, LOGBOOK_PAGE_LIMIT);
+  const ids = pageRows.map(({ id }) => id);
+  const attachmentRows =
+    ids.length === 0
+      ? []
+      : await database.getAllAsync<AttachmentRow>(
+          `SELECT entry_id, document_id
+           FROM logbook_entry_attachments
+           WHERE entry_id IN (${ids.map(() => '?').join(', ')})
+           ORDER BY entry_id, document_id
+           LIMIT ${PAGE_ATTACHMENT_LIMIT + 1}`,
+          ...ids,
+        );
+  if (attachmentRows.length > PAGE_ATTACHMENT_LIMIT) {
+    throw new Error('Logbook page attachments exceed supported limits');
   }
-  return decodeLogbookRows(rows, attachmentRows);
+  const entries = decodeLogbookRows(pageRows, attachmentRows);
+  const last = entries.at(-1);
+  return {
+    entries,
+    nextCursor:
+      rows.length > LOGBOOK_PAGE_LIMIT && last !== undefined
+        ? { createdAt: last.createdAt, flightDate: last.flightDate, id: last.id }
+        : null,
+  };
+};
+
+export const listLogbookEntriesPage = async (
+  database: SQLiteDatabase,
+  cursor: LogbookPageCursor,
+): Promise<LogbookPage> => {
+  const result: { page?: LogbookPage } = {};
+  await database.withExclusiveTransactionAsync(async (transaction) => {
+    result.page = await queryLogbookPage(transaction, cursor);
+  });
+  if (result.page === undefined) throw new Error('Logbook page transaction produced no result');
+  return result.page;
 };
 
 export const loadLogbookSummary = async (database: SQLiteDatabase): Promise<LogbookSummary> => {
@@ -183,6 +238,7 @@ export const loadLogbookSummary = async (database: SQLiteDatabase): Promise<Logb
 
 export interface LogbookDashboard {
   readonly entries: readonly LogbookEntry[];
+  readonly nextCursor: LogbookPageCursor | null;
   readonly summary: LogbookSummary;
 }
 
@@ -191,11 +247,11 @@ export const loadLogbookDashboard = async (
 ): Promise<LogbookDashboard> => {
   const result: { dashboard?: LogbookDashboard } = {};
   await database.withExclusiveTransactionAsync(async (transaction) => {
-    const [entries, summary] = await Promise.all([
-      listLogbookEntries(transaction),
+    const [page, summary] = await Promise.all([
+      queryLogbookPage(transaction, null),
       loadLogbookSummary(transaction),
     ]);
-    result.dashboard = { entries, summary };
+    result.dashboard = { entries: page.entries, nextCursor: page.nextCursor, summary };
   });
   if (result.dashboard === undefined) {
     throw new Error('Logbook dashboard transaction produced no result');

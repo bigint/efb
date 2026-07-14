@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 220 passed across thirty-three test files.
+- Unit tests: 223 passed across thirty-three test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,163 modules, 5.5 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -56,14 +56,15 @@ performance data.
   pointers, manifests, file metadata, and recent attempts before reporting registry state, while
   explicitly stating that filesystem contents have not been rehashed.
 - A local Records workspace now writes validated logbook entries through parameterized SQLite
-  transactions and labels regulatory compliance as unevaluated. An atomic dashboard bounds the
-  rendered page to 100 validated recent entries and 2,000 attachment relations while validating
-  constant-memory all-time SQLite aggregates. Migration v2 preserves v1 rows and moves
-  attachments to relational references; a database failure stops the normal shell. Native
-  recovery and visual/accessibility QA remain open. Saved aircraft references and up to 20
-  document attachments are selectable; their libraries fail independently so corrupt reference
-  metadata does not hide valid entries. React Native Web is not a usable visual-QA surface
-  because the current MapLibre native module fails its web codegen boundary before render.
+  transactions and labels regulatory compliance as unevaluated. An atomic dashboard and
+  exclusive keyset pagination bound each rendered page to 100 validated entries and 2,000
+  attachment relations while validating constant-memory all-time SQLite aggregates. Migration v2
+  preserves v1 rows and moves attachments to relational references; a database failure stops the
+  normal shell. Native recovery and visual/accessibility QA remain open. Saved aircraft
+  references and up to 20 document attachments are selectable; their libraries fail
+  independently so corrupt reference metadata does not hide valid entries. React Native Web is
+  not a usable visual-QA surface because the current MapLibre native module fails its web
+  codegen boundary before render.
 - The Library now supports user-authored normal, abnormal, and emergency-labelled checklist
   templates without bundling aircraft procedures. Active runs retain immutable revision
   snapshots and use compare-and-swap state revisions for atomic completion updates. Templates
