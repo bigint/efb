@@ -24,6 +24,12 @@ The current Plan workspace saves resolved routes with at least two fictional dem
 waypoints as revision-one drafts. Planning wind assumptions are not saved and the UI does not
 claim otherwise.
 
+When a local aircraft is selected for a new draft and the constant-wind route resolves, Plan
+multiplies wind-adjusted ETE by that profile's entered litres-per-hour cruise burn. It compares
+the result with entered usable litres. This transient estimate is bounded to seven days and
+never adds or implies taxi, climb, descent, contingency, alternate, or reserve fuel. Invalid
+assumptions and missing aircraft remain unavailable rather than becoming zero consumption.
+
 Saved drafts can be renamed and archived. Each action creates exactly the next revision and uses
 the same compare-and-swap update boundary; a conflict reloads current storage before reporting
 the error. Archive requires native destructive confirmation, hides the record from the active

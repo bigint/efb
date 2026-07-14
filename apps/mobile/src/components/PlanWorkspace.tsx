@@ -15,6 +15,7 @@ import {
 } from '@driftline/aviation-domain';
 import { knots, trueDegrees } from '@driftline/data-contracts';
 import {
+  calculateCruiseFuelEstimate,
   calculateRoute,
   calculateWindAdjustedRoute,
   resolveRouteIdentifiers,
@@ -109,6 +110,15 @@ export function PlanWorkspace() {
         windSpeed: knots(assumptionValues[2] ?? Number.NaN),
       })
     : null;
+  const selectedPlanningAircraft =
+    selectedAircraftId === null
+      ? null
+      : (aircraft.find(({ id }) => id === selectedAircraftId) ?? null);
+  const fuelEstimate = calculateCruiseFuelEstimate({
+    estimatedMinutes: windAdjusted?.status === 'ready' ? windAdjusted.estimatedMinutes : null,
+    fuelBurnLitresPerHour: selectedPlanningAircraft?.planning.fuelBurnLitresPerHour ?? null,
+    usableFuelLitres: selectedPlanningAircraft?.planning.usableFuelLitres ?? null,
+  });
 
   const reloadSavedPlans = useCallback(async () => {
     try {
@@ -284,6 +294,14 @@ export function PlanWorkspace() {
             }
           />
           <Summary label="Legs" value={String(summary.legs.length)} />
+          <Summary
+            label="Cruise fuel"
+            value={
+              fuelEstimate.kind === 'ready'
+                ? `${fuelEstimate.requiredLitres.toFixed(1)} L`
+                : '—'
+            }
+          />
           <Summary
             label="State"
             value={
@@ -663,6 +681,34 @@ export function PlanWorkspace() {
           One manually entered wind is applied to every leg. No winds-aloft source, altitude,
           valid time, interpolation, climb, or descent model is configured.
         </Text>
+        <Text
+          accessibilityRole={
+            fuelEstimate.kind === 'ready' && !fuelEstimate.withinEnteredUsableFuel
+              ? 'alert'
+              : undefined
+          }
+          style={[
+            panelStyles.copy,
+            styles.assumptionCopy,
+            {
+              color:
+                fuelEstimate.kind === 'ready' && !fuelEstimate.withinEnteredUsableFuel
+                  ? theme.danger
+                  : theme.secondary,
+            },
+          ]}
+        >
+          {fuelEstimate.kind === 'ready'
+            ? `Cruise-only fuel ${fuelEstimate.requiredLitres.toFixed(1)} L versus ${fuelEstimate.usableFuelLitres.toFixed(1)} L entered usable · ${fuelEstimate.withinEnteredUsableFuel ? 'WITHIN ENTERED USABLE' : 'ABOVE ENTERED USABLE'}`
+            : fuelEstimate.reason === 'missing-aircraft'
+              ? 'Assign a saved aircraft above to compare cruise-only fuel with entered usable fuel.'
+              : 'Cruise-only fuel unavailable until route and wind assumptions resolve.'}
+        </Text>
+        <Text
+          style={[styles.assumptionWarning, styles.fuelWarning, { color: theme.attention }]}
+        >
+          NO TAXI · CLIMB · DESCENT · CONTINGENCY · ALTERNATE · RESERVE FUEL INCLUDED
+        </Text>
         {!assumptionsValid && (
           <Text accessibilityRole="alert" style={[styles.inputError, { color: theme.danger }]}>
             Enter TAS above 0 KT, wind direction from 0–359°T, and wind speed at or above 0 KT.
@@ -876,6 +922,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxl,
     marginTop: spacing.lg,
   },
+  fuelWarning: { marginTop: spacing.md },
   identifier: { fontFamily: 'Menlo', fontSize: 16, fontWeight: '800' },
   input: {
     borderRadius: radii.control,

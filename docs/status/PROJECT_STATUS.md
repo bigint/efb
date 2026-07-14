@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 274 passed across forty-six test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,181 modules, 5.6 MB
+- Unit tests: 276 passed across forty-seven test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,182 modules, 5.6 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -127,6 +127,10 @@ performance data.
   ephemeral waypoints can move up/down with every route edit clearing active-leg selection. MMKV
   no longer claims route durability; drag editing, a native date/time picker, and richer
   conflict UI remain open.
+- With a saved aircraft selected, Plan now derives a transient cruise-only litre estimate from
+  wind-adjusted ETE and entered fuel burn, then compares it with entered usable fuel. The UI
+  explicitly excludes taxi, climb, descent, contingency, alternate, and reserve fuel; scenario
+  persistence and full fuel planning remain open.
 - Plan now requires explicit transient active-leg selection; every route mutation clears it.
   With a fresh position, the map derives next distance, true bearing, signed cross-track,
   remaining distance, and groundspeed-based next/route ETE through a pure spherical calculator.
