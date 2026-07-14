@@ -2,8 +2,10 @@ declare const unitBrand: unique symbol;
 
 export type BrandedUnit<Name extends string> = number & { readonly [unitBrand]: Name };
 
+export type Celsius = BrandedUnit<'celsius'>;
 export type Degrees = BrandedUnit<'degrees'>;
 export type Feet = BrandedUnit<'feet'>;
+export type Hectopascals = BrandedUnit<'hectopascals'>;
 export type Kilograms = BrandedUnit<'kilograms'>;
 export type Knots = BrandedUnit<'knots'>;
 export type MagneticDegrees = BrandedUnit<'magnetic-degrees'>;
@@ -20,7 +22,10 @@ const requireFinite = (value: number, unit: string): number => {
 };
 
 export const degrees = (value: number): Degrees => requireFinite(value, 'Degrees') as Degrees;
+export const celsius = (value: number): Celsius => requireFinite(value, 'Celsius') as Celsius;
 export const feet = (value: number): Feet => requireFinite(value, 'Feet') as Feet;
+export const hectopascals = (value: number): Hectopascals =>
+  requireFinite(value, 'Hectopascals') as Hectopascals;
 export const kilograms = (value: number): Kilograms =>
   requireFinite(value, 'Kilograms') as Kilograms;
 export const knots = (value: number): Knots => requireFinite(value, 'Knots') as Knots;

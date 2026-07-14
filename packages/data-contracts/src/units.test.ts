@@ -1,7 +1,9 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import {
+  celsius,
   degrees,
+  hectopascals,
   metres,
   metresToNauticalMiles,
   magneticDegrees,
@@ -30,6 +32,8 @@ describe('typed unit conversions', () => {
 
   it('rejects non-finite values at the boundary', () => {
     expect(() => metres(Number.NaN)).toThrow(RangeError);
+    expect(() => celsius(Number.POSITIVE_INFINITY)).toThrow(RangeError);
+    expect(() => hectopascals(Number.NEGATIVE_INFINITY)).toThrow(RangeError);
   });
 
   it('enforces bounded true and magnetic references independently', () => {
