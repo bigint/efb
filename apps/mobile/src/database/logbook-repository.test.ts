@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { decodeLogbookRows, type LogbookRow } from './logbook-repository';
+import {
+  decodeLogbookRows,
+  decodeLogbookSummary,
+  type LogbookAggregateRow,
+  type LogbookRow,
+} from './logbook-repository';
 
 const row: LogbookRow = {
   aircraft_id: null,
@@ -48,5 +53,45 @@ describe('logbook SQLite read boundary', () => {
     expect(() => decodeLogbookRows([row], [attachment, attachment])).toThrow(
       'Attachment references must be unique',
     );
+  });
+
+  it('fails closed on an attachment outside the bounded recent page', () => {
+    expect(() =>
+      decodeLogbookRows(
+        [],
+        [
+          {
+            document_id: '019f5f42-a146-7c00-861d-7ad2313bbbd5',
+            entry_id: row.id,
+          },
+        ],
+      ),
+    ).toThrow('unavailable entry');
+  });
+
+  it('decodes validated all-time SQL aggregates without compliance claims', () => {
+    const aggregate: LogbookAggregateRow = {
+      block_minutes: 90,
+      day_minutes: 60,
+      dual_minutes: 0,
+      entry_count: 1,
+      flight_minutes: 75,
+      instructor_minutes: 0,
+      instrument_minutes: 10,
+      landings_day: 1,
+      landings_night: 0,
+      night_minutes: 15,
+      pic_minutes: 75,
+      sic_minutes: 0,
+    };
+    expect(decodeLogbookSummary(aggregate, [{ jurisdiction: 'UNCLASSIFIED' }])).toMatchObject({
+      entries: 1,
+      jurisdictions: ['UNCLASSIFIED'],
+      regulatoryComplianceEvaluated: false,
+      totals: { flightMinutes: 75, instrumentMinutes: 10 },
+    });
+    expect(() =>
+      decodeLogbookSummary({ ...aggregate, flight_minutes: Number.MAX_SAFE_INTEGER + 1 }, []),
+    ).toThrow('aggregate is invalid');
   });
 });

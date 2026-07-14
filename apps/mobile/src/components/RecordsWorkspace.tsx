@@ -2,9 +2,9 @@ import {
   formatLogbookDuration,
   logbookEntrySchema,
   parseLogbookDuration,
-  summariseLogbook,
   type DocumentRecord,
   type LogbookEntry,
+  type LogbookSummary,
 } from '@driftline/aviation-domain';
 import type { AircraftProfile } from '@driftline/aircraft-performance';
 import { radii, spacing, typography } from '@driftline/design-system';
@@ -16,7 +16,7 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { listAircraftProfiles } from '@/database/aircraft-profile-repository';
 import { listDocuments } from '@/database/document-repository';
-import { insertLogbookEntry, listLogbookEntries } from '@/database/logbook-repository';
+import { insertLogbookEntry, loadLogbookDashboard } from '@/database/logbook-repository';
 import { useDriftlineTheme } from '@/theme';
 
 import { Action, Card, PanelHeader, panelStyles } from './PanelPrimitives';
@@ -45,6 +45,25 @@ const defaults = (): LogbookForm => ({
   remarks: '',
 });
 
+const emptySummary: LogbookSummary = {
+  entries: 0,
+  jurisdictions: [],
+  regulatoryComplianceEvaluated: false,
+  totals: {
+    blockMinutes: 0,
+    dayMinutes: 0,
+    dualMinutes: 0,
+    flightMinutes: 0,
+    instructorMinutes: 0,
+    instrumentMinutes: 0,
+    landingsDay: 0,
+    landingsNight: 0,
+    nightMinutes: 0,
+    picMinutes: 0,
+    sicMinutes: 0,
+  },
+};
+
 function localDate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -63,6 +82,7 @@ export function RecordsWorkspace() {
   const [referenceError, setReferenceError] = useState<string | null>(null);
   const [readBlocked, setReadBlocked] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [summary, setSummary] = useState<LogbookSummary>(emptySummary);
   const [selectedAircraftId, setSelectedAircraftId] = useState<string | null>(null);
   const { control, handleSubmit, reset, setValue } = useForm<LogbookForm>({
     defaultValues: defaults(),
@@ -70,12 +90,14 @@ export function RecordsWorkspace() {
 
   const reload = useCallback(async () => {
     try {
-      const records = await listLogbookEntries(database);
-      setEntries(records);
+      const dashboard = await loadLogbookDashboard(database);
+      setEntries(dashboard.entries);
+      setSummary(dashboard.summary);
       setError(null);
       setReadBlocked(false);
     } catch {
       setEntries([]);
+      setSummary(emptySummary);
       setError('Logbook unavailable: stored records did not pass integrity checks.');
       setReadBlocked(true);
     }
@@ -164,8 +186,6 @@ export function RecordsWorkspace() {
       setSaving(false);
     }
   });
-
-  const summary = summariseLogbook(entries);
 
   return (
     <ScrollView
@@ -271,7 +291,7 @@ export function RecordsWorkspace() {
       </Card>
 
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
-        Recent entries
+        Recent entries · showing {entries.length} of {summary.entries}
       </Text>
       {entries.length === 0 ? (
         <Card>

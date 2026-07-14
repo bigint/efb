@@ -15,7 +15,12 @@ import workflows.
   other time category is individually bounded by flight time.
 - Calendar dates, UUIDs, station identifiers, timestamps, attachment uniqueness, and update
   chronology are validated before parameterized SQLite writes and again when rows are read.
-- A malformed stored row blocks the ledger and its totals; the UI does not silently omit it.
+- A malformed row in the loaded recent page or an invalid numeric aggregate blocks the ledger;
+  neither is silently omitted from the current view.
+- The Records list loads at most the newest 100 domain-validated entries and 2,000 attachment
+  relations. All-time additive totals are computed by constant-memory SQLite aggregates, then
+  checked as non-negative safe integers before display. The heading states exactly how many
+  recent rows are shown out of the aggregate entry count.
 - Aircraft and document reference libraries load independently from logbook entries. Reference
   corruption disables selection and clears ephemeral selections without hiding valid ledger
   rows. A selected aircraft UUID must still exist in the loaded library and its registration
@@ -37,4 +42,6 @@ separately, but must never rewrite recorded flight facts or turn an unevaluated 
 compliant claim by default.
 
 Native process-death, migration interruption, backup/export, accessibility, and physical-device
-tests remain required before this module can pass a release gate.
+tests remain required before this module can pass a release gate. Paging beyond the newest 100
+entries and semantic revalidation of older rows during browsing also remain open; aggregate
+totals do not imply regulatory or semantic validation of every historical row.
