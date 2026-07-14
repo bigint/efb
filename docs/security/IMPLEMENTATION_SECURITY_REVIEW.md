@@ -127,3 +127,24 @@ This report does not approve the future API, authentication, dataset update, doc
 weather, telemetry, or account deletion/export paths. Each introduces new trust boundaries and
 requires implementation review plus the negative tests defined in the threat model and test
 strategy.
+
+## Post-review expansion addendum · 2026-07-14
+
+The implementation now includes one fixed HTTPS NOAA/NWS AWC weather client, native PDF import
+and verified local-file sharing, CSV/GPX local-file sharing, and additional SQLite user records.
+A scoped delta review found:
+
+- no credential/private-key patterns in tracked implementation or the exported iOS Hermes
+  bundle;
+- no dynamic evaluation, WebView, arbitrary `openURL`, HTML injection, or post-message sink;
+- the only application HTTP endpoints are fixed AWC METAR/TAF constants, with a four-character
+  station allowlist encoded through `URLSearchParams`, a shared one-minute request gate,
+  timeout, response length/line/control checks, station rebinding checks, and local parsing;
+- document sharing reconstructs a UUID-owned app-private path and rechecks byte length, PDF
+  markers, and SHA-256 before opening the system sheet; CSV/GPX exports write bounded generated
+  text to app cache and verify readback; and
+- imported display names and user content never construct document storage paths.
+
+The delta review does not provide native malformed-file, share-extension, TLS interception,
+device backup, or physical-device evidence. Those remain release work, and the historical
+controls above describe the earlier candidate where noted.
