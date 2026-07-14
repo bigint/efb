@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 242 passed across thirty-seven test files.
+- Unit tests: 243 passed across thirty-seven test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,163 modules, 5.5 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -58,6 +58,9 @@ performance data.
 - User database migration v7 stores normalized airport favourites independently from replaceable
   aviation datasets. Places can add/remove and visibly mark favourites; a corrupt favourite
   collection disables only preference decoration while airport browsing remains available.
+- Airport dossiers expose runway geometry and full available provenance metadata, rank nearby
+  demonstration airports by validated great-circle distance, and explicitly mark frequencies,
+  services, fuel, notes, NOTAM, and sunrise/sunset as unavailable rather than inventing values.
 - A local Records workspace now writes validated logbook entries through parameterized SQLite
   transactions and labels regulatory compliance as unevaluated. An atomic dashboard and
   exclusive keyset pagination bound each rendered page to 100 validated entries and 2,000

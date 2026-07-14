@@ -3,7 +3,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { demoAirports, searchAirports } from '@driftline/aviation-domain';
+import { demoAirports, findNearbyAirports, searchAirports } from '@driftline/aviation-domain';
 import { classifyDataCurrency } from '@driftline/data-contracts';
 
 import { evaluatePosition } from '@/domain/position-source';
@@ -42,6 +42,7 @@ export function PlacesWorkspace() {
     selected === undefined
       ? null
       : calculateRelativePosition(evaluatedPosition, selected.position);
+  const nearby = selected === undefined ? [] : findNearbyAirports(demoAirports, selected, 5);
 
   const reloadFavourites = useCallback(async () => {
     try {
@@ -159,6 +160,12 @@ export function PlacesWorkspace() {
                 />
                 <Fact label="Source" value={selected.provenance.source} />
                 <Fact label="Dataset" value={selected.provenance.datasetVersion} />
+                <Fact label="Retrieved" value={selected.provenance.retrievedAt} />
+                <Fact
+                  label="Effective"
+                  value={selected.provenance.effectiveAt ?? 'NOT SUPPLIED'}
+                />
+                <Fact label="Expires" value={selected.provenance.expiresAt ?? 'NOT SUPPLIED'} />
                 <Fact label="Verification" value={selected.provenance.verificationStatus} />
                 <Fact label="Confidence" value={selected.provenance.confidence} />
                 <Fact label="Currency" value={currency ?? 'unknown'} />
@@ -226,6 +233,54 @@ export function PlacesWorkspace() {
                 </View>
               </Card>
             ))}
+            <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
+              Operational fields
+            </Text>
+            <Card>
+              <Text style={[styles.warning, { color: theme.attention }]}>
+                NOT PRESENT IN DEMONSTRATION DATASET
+              </Text>
+              <View style={styles.facts}>
+                <Fact label="Frequencies" value="NOT SUPPLIED" />
+                <Fact label="Services" value="NOT SUPPLIED" />
+                <Fact label="Fuel" value="NOT SUPPLIED" />
+                <Fact label="Operating notes" value="NOT SUPPLIED" />
+                <Fact label="Current NOTAM" value="NOT AVAILABLE" />
+                <Fact label="Sunrise / sunset" value="NOT CALCULATED" />
+              </View>
+              <Text
+                style={[panelStyles.copy, styles.unavailableCopy, { color: theme.secondary }]}
+              >
+                Absence is not evidence that a frequency, service, restriction, closure, or
+                daylight condition does not exist. Consult approved current sources.
+              </Text>
+            </Card>
+            <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
+              Nearby demonstration airports
+            </Text>
+            {nearby.length === 0 ? (
+              <Card>
+                <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+                  No other airports in the active fixture.
+                </Text>
+              </Card>
+            ) : (
+              nearby.map(({ airport, distanceNauticalMiles }) => (
+                <Card key={airport.icao}>
+                  <View style={panelStyles.row}>
+                    <View style={styles.routeCopy}>
+                      <Text style={[styles.runway, { color: theme.primary }]}>
+                        {airport.icao}
+                      </Text>
+                      <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+                        {airport.name} · {distanceNauticalMiles.toFixed(1)} NM GREAT-CIRCLE
+                      </Text>
+                    </View>
+                    <Action label="Open" onPress={() => selectAirport(airport.icao)} />
+                  </View>
+                </Card>
+              ))
+            )}
             <View style={styles.actions}>
               <Action
                 disabled={savingFavourite}
@@ -306,6 +361,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   section: { marginTop: spacing.xl },
+  unavailableCopy: { marginTop: spacing.md },
   warning: {
     fontFamily: typography.mono,
     fontSize: 10,

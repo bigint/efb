@@ -8,7 +8,7 @@ import {
   type Feet,
   type TrueDegrees,
 } from '@driftline/data-contracts';
-import { position, type Position } from '@driftline/geospatial';
+import { greatCircleDistance, position, type Position } from '@driftline/geospatial';
 
 const positionSchema = z
   .object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) })
@@ -121,4 +121,37 @@ export const searchAirports = (airports: readonly Airport[], query: string): Air
       const rightExact = right.icao === needle || right.iata === needle;
       return Number(rightExact) - Number(leftExact) || left.icao.localeCompare(right.icao);
     });
+};
+
+export interface NearbyAirport {
+  readonly airport: Airport;
+  readonly distanceNauticalMiles: number;
+}
+
+export const findNearbyAirports = (
+  airports: readonly Airport[],
+  origin: Airport,
+  limit = 5,
+): readonly NearbyAirport[] => {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
+    throw new RangeError('Nearby airport limit must be between 1 and 50');
+  }
+  const identifiers = new Set<string>();
+  for (const airport of airports) {
+    if (identifiers.has(airport.icao))
+      throw new Error('Nearby airport candidates must be unique');
+    identifiers.add(airport.icao);
+  }
+  return airports
+    .filter(({ icao }) => icao !== origin.icao)
+    .map((airport) => ({
+      airport,
+      distanceNauticalMiles: greatCircleDistance(origin.position, airport.position),
+    }))
+    .sort(
+      (left, right) =>
+        left.distanceNauticalMiles - right.distanceNauticalMiles ||
+        left.airport.icao.localeCompare(right.airport.icao),
+    )
+    .slice(0, limit);
 };

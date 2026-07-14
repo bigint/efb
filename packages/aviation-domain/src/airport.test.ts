@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { demoAirports } from './demo-airports';
-import { parseAirport, searchAirports } from './airport';
+import { findNearbyAirports, parseAirport, searchAirports } from './airport';
 
 describe('airport adapter boundary', () => {
   it('prioritises exact identifiers', () => {
@@ -71,5 +71,16 @@ describe('airport adapter boundary', () => {
         timezone: 'UTC',
       }),
     ).toThrow();
+  });
+
+  it('ranks nearby airports deterministically and excludes the origin', () => {
+    const origin = demoAirports[0];
+    if (origin === undefined) throw new Error('Missing origin fixture');
+    const nearby = findNearbyAirports(demoAirports, origin, 1);
+    expect(nearby).toHaveLength(1);
+    expect(nearby[0]?.airport.icao).not.toBe(origin.icao);
+    expect(nearby[0]?.distanceNauticalMiles).toBeGreaterThan(0);
+    expect(() => findNearbyAirports([origin, origin], origin)).toThrow('unique');
+    expect(() => findNearbyAirports([origin], origin, 0)).toThrow(RangeError);
   });
 });
