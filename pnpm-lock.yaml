@@ -43,6 +43,9 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@driftline/aircraft-performance':
+        specifier: workspace:*
+        version: link:../../packages/aircraft-performance
       '@driftline/aviation-domain':
         specifier: workspace:*
         version: link:../../packages/aviation-domain

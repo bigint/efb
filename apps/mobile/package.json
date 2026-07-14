@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@driftline/aircraft-performance": "workspace:*",
     "@driftline/aviation-domain": "workspace:*",
     "@driftline/data-contracts": "workspace:*",
     "@driftline/design-system": "workspace:*",
