@@ -105,6 +105,8 @@ performance data.
   duplicate parent rows before grouping relational items or completions.
 - Saved-flight reconstruction bounds plans/waypoints, rejects duplicate plan parents, and
   prevents control characters in persisted waypoint source references.
+- MMKV flight preferences require exact normalized airport identifiers; lowercase or
+  control-bearing restored selections fail back to the safe System workspace state.
 - Separate versioned user and control SQLite schemas now migrate before app render. Executable
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,

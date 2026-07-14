@@ -74,6 +74,8 @@ describe('persisted flight recovery', () => {
   it.each([
     { ...validState, routeIdentifiers: ['DVL1', 'DVL1'] },
     { ...validState, routeIdentifiers: [''] },
+    { ...validState, selectedAirport: 'dvl1' },
+    { ...validState, selectedAirport: 'DVL1\n' },
     { ...validState, workspace: 'unknown' },
     { ...validState, unexpected: true },
   ])('fails closed for invalid state %#', (value) => {

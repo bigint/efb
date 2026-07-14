@@ -35,6 +35,8 @@ export const safePersistedFlightState: PersistedFlightState = {
   workspace: 'system',
 };
 
+const persistedAirportIdentifierSchema = z.string().regex(/^[A-Z0-9-]{1,16}$/u);
+
 const persistedFlightSchema = z
   .object({
     positionScenario: z.discriminatedUnion('kind', [
@@ -43,14 +45,14 @@ const persistedFlightSchema = z
       z.object({ gpsAvailable: z.boolean(), kind: z.literal('simulated') }).strict(),
     ]),
     routeIdentifiers: z
-      .array(z.string().trim().min(1).max(16))
+      .array(persistedAirportIdentifierSchema)
       .max(100)
       .refine((identifiers) => new Set(identifiers).size === identifiers.length, {
         message: 'Persisted route identifiers must be unique',
       })
       .optional()
       .default([]),
-    selectedAirport: z.string().trim().min(1).max(16).nullable(),
+    selectedAirport: persistedAirportIdentifierSchema.nullable(),
     simulationProfile: simulationProfileSchema.optional().default(defaultSimulationProfile),
     workspace: workspaceSchema,
   })
