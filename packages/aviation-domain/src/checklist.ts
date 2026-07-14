@@ -50,6 +50,7 @@ export type ChecklistTemplate = z.infer<typeof checklistTemplateSchema>;
 
 export const checklistRunSchema = z
   .object({
+    abandonedAt: z.iso.datetime().nullable(),
     completedAt: z.iso.datetime().nullable(),
     completedSequences: z.array(z.number().int().min(0).max(99)).max(100),
     id: z.uuid(),
@@ -84,11 +85,18 @@ export const checklistRunSchema = z
       });
     }
     const isComplete = run.completedSequences.length === run.itemCount;
-    if (isComplete !== (run.completedAt !== null)) {
+    if (isComplete !== (run.completedAt !== null) || (run.abandonedAt !== null && isComplete)) {
       context.addIssue({
         code: 'custom',
-        message: 'Checklist completion timestamp must match completion state',
+        message: 'Checklist terminal state must match completion state',
         path: ['completedAt'],
+      });
+    }
+    if (run.completedAt !== null && run.abandonedAt !== null) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Checklist run cannot be both completed and abandoned',
+        path: ['abandonedAt'],
       });
     }
     if (run.completedAt !== null && Date.parse(run.completedAt) < Date.parse(run.startedAt)) {
@@ -96,6 +104,13 @@ export const checklistRunSchema = z
         code: 'custom',
         message: 'Checklist completion cannot precede its start',
         path: ['completedAt'],
+      });
+    }
+    if (run.abandonedAt !== null && Date.parse(run.abandonedAt) < Date.parse(run.startedAt)) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Checklist abandonment cannot precede its start',
+        path: ['abandonedAt'],
       });
     }
   });
@@ -109,6 +124,7 @@ export const startChecklistRun = (
 ): ChecklistRun => {
   const template = checklistTemplateSchema.parse(templateSource);
   return checklistRunSchema.parse({
+    abandonedAt: null,
     completedAt: null,
     completedSequences: [],
     id,
@@ -137,8 +153,8 @@ export const setChecklistItemCompleted = (
   ) {
     throw new Error('Checklist change time is invalid');
   }
-  if (run.completedAt !== null && !completed) {
-    throw new Error('A completed checklist run is immutable');
+  if (run.completedAt !== null || run.abandonedAt !== null) {
+    throw new Error('A terminal checklist run is immutable');
   }
   const sequences = new Set(run.completedSequences);
   if (completed) sequences.add(sequence);
@@ -148,6 +164,27 @@ export const setChecklistItemCompleted = (
     ...run,
     completedAt: completedSequences.length === run.itemCount ? changedAt : null,
     completedSequences,
+    stateRevision: run.stateRevision + 1,
+  });
+};
+
+export const abandonChecklistRun = (
+  source: ChecklistRun,
+  abandonedAt: string,
+): ChecklistRun => {
+  const run = checklistRunSchema.parse(source);
+  if (run.completedAt !== null || run.abandonedAt !== null) {
+    throw new Error('A terminal checklist run is immutable');
+  }
+  if (
+    !Number.isFinite(Date.parse(abandonedAt)) ||
+    Date.parse(abandonedAt) < Date.parse(run.startedAt)
+  ) {
+    throw new Error('Checklist abandonment time is invalid');
+  }
+  return checklistRunSchema.parse({
+    ...run,
+    abandonedAt,
     stateRevision: run.stateRevision + 1,
   });
 };

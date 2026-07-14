@@ -18,13 +18,15 @@ application:
   schema.
 - Referential and numeric constraints live in SQLite as a final integrity boundary; domain
   validation remains required before every write.
+- A partial unique index permits at most one checklist run with neither a completion nor an
+  abandonment timestamp, protecting the one-open-run rule across writers.
 - Imported documents remain local files. SQLite stores only metadata, integrity digests and
   bookmarks.
 - Dataset authority cannot be removed by deleting user content, and user records never enter a
   dataset-generation transaction.
 
-The current route sandbox remains a non-operational MMKV preference while repository adapters
-are built. It must not be treated as the durable flight record.
+Saved flight drafts and ordered waypoint snapshots are durable user records. The active unsaved
+route editor remains ephemeral and must not be treated as a saved flight.
 
 This follows Expo's documented `SQLiteProvider` initialization and migration pattern. Native
 device validation remains required before Phase 1 can pass.

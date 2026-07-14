@@ -1,4 +1,5 @@
 import {
+  abandonChecklistRun,
   checklistTemplateSchema,
   setChecklistItemCompleted,
   type ChecklistCategory,
@@ -11,13 +12,22 @@ import { randomUUID } from 'expo-crypto';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import {
   createChecklistRun,
   insertChecklistTemplate,
   listChecklistTemplates,
-  listRecentCompletedChecklistRuns,
+  listRecentTerminalChecklistRuns,
   loadLatestOpenChecklistRun,
   persistChecklistRunTransition,
 } from '@/database/checklist-repository';
@@ -86,7 +96,7 @@ export function LibraryWorkspace() {
 
   const reloadHistory = useCallback(async () => {
     try {
-      setHistory(await listRecentCompletedChecklistRuns(database));
+      setHistory(await listRecentTerminalChecklistRuns(database));
       setHistoryError(null);
     } catch {
       setHistory([]);
@@ -174,7 +184,8 @@ export function LibraryWorkspace() {
   };
 
   const toggle = async (sequence: number) => {
-    if (activeRun === null || activeRun.completedAt !== null) return;
+    if (activeRun === null || activeRun.completedAt !== null || activeRun.abandonedAt !== null)
+      return;
     setSaving(true);
     const changedAt = new Date().toISOString();
     try {
@@ -190,6 +201,40 @@ export function LibraryWorkspace() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const abandonActiveRun = async () => {
+    if (activeRun === null) return;
+    setSaving(true);
+    const changedAt = new Date().toISOString();
+    try {
+      const next = abandonChecklistRun(activeRun, changedAt);
+      await persistChecklistRunTransition(database, activeRun, next, changedAt);
+      setActiveRun(null);
+      setError(null);
+      await reloadHistory();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to abandon checklist.');
+      await reload();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmAbandon = () => {
+    if (activeRun === null) return;
+    Alert.alert(
+      'Abandon active checklist?',
+      `${activeRun.templateSnapshot.title} will be locked as incomplete and retained in history.`,
+      [
+        { style: 'cancel', text: 'Cancel' },
+        {
+          onPress: () => void abandonActiveRun(),
+          style: 'destructive',
+          text: 'Abandon',
+        },
+      ],
+    );
   };
 
   return (
@@ -215,20 +260,21 @@ export function LibraryWorkspace() {
       {activeRun !== null && (
         <ActiveChecklist
           disabled={saving}
+          onAbandon={confirmAbandon}
           onToggle={(sequence) => void toggle(sequence)}
           run={activeRun}
         />
       )}
 
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
-        Recent completed runs
+        Recent terminal runs
       </Text>
       {historyError !== null && (
         <Text style={[styles.error, { color: theme.danger }]}>{historyError}</Text>
       )}
       {history.length === 0 && historyError === null ? (
         <Card>
-          <Text style={[panelStyles.copy, { color: theme.secondary }]}>No completed runs.</Text>
+          <Text style={[panelStyles.copy, { color: theme.secondary }]}>No terminal runs.</Text>
         </Card>
       ) : (
         history.map((run) => (
@@ -241,8 +287,10 @@ export function LibraryWorkspace() {
               {run.itemCount} items
             </Text>
             <Text style={[styles.historyMeta, { color: theme.secondary }]}>
-              LOCKED SNAPSHOT · REV {run.templateRevision} ·{' '}
-              {new Date(run.completedAt ?? run.startedAt).toLocaleString()}
+              {run.abandonedAt === null ? 'COMPLETED' : 'ABANDONED'} ·{' '}
+              {run.completedSequences.length}/{run.itemCount} ITEMS · LOCKED SNAPSHOT · REV{' '}
+              {run.templateRevision} ·{' '}
+              {new Date(run.completedAt ?? run.abandonedAt ?? run.startedAt).toLocaleString()}
             </Text>
           </View>
         ))
@@ -398,10 +446,12 @@ export function LibraryWorkspace() {
 
 function ActiveChecklist({
   disabled,
+  onAbandon,
   onToggle,
   run,
 }: {
   readonly disabled: boolean;
+  readonly onAbandon: () => void;
   readonly onToggle: (sequence: number) => void;
   readonly run: ChecklistRun;
 }) {
@@ -454,6 +504,11 @@ function ActiveChecklist({
           );
         })}
       </View>
+      {!complete && (
+        <View style={styles.abandonAction}>
+          <Action destructive disabled={disabled} label="Abandon run" onPress={onAbandon} />
+        </View>
+      )}
     </View>
   );
 }
@@ -502,6 +557,7 @@ function FormField({
 }
 
 const styles = StyleSheet.create({
+  abandonAction: { alignItems: 'flex-start', marginTop: spacing.lg },
   active: {
     borderRadius: radii.panel,
     borderWidth: 1,

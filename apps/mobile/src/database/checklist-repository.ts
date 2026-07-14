@@ -29,6 +29,7 @@ export interface ChecklistItemRow {
 }
 
 interface ChecklistRunRow {
+  readonly abandoned_at: string | null;
   readonly completed_at: string | null;
   readonly id: string;
   readonly item_count: number;
@@ -116,6 +117,7 @@ export const decodeChecklistRun = (
     throw new Error('Stored checklist snapshot is not valid JSON');
   }
   return checklistRunSchema.parse({
+    abandonedAt: row.abandoned_at,
     completedAt: row.completed_at,
     completedSequences: completionRows.map(({ item_sequence }) => item_sequence),
     id: row.id,
@@ -194,20 +196,22 @@ export const createChecklistRun = async (
   const run = startChecklistRun(template, id, startedAt);
   await database.withExclusiveTransactionAsync(async (transaction) => {
     const existing = await transaction.getFirstAsync<{ readonly id: string }>(
-      `SELECT id FROM checklist_runs WHERE completed_at IS NULL LIMIT 1`,
+      `SELECT id FROM checklist_runs
+       WHERE completed_at IS NULL AND abandoned_at IS NULL LIMIT 1`,
     );
     if (existing !== null)
-      throw new Error('Complete the active checklist before starting another');
+      throw new Error('Complete or abandon the active checklist before starting another');
     await transaction.runAsync(
       `INSERT INTO checklist_runs (
-        id, template_id, template_revision, started_at, completed_at,
+        id, template_id, template_revision, started_at, completed_at, abandoned_at,
         item_count, template_snapshot_json, state_revision
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       run.id,
       run.templateId,
       run.templateRevision,
       run.startedAt,
       run.completedAt,
+      run.abandonedAt,
       run.itemCount,
       JSON.stringify(run.templateSnapshot),
       run.stateRevision,
@@ -220,9 +224,11 @@ export const loadLatestOpenChecklistRun = async (
   database: SQLiteDatabase,
 ): Promise<ChecklistRun | null> => {
   const row = await database.getFirstAsync<ChecklistRunRow>(
-    `SELECT id, template_id, template_revision, started_at, completed_at,
+    `SELECT id, template_id, template_revision, started_at, completed_at, abandoned_at,
       item_count, template_snapshot_json, state_revision
-     FROM checklist_runs WHERE completed_at IS NULL ORDER BY started_at DESC LIMIT 1`,
+     FROM checklist_runs
+     WHERE completed_at IS NULL AND abandoned_at IS NULL
+     ORDER BY started_at DESC LIMIT 1`,
   );
   if (row === null) return null;
   const completions = await database.getAllAsync<ChecklistCompletionRow>(
@@ -233,7 +239,7 @@ export const loadLatestOpenChecklistRun = async (
   return decodeChecklistRun(row, completions);
 };
 
-export const listRecentCompletedChecklistRuns = async (
+export const listRecentTerminalChecklistRuns = async (
   database: SQLiteDatabase,
   limit = 20,
 ): Promise<readonly ChecklistRun[]> => {
@@ -243,11 +249,11 @@ export const listRecentCompletedChecklistRuns = async (
   let decoded: readonly ChecklistRun[] = [];
   await database.withExclusiveTransactionAsync(async (transaction) => {
     const rows = await transaction.getAllAsync<ChecklistRunRow>(
-      `SELECT id, template_id, template_revision, started_at, completed_at,
+      `SELECT id, template_id, template_revision, started_at, completed_at, abandoned_at,
         item_count, template_snapshot_json, state_revision
        FROM checklist_runs
-       WHERE completed_at IS NOT NULL
-       ORDER BY completed_at DESC, id DESC
+       WHERE completed_at IS NOT NULL OR abandoned_at IS NOT NULL
+       ORDER BY COALESCE(completed_at, abandoned_at) DESC, id DESC
        LIMIT ?`,
       limit,
     );
@@ -260,8 +266,8 @@ export const listRecentCompletedChecklistRuns = async (
        FROM checklist_completions
        WHERE run_id IN (
          SELECT id FROM checklist_runs
-         WHERE completed_at IS NOT NULL
-         ORDER BY completed_at DESC, id DESC
+         WHERE completed_at IS NOT NULL OR abandoned_at IS NOT NULL
+         ORDER BY COALESCE(completed_at, abandoned_at) DESC, id DESC
          LIMIT ?
        )
        ORDER BY run_id, item_sequence`,
@@ -284,9 +290,31 @@ export const persistChecklistRunTransition = async (
     before.id !== after.id ||
     before.templateId !== after.templateId ||
     before.templateRevision !== after.templateRevision ||
+    before.itemCount !== after.itemCount ||
+    before.startedAt !== after.startedAt ||
+    JSON.stringify(before.templateSnapshot) !== JSON.stringify(after.templateSnapshot) ||
     after.stateRevision !== before.stateRevision + 1
   ) {
     throw new Error('Checklist transition does not follow the stored revision');
+  }
+  if (before.completedAt !== null || before.abandonedAt !== null) {
+    throw new Error('A terminal checklist run is immutable');
+  }
+  const beforeSequences = new Set(before.completedSequences);
+  const afterSequences = new Set(after.completedSequences);
+  const changedSequences = new Set(
+    [...beforeSequences, ...afterSequences].filter(
+      (sequence) => beforeSequences.has(sequence) !== afterSequences.has(sequence),
+    ),
+  );
+  const isAbandonment = after.abandonedAt !== null;
+  if (
+    (isAbandonment && changedSequences.size !== 0) ||
+    (!isAbandonment && changedSequences.size !== 1) ||
+    (after.completedAt !== null && after.completedAt !== changedAt) ||
+    (after.abandonedAt !== null && after.abandonedAt !== changedAt)
+  ) {
+    throw new Error('Checklist transition changes an unsupported state');
   }
   if (
     !Number.isFinite(Date.parse(changedAt)) ||
@@ -296,16 +324,15 @@ export const persistChecklistRunTransition = async (
   }
   await database.withExclusiveTransactionAsync(async (transaction) => {
     const result = await transaction.runAsync(
-      `UPDATE checklist_runs SET completed_at = ?, state_revision = ?
+      `UPDATE checklist_runs SET completed_at = ?, abandoned_at = ?, state_revision = ?
        WHERE id = ? AND state_revision = ?`,
       after.completedAt,
+      after.abandonedAt,
       after.stateRevision,
       after.id,
       before.stateRevision,
     );
     if (result.changes !== 1) throw new Error('Checklist completion state changed elsewhere');
-    const beforeSequences = new Set(before.completedSequences);
-    const afterSequences = new Set(after.completedSequences);
     for (const sequence of beforeSequences) {
       if (!afterSequences.has(sequence)) {
         await transaction.runAsync(

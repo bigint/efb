@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  abandonChecklistRun,
   checklistTemplateSchema,
   setChecklistItemCompleted,
   startChecklistRun,
@@ -51,6 +52,7 @@ describe('checklist domain', () => {
         '2026-07-14T11:00:00.000Z',
       ),
     ).toMatchObject({
+      abandonedAt: null,
       completedAt: null,
       completedSequences: [],
       itemCount: 2,
@@ -77,6 +79,26 @@ describe('checklist domain', () => {
     expect(() => setChecklistItemCompleted(run, 0, false, '2026-07-14T11:03:00.000Z')).toThrow(
       'immutable',
     );
+  });
+
+  it('abandons an incomplete run as a distinct immutable terminal state', () => {
+    let run = startChecklistRun(
+      template(),
+      '019f5f42-a146-7c00-861d-7ad2313bbbd5',
+      '2026-07-14T11:00:00.000Z',
+    );
+    run = setChecklistItemCompleted(run, 0, true, '2026-07-14T11:01:00.000Z');
+    run = abandonChecklistRun(run, '2026-07-14T11:02:00.000Z');
+    expect(run).toMatchObject({
+      abandonedAt: '2026-07-14T11:02:00.000Z',
+      completedAt: null,
+      completedSequences: [0],
+      stateRevision: 3,
+    });
+    expect(() => setChecklistItemCompleted(run, 1, true, '2026-07-14T11:03:00.000Z')).toThrow(
+      'immutable',
+    );
+    expect(() => abandonChecklistRun(run, '2026-07-14T11:03:00.000Z')).toThrow('immutable');
   });
 
   it('rejects out-of-range items and chronology reversal', () => {

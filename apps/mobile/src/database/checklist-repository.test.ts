@@ -50,6 +50,7 @@ describe('checklist SQLite read boundary', () => {
     expect(() =>
       decodeChecklistRun(
         {
+          abandoned_at: null,
           completed_at: null,
           id: '019f5f42-a146-7c00-861d-7ad2313bbbd5',
           item_count: 1,
@@ -81,6 +82,7 @@ describe('checklist SQLite read boundary', () => {
       verificationStatus: templateRow.verification_status,
     } as const;
     const completed = {
+      abandoned_at: null,
       completed_at: '2026-07-14T11:01:00.000Z',
       id: '019f5f42-a146-7c00-861d-7ad2313bbbd5',
       item_count: 1,

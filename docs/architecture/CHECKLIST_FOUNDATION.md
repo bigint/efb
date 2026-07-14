@@ -18,25 +18,31 @@ normal, abnormal, or emergency procedure content. Every template and active run 
   count. Later template changes cannot alter the procedure a historical run displayed.
 - Completion sequences are unique and in range. A completion time exists only when all snapshot
   items are checked, cannot precede start, and locks the completed run.
+- An incomplete run may be explicitly abandoned after native destructive confirmation. Its
+  abandonment timestamp, checked-item subset, snapshot, and revision remain immutable in
+  terminal history; it is never relabelled complete or deleted.
 - Each toggle increments a state revision. SQLite persists it with a compare-and-swap update;
   stale views roll back and reload instead of overwriting newer completion state.
 - Changed completion rows are inserted or removed inside the same exclusive transaction while
   unchanged item timestamps are preserved.
-- The Library exposes at most 20 recently completed runs as read-only locked snapshots. History
-  rows and their relational completions are read in one exclusive transaction, decoded through
-  the same domain boundary as an active run, and a malformed historical row disables only the
-  history view rather than hiding otherwise valid templates or the open run.
+- The Library exposes at most 20 recent completed or abandoned runs as read-only locked
+  snapshots. History rows and their relational completions are read in one exclusive
+  transaction, decoded through the same domain boundary as an active run, and a malformed
+  historical row disables only the history view rather than hiding otherwise valid templates or
+  the open run.
 
 ## Migration
 
 User database migration v3 adds category, source, verification, aircraft label, run item count,
 snapshot JSON, and state revision to the original checklist tables. Legacy templates are mapped
 conservatively to user-authored/unverified; legacy runs receive deterministic ordered snapshots.
-Executable migration tests verify the preserved snapshot.
+Migration v6 adds the abandonment timestamp and a partial unique expression index that permits
+at most one run with neither completion nor abandonment. Executable migration tests verify the
+preserved snapshot and the one-open-run constraint.
 
 ## Open release work
 
-Physical-device process-death and concurrent-view tests, template revision/edit UI, explicit run
-abandonment, handling a later-renamed aircraft profile, detailed history inspection,
+Physical-device process-death and concurrent-view tests, template revision/edit UI, recovery
+during abandonment, handling a later-renamed aircraft profile, detailed history inspection,
 export/backup, VoiceOver sequencing, Dynamic Type, and comparison against approved aircraft
 material remain open. A saved checklist is not approved merely because every box is checked.

@@ -1,4 +1,4 @@
-export const USER_DATABASE_VERSION = 5;
+export const USER_DATABASE_VERSION = 6;
 
 export interface UserDatabaseMigration {
   readonly statements: readonly string[];
@@ -277,6 +277,15 @@ export const userDatabaseMigrations: readonly UserDatabaseMigration[] = [
         CHECK (verification_status = 'unverified')`,
       `ALTER TABLE aircraft_profiles ADD COLUMN revision INTEGER NOT NULL DEFAULT 1
         CHECK (revision >= 1)`,
+    ],
+  },
+  {
+    version: 6,
+    statements: [
+      `ALTER TABLE checklist_runs ADD COLUMN abandoned_at TEXT`,
+      `CREATE UNIQUE INDEX checklist_one_open_run_idx
+        ON checklist_runs ((1))
+        WHERE completed_at IS NULL AND abandoned_at IS NULL`,
     ],
   },
 ] as const;

@@ -89,6 +89,74 @@ describe('user database migration plan', () => {
     database.close();
   });
 
+  it('enforces one non-terminal checklist run after the abandonment migration', () => {
+    const database = new DatabaseSync(':memory:');
+    database.exec('PRAGMA foreign_keys = ON');
+    for (const migration of userDatabaseMigrations) {
+      for (const statement of migration.statements) database.exec(statement);
+    }
+    database
+      .prepare(
+        `INSERT INTO checklist_templates (
+          id, created_at, updated_at, title, phase, revision, category,
+          source, verification_status, aircraft_label
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        '019f5f42-a146-7c00-861d-7ad2313bbbd4',
+        '2026-07-14T10:00:00.000Z',
+        '2026-07-14T10:00:00.000Z',
+        'Fixture',
+        'normal',
+        1,
+        'normal',
+        'user-authored',
+        'unverified',
+        'N123DL',
+      );
+    const insertRun = database.prepare(
+      `INSERT INTO checklist_runs (
+        id, template_id, template_revision, started_at, item_count,
+        template_snapshot_json, state_revision
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    );
+    insertRun.run(
+      '019f5f42-a146-7c00-861d-7ad2313bbbd5',
+      '019f5f42-a146-7c00-861d-7ad2313bbbd4',
+      1,
+      '2026-07-14T11:00:00.000Z',
+      1,
+      '{}',
+      1,
+    );
+    expect(() =>
+      insertRun.run(
+        '019f5f42-a146-7c00-861d-7ad2313bbbd6',
+        '019f5f42-a146-7c00-861d-7ad2313bbbd4',
+        1,
+        '2026-07-14T11:01:00.000Z',
+        1,
+        '{}',
+        1,
+      ),
+    ).toThrow(/UNIQUE constraint failed/u);
+    database
+      .prepare(`UPDATE checklist_runs SET abandoned_at = ? WHERE id = ?`)
+      .run('2026-07-14T11:02:00.000Z', '019f5f42-a146-7c00-861d-7ad2313bbbd5');
+    expect(() =>
+      insertRun.run(
+        '019f5f42-a146-7c00-861d-7ad2313bbbd6',
+        '019f5f42-a146-7c00-861d-7ad2313bbbd4',
+        1,
+        '2026-07-14T11:03:00.000Z',
+        1,
+        '{}',
+        1,
+      ),
+    ).not.toThrow();
+    database.close();
+  });
+
   it('preserves v1 logbook rows while moving dataset authority out of the user database', () => {
     const database = new DatabaseSync(':memory:');
     database.exec('PRAGMA foreign_keys = ON');
