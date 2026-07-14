@@ -22,7 +22,7 @@ existing web build is not a validation surface.
 - Requests send a Driftline user-agent and request plain text.
 - One client instance enforces at least 60 seconds between attempts across stations and across
   METAR/TAF, including failed attempts, matching AWC's per-thread guidance.
-- An abort signal limits a request to 10 seconds.
+- An abort signal limits the complete headers-and-body request to 10 seconds.
 - HTTP 204, 429, other provider errors, timeouts, and invalid clocks remain distinct failures.
 
 ## Response boundary

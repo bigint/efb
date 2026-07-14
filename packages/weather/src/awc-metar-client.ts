@@ -183,6 +183,7 @@ export class AwcMetarClient {
         signal: controller.signal,
       });
     } catch (error) {
+      clearTimeout(timeout);
       if (controller.signal.aborted) {
         throw new AwcMetarError('timeout', 'Aviation Weather Center request timed out.');
       }
@@ -190,52 +191,71 @@ export class AwcMetarClient {
         'provider-error',
         error instanceof Error ? error.message : 'Aviation Weather Center request failed.',
       );
-    } finally {
-      clearTimeout(timeout);
     }
 
-    if (response.status === 204) {
-      throw new AwcMetarError('no-data', `No current ${product} is available for ${station}.`);
-    }
-    if (!response.ok) {
-      throw new AwcMetarError(
-        response.status === 429 ? 'rate-limited' : 'provider-error',
-        `Aviation Weather Center returned HTTP ${response.status}.`,
-      );
-    }
-    const contentLengthHeader = response.headers.get('content-length');
-    if (contentLengthHeader !== null) {
-      const contentLength = Number(contentLengthHeader);
+    try {
+      if (response.status === 204) {
+        throw new AwcMetarError(
+          'no-data',
+          `No current ${product} is available for ${station}.`,
+        );
+      }
+      if (!response.ok) {
+        throw new AwcMetarError(
+          response.status === 429 ? 'rate-limited' : 'provider-error',
+          `Aviation Weather Center returned HTTP ${response.status}.`,
+        );
+      }
+      const contentLengthHeader = response.headers.get('content-length');
+      if (contentLengthHeader !== null) {
+        const contentLength = Number(contentLengthHeader);
+        if (
+          !/^(?:0|[1-9]\d*)$/u.test(contentLengthHeader) ||
+          !Number.isSafeInteger(contentLength) ||
+          contentLength > maximumLength * MAXIMUM_TRANSFER_BYTES_PER_CHARACTER
+        ) {
+          throw new AwcMetarError(
+            'response-invalid',
+            `Provider returned an invalid raw ${product} body length.`,
+          );
+        }
+      }
+      const raw = (await response.text()).trim();
+      const lineCount = raw.split(/\r?\n/u).filter((line) => line.trim().length > 0).length;
       if (
-        !/^(?:0|[1-9]\d*)$/u.test(contentLengthHeader) ||
-        !Number.isSafeInteger(contentLength) ||
-        contentLength > maximumLength * MAXIMUM_TRANSFER_BYTES_PER_CHARACTER
+        raw.length === 0 ||
+        raw.length > maximumLength ||
+        lineCount < 1 ||
+        lineCount > maximumLines ||
+        containsUnexpectedControlCharacter(raw)
       ) {
         throw new AwcMetarError(
           'response-invalid',
-          `Provider returned an invalid raw ${product} body length.`,
+          `Provider returned an invalid raw ${product} body.`,
         );
       }
-    }
-    const raw = (await response.text()).trim();
-    const lineCount = raw.split(/\r?\n/u).filter((line) => line.trim().length > 0).length;
-    if (
-      raw.length === 0 ||
-      raw.length > maximumLength ||
-      lineCount < 1 ||
-      lineCount > maximumLines ||
-      containsUnexpectedControlCharacter(raw)
-    ) {
+      const receivedAt = this.clock();
+      if (!Number.isFinite(receivedAt.getTime()) || receivedAt.getTime() < startedAt) {
+        throw new AwcMetarError(
+          'clock-invalid',
+          'Device clock became invalid during retrieval.',
+        );
+      }
+      return { raw, receivedAt, station };
+    } catch (error) {
+      if (error instanceof AwcMetarError) throw error;
+      if (controller.signal.aborted) {
+        throw new AwcMetarError('timeout', 'Aviation Weather Center request timed out.');
+      }
       throw new AwcMetarError(
-        'response-invalid',
-        `Provider returned an invalid raw ${product} body.`,
+        'provider-error',
+        error instanceof Error
+          ? error.message
+          : 'Aviation Weather Center response body failed.',
       );
+    } finally {
+      clearTimeout(timeout);
     }
-    const receivedAt = this.clock();
-    if (!Number.isFinite(receivedAt.getTime()) || receivedAt.getTime() < startedAt) {
-      throw new AwcMetarError('clock-invalid', 'Device clock became invalid during retrieval.');
-    }
-    return { raw, receivedAt, station };
   }
 }
 

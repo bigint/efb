@@ -157,6 +157,29 @@ describe('AWC METAR client', () => {
     }
   });
 
+  it('keeps the timeout active while consuming the response body', async () => {
+    vi.useFakeTimers();
+    try {
+      const client = new AwcMetarClient(
+        (_input, init) => {
+          const stalledResponse = response('');
+          stalledResponse.text = () =>
+            new Promise<string>((_resolve, reject) => {
+              init.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+            });
+          return Promise.resolve(stalledResponse);
+        },
+        () => now,
+      );
+      const pending = client.fetchLatest('KMCI');
+      const assertion = expect(pending).rejects.toMatchObject({ code: 'timeout' });
+      await vi.advanceTimersByTimeAsync(10_000);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('fails closed when the injected clock reverses', async () => {
     const times = [now, new Date(now.getTime() - 1)];
     const client = new AwcMetarClient(
