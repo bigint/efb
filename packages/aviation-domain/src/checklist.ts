@@ -112,6 +112,13 @@ export const checklistRunSchema = z
         path: ['templateSnapshot'],
       });
     }
+    if (Date.parse(run.startedAt) < Date.parse(run.templateSnapshot.updatedAt)) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Checklist run cannot precede its captured template revision',
+        path: ['startedAt'],
+      });
+    }
     if (
       new Set(run.completedSequences).size !== run.completedSequences.length ||
       run.completedSequences.some((sequence) => sequence >= run.itemCount)

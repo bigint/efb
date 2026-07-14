@@ -93,6 +93,8 @@ performance data.
   identity, display-name, and coordinate fields they consume from typed runtime objects.
 - Document storage reconciliation bounds filesystem/database collections and rejects unsafe
   URIs, identifiers, kinds, and byte counts before producing System audit output.
+- Checklist runs cannot predate the immutable template revision captured in their history
+  snapshot; restored records are rechecked by the same schema.
 - Separate versioned user and control SQLite schemas now migrate before app render. Executable
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,

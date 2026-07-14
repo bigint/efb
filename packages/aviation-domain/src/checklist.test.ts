@@ -161,5 +161,12 @@ describe('checklist domain', () => {
     expect(() => setChecklistItemCompleted(run, 0, true, '2026-07-14T10:59:00.000Z')).toThrow(
       'invalid',
     );
+    expect(() =>
+      startChecklistRun(
+        template(),
+        '019f5f42-a146-7c00-861d-7ad2313bbbd6',
+        '2026-07-14T09:59:59.000Z',
+      ),
+    ).toThrow('captured template');
   });
 });
