@@ -99,6 +99,23 @@ describe('AWC METAR client', () => {
     });
   });
 
+  it('rejects malformed or implausibly large declared response lengths', async () => {
+    for (const contentLength of ['not-a-number', '16385']) {
+      const client = new AwcMetarClient(
+        () =>
+          Promise.resolve(
+            new Response('METAR KMCI 140753Z 11004KT 10SM CLR 24/19 A3019', {
+              headers: { 'Content-Length': contentLength },
+            }),
+          ),
+        () => now,
+      );
+      await expect(client.fetchLatest('KMCI')).rejects.toMatchObject({
+        code: 'response-invalid',
+      });
+    }
+  });
+
   it('rejects a mismatched or multi-report TAF response', async () => {
     const mismatch = new AwcMetarClient(
       () => Promise.resolve(response('TAF KSEA 140520Z 1406/1506 VRB04KT P6SM SKC')),

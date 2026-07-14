@@ -139,7 +139,8 @@ A scoped delta review found:
 - no dynamic evaluation, WebView, arbitrary `openURL`, HTML injection, or post-message sink;
 - the only application HTTP endpoints are fixed AWC METAR/TAF constants, with a four-character
   station allowlist encoded through `URLSearchParams`, a shared one-minute request gate,
-  timeout, response length/line/control checks, station rebinding checks, and local parsing;
+  timeout, declared transfer-size and decoded length/line/control checks, station rebinding
+  checks, and local parsing;
 - document sharing reconstructs a UUID-owned app-private path and rechecks byte length, PDF
   markers, and SHA-256 before opening the system sheet; CSV/GPX exports write bounded generated
   text to app cache and verify readback; and

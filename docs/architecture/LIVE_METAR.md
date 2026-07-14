@@ -38,6 +38,11 @@ original/amended/corrected state, issue UTC, and validity start/end across adjac
 impossible or greater-than-48-hour windows fail closed. Forecast change groups and weather
 content remain raw and uninterpreted.
 
+When the provider supplies `Content-Length`, it must be a canonical non-negative integer and no
+greater than four transfer bytes per accepted character. This rejects an obviously oversized
+body before text allocation; the character and line checks remain authoritative after decoding
+and also cover responses without that header.
+
 After header validation, the display may identify bounded change markers only. `FMDDHHMM`
 resolves to a UTC start instant; `TEMPO`, `BECMG`, `PROB30`, and `PROB40` periods resolve to UTC
 start/end instants, including a combined `PROBxx TEMPO` marker. Every marker must fall inside

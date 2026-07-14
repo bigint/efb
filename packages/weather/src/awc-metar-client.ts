@@ -9,6 +9,7 @@ const AWC_ENDPOINTS = {
 } as const;
 const MINIMUM_REQUEST_INTERVAL_MILLISECONDS = 60_000;
 const REQUEST_TIMEOUT_MILLISECONDS = 10_000;
+const MAXIMUM_TRANSFER_BYTES_PER_CHARACTER = 4;
 
 const containsUnexpectedControlCharacter = (value: string): boolean =>
   [...value].some((character) => {
@@ -201,6 +202,20 @@ export class AwcMetarClient {
         response.status === 429 ? 'rate-limited' : 'provider-error',
         `Aviation Weather Center returned HTTP ${response.status}.`,
       );
+    }
+    const contentLengthHeader = response.headers.get('content-length');
+    if (contentLengthHeader !== null) {
+      const contentLength = Number(contentLengthHeader);
+      if (
+        !/^(?:0|[1-9]\d*)$/u.test(contentLengthHeader) ||
+        !Number.isSafeInteger(contentLength) ||
+        contentLength > maximumLength * MAXIMUM_TRANSFER_BYTES_PER_CHARACTER
+      ) {
+        throw new AwcMetarError(
+          'response-invalid',
+          `Provider returned an invalid raw ${product} body length.`,
+        );
+      }
     }
     const raw = (await response.text()).trim();
     const lineCount = raw.split(/\r?\n/u).filter((line) => line.trim().length > 0).length;
