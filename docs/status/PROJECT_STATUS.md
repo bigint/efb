@@ -102,6 +102,8 @@ performance data.
   reject duplicate jurisdictions and totals that contradict per-entry time invariants.
 - Document, aircraft-profile, and airport-favourite decoders enforce collection limits and
   reject duplicate parent identities even when called outside their normal bounded query path.
+- iOS no longer advertises document-browser access to the UUID-owned document container; imports
+  remain picker-driven and exports remain explicit verified share actions.
 - Checklist template/history decoders apply the same direct-call collection limits and reject
   duplicate parent rows before grouping relational items or completions.
 - Saved-flight reconstruction bounds plans/waypoints, rejects duplicate plan parents, and

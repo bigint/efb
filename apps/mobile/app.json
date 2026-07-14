@@ -10,8 +10,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "computer.rag.driftline",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Driftline uses location to show supplemental position awareness. It is not a primary navigation instrument.",
-        "UISupportsDocumentBrowser": true
+        "NSLocationWhenInUseUsageDescription": "Driftline uses location to show supplemental position awareness. It is not a primary navigation instrument."
       }
     },
     "android": {

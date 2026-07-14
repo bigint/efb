@@ -23,6 +23,10 @@ bookmark is reconstructed inside one exclusive read snapshot and revalidated; co
 bookmark/metadata writes cannot create a mixed-version library view. Corrupt metadata blocks the
 library instead of disappearing from results.
 
+The iOS target does not enable document-browser or file-sharing container exposure. External
+files enter only through the user-driven picker; Driftline's UUID-owned copies remain in its
+private application document container and leave only through an explicit verified share action.
+
 ## Organization metadata
 
 The Library can now mark a document favourite, assign a bounded folder label, and add manual
