@@ -150,4 +150,70 @@ describe('user database migration plan', () => {
     ).toBeUndefined();
     database.close();
   });
+
+  it('upgrades legacy checklists with category and run snapshots', () => {
+    const database = new DatabaseSync(':memory:');
+    database.exec('PRAGMA foreign_keys = ON');
+    const first = userDatabaseMigrations[0];
+    const second = userDatabaseMigrations[1];
+    const third = userDatabaseMigrations[2];
+    if (first === undefined || second === undefined || third === undefined) {
+      throw new Error('Missing migration fixture');
+    }
+    for (const migration of [first, second]) {
+      for (const statement of migration.statements) database.exec(statement);
+    }
+    database
+      .prepare(
+        `INSERT INTO checklist_templates
+          (id, created_at, updated_at, title, phase, revision)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        '019f5f42-a146-7c00-861d-7ad2313bbbd4',
+        '2026-07-14T10:00:00.000Z',
+        '2026-07-14T10:00:00.000Z',
+        'User fixture',
+        'emergency',
+        1,
+      );
+    database
+      .prepare(
+        `INSERT INTO checklist_items
+          (template_id, sequence, challenge, response, is_critical)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run('019f5f42-a146-7c00-861d-7ad2313bbbd4', 0, 'Test', 'Checked', 1);
+    database
+      .prepare(
+        `INSERT INTO checklist_runs
+          (id, template_id, template_revision, started_at)
+         VALUES (?, ?, ?, ?)`,
+      )
+      .run(
+        '019f5f42-a146-7c00-861d-7ad2313bbbd5',
+        '019f5f42-a146-7c00-861d-7ad2313bbbd4',
+        1,
+        '2026-07-14T11:00:00.000Z',
+      );
+    for (const statement of third.statements) database.exec(statement);
+
+    const upgraded = database
+      .prepare(
+        `SELECT item_count, template_snapshot_json FROM checklist_runs
+         WHERE id = ?`,
+      )
+      .get('019f5f42-a146-7c00-861d-7ad2313bbbd5') as {
+      readonly item_count: number;
+      readonly template_snapshot_json: string;
+    };
+    expect(upgraded.item_count).toBe(1);
+    expect(JSON.parse(upgraded.template_snapshot_json)).toMatchObject({
+      category: 'emergency',
+      items: [{ challenge: 'Test', isCritical: true, sequence: 0 }],
+      source: 'user-authored',
+      verificationStatus: 'unverified',
+    });
+    database.close();
+  });
 });

@@ -4,6 +4,7 @@ import { StyleSheet, useColorScheme, useWindowDimensions, View } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AircraftWorkspace } from '@/components/AircraftWorkspace';
+import { LibraryWorkspace } from '@/components/LibraryWorkspace';
 import { MapWorkspace } from '@/components/MapWorkspace';
 import { PlacesWorkspace } from '@/components/PlacesWorkspace';
 import { PlanWorkspace } from '@/components/PlanWorkspace';
@@ -27,6 +28,8 @@ export default function HomeScreen() {
     switch (workspace) {
       case 'aircraft':
         return <AircraftWorkspace />;
+      case 'library':
+        return <LibraryWorkspace />;
       case 'map':
         return <MapWorkspace />;
       case 'places':

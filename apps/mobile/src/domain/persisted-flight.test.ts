@@ -20,6 +20,12 @@ describe('persisted flight recovery', () => {
     );
   });
 
+  it('accepts the local library as a recoverable destination', () => {
+    expect(parsePersistedFlightState({ ...validState, workspace: 'library' }).workspace).toBe(
+      'library',
+    );
+  });
+
   it('accepts an exact valid persisted state', () => {
     expect(parsePersistedFlightState(validState)).toEqual(validState);
     expect(parsePersistedFlightState({ ...validState, workspace: 'weather' }).workspace).toBe(

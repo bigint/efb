@@ -1,4 +1,4 @@
-export const USER_DATABASE_VERSION = 2;
+export const USER_DATABASE_VERSION = 3;
 
 export interface UserDatabaseMigration {
   readonly statements: readonly string[];
@@ -192,6 +192,65 @@ export const userDatabaseMigrations: readonly UserDatabaseMigration[] = [
         PRIMARY KEY (entry_id, document_id)
       ) STRICT, WITHOUT ROWID`,
       `DROP TABLE IF EXISTS offline_regions`,
+    ],
+  },
+  {
+    version: 3,
+    statements: [
+      `ALTER TABLE checklist_templates ADD COLUMN category TEXT NOT NULL DEFAULT 'normal'
+        CHECK (category IN ('normal', 'abnormal', 'emergency'))`,
+      `ALTER TABLE checklist_templates ADD COLUMN source TEXT NOT NULL DEFAULT 'user-authored'
+        CHECK (source IN ('user-authored', 'generic-demonstration'))`,
+      `ALTER TABLE checklist_templates ADD COLUMN verification_status TEXT NOT NULL DEFAULT 'unverified'
+        CHECK (verification_status = 'unverified')`,
+      `ALTER TABLE checklist_templates ADD COLUMN aircraft_label TEXT NOT NULL DEFAULT 'Unassigned aircraft'`,
+      `UPDATE checklist_templates
+        SET category = CASE lower(phase)
+          WHEN 'abnormal' THEN 'abnormal'
+          WHEN 'emergency' THEN 'emergency'
+          ELSE 'normal'
+        END`,
+      `ALTER TABLE checklist_runs ADD COLUMN item_count INTEGER NOT NULL DEFAULT 0
+        CHECK (item_count >= 0 AND item_count <= 100)`,
+      `ALTER TABLE checklist_runs ADD COLUMN template_snapshot_json TEXT NOT NULL DEFAULT '{}'`,
+      `ALTER TABLE checklist_runs ADD COLUMN state_revision INTEGER NOT NULL DEFAULT 1
+        CHECK (state_revision >= 1)`,
+      `UPDATE checklist_runs
+        SET item_count = (
+          SELECT count(*) FROM checklist_items
+          WHERE checklist_items.template_id = checklist_runs.template_id
+        )`,
+      `UPDATE checklist_runs
+        SET template_snapshot_json = (
+          SELECT json_object(
+            'aircraftId', template.aircraft_id,
+            'aircraftLabel', template.aircraft_label,
+            'category', template.category,
+            'createdAt', template.created_at,
+            'id', template.id,
+            'items', json(COALESCE((
+              SELECT json_group_array(json(ordered.item_json))
+              FROM (
+                SELECT json_object(
+                  'challenge', item.challenge,
+                  'isCritical', CASE item.is_critical WHEN 1 THEN json('true') ELSE json('false') END,
+                  'response', item.response,
+                  'sequence', item.sequence
+                ) AS item_json
+                FROM checklist_items AS item
+                WHERE item.template_id = template.id
+                ORDER BY item.sequence
+              ) AS ordered
+            ), '[]')),
+            'revision', template.revision,
+            'source', template.source,
+            'title', template.title,
+            'updatedAt', template.updated_at,
+            'verificationStatus', template.verification_status
+          )
+          FROM checklist_templates AS template
+          WHERE template.id = checklist_runs.template_id
+        )`,
     ],
   },
 ] as const;

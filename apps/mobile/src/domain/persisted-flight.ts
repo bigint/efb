@@ -8,6 +8,7 @@ export const workspaceSchema = z.enum([
   'places',
   'weather',
   'aircraft',
+  'library',
   'records',
   'system',
 ]);

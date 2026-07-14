@@ -1,5 +1,5 @@
 import { cockpitTarget, spacing, typography } from '@driftline/design-system';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useFlightStore, type Workspace } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
@@ -10,7 +10,8 @@ const items: readonly { label: string; mark: string; value: Workspace }[] = [
   { label: 'Places', mark: '⌖', value: 'places' },
   { label: 'Weather', mark: '≋', value: 'weather' },
   { label: 'Aircraft', mark: '△', value: 'aircraft' },
-  { label: 'Records', mark: '▤', value: 'records' },
+  { label: 'Library', mark: '□', value: 'library' },
+  { label: 'Flights', mark: '▤', value: 'records' },
   { label: 'System', mark: '◫', value: 'system' },
 ];
 
@@ -32,36 +33,75 @@ export function WorkspaceRail({ compact }: WorkspaceRailProps) {
       ]}
     >
       {!compact && <Text style={[styles.wordmark, { color: theme.primary }]}>DRIFTLINE</Text>}
-      <View style={compact ? styles.bottomItems : styles.railItems}>
-        {items.map((item) => {
-          const selected = workspace === item.value;
-          return (
-            <Pressable
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
-              key={item.value}
-              onPress={() => setWorkspace(item.value)}
-              style={({ pressed }) => [
-                compact ? styles.bottomItem : styles.railItem,
-                selected && { backgroundColor: theme.accent },
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text
-                style={[styles.mark, { color: selected ? theme.onAccent : theme.secondary }]}
-              >
-                {item.mark}
-              </Text>
-              <Text
-                style={[styles.label, { color: selected ? theme.onAccent : theme.secondary }]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {compact ? (
+        <ScrollView
+          contentContainerStyle={styles.bottomItems}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+        >
+          {items.map((item) => {
+            const selected = workspace === item.value;
+            return (
+              <NavigationItem
+                compact
+                item={item}
+                key={item.value}
+                selected={selected}
+                setWorkspace={setWorkspace}
+              />
+            );
+          })}
+        </ScrollView>
+      ) : (
+        <View style={styles.railItems}>
+          {items.map((item) => {
+            const selected = workspace === item.value;
+            return (
+              <NavigationItem
+                compact={false}
+                item={item}
+                key={item.value}
+                selected={selected}
+                setWorkspace={setWorkspace}
+              />
+            );
+          })}
+        </View>
+      )}
     </View>
+  );
+}
+
+function NavigationItem({
+  compact,
+  item,
+  selected,
+  setWorkspace,
+}: {
+  readonly compact: boolean;
+  readonly item: (typeof items)[number];
+  readonly selected: boolean;
+  readonly setWorkspace: (workspace: Workspace) => void;
+}) {
+  const theme = useDriftlineTheme();
+  return (
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityState={{ selected }}
+      onPress={() => setWorkspace(item.value)}
+      style={({ pressed }) => [
+        compact ? styles.bottomItem : styles.railItem,
+        selected && { backgroundColor: theme.accent },
+        pressed && styles.pressed,
+      ]}
+    >
+      <Text style={[styles.mark, { color: selected ? theme.onAccent : theme.secondary }]}>
+        {item.mark}
+      </Text>
+      <Text style={[styles.label, { color: selected ? theme.onAccent : theme.secondary }]}>
+        {item.label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -70,7 +110,7 @@ const styles = StyleSheet.create({
   bottomItem: {
     alignItems: 'center',
     borderRadius: 12,
-    flex: 1,
+    width: 68,
     minHeight: 56,
     paddingVertical: 6,
   },
