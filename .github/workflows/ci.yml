@@ -23,7 +23,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm audit --prod --audit-level moderate
+      - run: pnpm audit --audit-level moderate
       - run: pnpm verify
       - run: pnpm --dir apps/mobile doctor
       - run:

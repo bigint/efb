@@ -25,9 +25,9 @@ performance data.
 ## Verification
 
 - pnpm workspace and frozen lockfile are present.
-- Production dependency audit reports no known vulnerabilities after a tested pnpm workspace
+- Full locked dependency audit reports no known vulnerabilities after a tested pnpm workspace
   override moves Expo/Xcode build tooling from vulnerable `uuid@7.0.3` to `uuid@11.1.1`; CI
-  enforces the production audit at Moderate or higher severity.
+  enforces the complete runtime/build-tool audit at Moderate or higher severity.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Expo Doctor is pinned at 1.20.0 and runs in CI before both platform exports.
 - Strict TypeScript: passed across nine implementation packages/apps.
