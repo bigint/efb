@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 178 passed across twenty-eight test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,159 modules, 5.4 MB
+- Unit tests: 184 passed across twenty-nine test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,160 modules, 5.4 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -39,7 +39,10 @@ performance data.
   independent targeted closure review.
 - A conservative METAR/SPECI adapter now preserves raw/provenance data, explicit visibility
   bounds, observation time, and unsupported body groups. An offline manual decoder labels all
-  input unverified and currency-unknown; live retrieval, TAF, and briefing remain open.
+  input unverified and currency-unknown. An on-demand AWC client retrieves one bounded raw METAR
+  with a one-minute request interval, provider/station validation, source provenance, and
+  currency evaluation; TAF, offline cache, native network QA, and briefing completeness remain
+  open.
 - A typed true-reference wind triangle returns heading, signed correction, and groundspeed or an
   explicit no-solution state. Route legs can now produce wind-adjusted ETE or identify the
   blocking leg, and Plan exposes a clearly labelled constant-wind sandbox. Winds-aloft sourcing
