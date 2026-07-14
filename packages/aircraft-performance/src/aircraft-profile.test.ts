@@ -60,4 +60,10 @@ describe('aircraft profile', () => {
       }),
     ).toThrow('Updated time');
   });
+
+  it('rejects control characters in display names used by selectors', () => {
+    expect(() =>
+      aircraftProfileSchema.parse({ ...fixture(), displayName: 'Trainer\nN999XX' }),
+    ).toThrow('control characters');
+  });
 });

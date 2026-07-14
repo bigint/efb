@@ -8,6 +8,10 @@ normal, abnormal, or emergency procedure content. Every template and active run 
 
 - A template records its aircraft/source label, category, ordered challenge/response items,
   critical-item flags, timestamps, and revision.
+- Authoring can link one of at most 100 validated local aircraft profiles. A linked template
+  stores the profile UUID and derives its visible label from that profile's normalized
+  registration; free-text source labels remain available when no profile is selected or profile
+  reads fail.
 - Item sequences are contiguous from zero and bounded to 100 items. Empty templates do not cross
   the domain or SQLite read boundary.
 - Starting a run embeds the complete validated template snapshot, template revision, and item
@@ -33,6 +37,6 @@ Executable migration tests verify the preserved snapshot.
 ## Open release work
 
 Physical-device process-death and concurrent-view tests, template revision/edit UI, explicit run
-abandonment, detailed history inspection, export/backup, VoiceOver sequencing, Dynamic Type, and
-comparison against approved aircraft material remain open. A saved checklist is not approved
-merely because every box is checked.
+abandonment, handling a later-renamed aircraft profile, detailed history inspection,
+export/backup, VoiceOver sequencing, Dynamic Type, and comparison against approved aircraft
+material remain open. A saved checklist is not approved merely because every box is checked.

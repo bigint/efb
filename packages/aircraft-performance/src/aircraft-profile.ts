@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
 const boundedNumber = (maximum: number) => z.number().finite().min(0).max(maximum);
+const hasNoControlCharacters = (value: string): boolean =>
+  [...value].every((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code >= 32 && code !== 127;
+  });
 
 export const aircraftProfileUnitsSchema = z
   .object({
@@ -36,7 +41,12 @@ export const aircraftPlanningValuesSchema = z
 export const aircraftProfileSchema = z
   .object({
     createdAt: z.iso.datetime(),
-    displayName: z.string().trim().min(1).max(80),
+    displayName: z
+      .string()
+      .trim()
+      .min(1)
+      .max(80)
+      .refine(hasNoControlCharacters, 'Aircraft display name has control characters'),
     id: z.uuid(),
     notes: z.string().max(5_000),
     planning: aircraftPlanningValuesSchema,

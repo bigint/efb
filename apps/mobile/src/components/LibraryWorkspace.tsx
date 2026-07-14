@@ -5,6 +5,7 @@ import {
   type ChecklistRun,
   type ChecklistTemplate,
 } from '@driftline/aviation-domain';
+import type { AircraftProfile } from '@driftline/aircraft-performance';
 import { radii, spacing, typography } from '@driftline/design-system';
 import { randomUUID } from 'expo-crypto';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -20,6 +21,7 @@ import {
   loadLatestOpenChecklistRun,
   persistChecklistRunTransition,
 } from '@/database/checklist-repository';
+import { listAircraftProfiles } from '@/database/aircraft-profile-repository';
 import { useDriftlineTheme } from '@/theme';
 
 import { Action, Card, PanelHeader, panelStyles } from './PanelPrimitives';
@@ -49,14 +51,17 @@ export function LibraryWorkspace() {
   const database = useSQLiteContext();
   const theme = useDriftlineTheme();
   const [activeRun, setActiveRun] = useState<ChecklistRun | null>(null);
+  const [aircraft, setAircraft] = useState<readonly AircraftProfile[]>([]);
+  const [aircraftError, setAircraftError] = useState<string | null>(null);
   const [category, setCategory] = useState<ChecklistCategory>('normal');
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<readonly ChecklistRun[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [readBlocked, setReadBlocked] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectedAircraftId, setSelectedAircraftId] = useState<string | null>(null);
   const [templates, setTemplates] = useState<readonly ChecklistTemplate[]>([]);
-  const { control, handleSubmit, reset } = useForm<ChecklistForm>({
+  const { control, handleSubmit, reset, setValue } = useForm<ChecklistForm>({
     defaultValues: formDefaults(),
   });
   const { append, fields, remove } = useFieldArray({ control, name: 'items' });
@@ -96,13 +101,38 @@ export function LibraryWorkspace() {
     void reloadHistory();
   }, [reload, reloadHistory]);
 
+  const reloadAircraft = useCallback(async () => {
+    try {
+      setAircraft(await listAircraftProfiles(database));
+      setAircraftError(null);
+    } catch {
+      setAircraft([]);
+      setSelectedAircraftId(null);
+      setAircraftError(
+        'Aircraft references unavailable; free-text source labels remain usable.',
+      );
+    }
+  }, [database]);
+
+  useEffect(() => {
+    void reloadAircraft();
+  }, [reloadAircraft]);
+
   const saveTemplate = handleSubmit(async (form) => {
     setSaving(true);
     try {
       const now = new Date().toISOString();
+      const selectedAircraft =
+        selectedAircraftId === null
+          ? null
+          : (aircraft.find(({ id }) => id === selectedAircraftId) ?? null);
+      if (selectedAircraftId !== null && selectedAircraft === null) {
+        throw new Error('Selected aircraft reference is no longer available.');
+      }
       const template = checklistTemplateSchema.parse({
-        aircraftId: null,
-        aircraftLabel: form.aircraftLabel,
+        aircraftId: selectedAircraft?.id ?? null,
+        aircraftLabel:
+          selectedAircraft === null ? form.aircraftLabel : selectedAircraft.registration,
         category,
         createdAt: now,
         id: randomUUID(),
@@ -116,6 +146,7 @@ export function LibraryWorkspace() {
       await insertChecklistTemplate(database, template);
       reset(formDefaults());
       setCategory('normal');
+      setSelectedAircraftId(null);
       await reload();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to save checklist.');
@@ -252,8 +283,40 @@ export function LibraryWorkspace() {
       </Text>
       <Card>
         <FormField control={control} label="Title" name="title" />
+        <Text style={[panelStyles.label, styles.formGap, { color: theme.secondary }]}>
+          Aircraft reference
+        </Text>
+        <View style={styles.aircraftChoices}>
+          <Action
+            label="Free-text label"
+            onPress={() => {
+              setSelectedAircraftId(null);
+              setValue('aircraftLabel', '');
+            }}
+            primary={selectedAircraftId === null}
+          />
+          {aircraft.map((profile) => (
+            <Action
+              key={profile.id}
+              label={`${profile.registration} · ${profile.displayName}`}
+              onPress={() => {
+                setSelectedAircraftId(profile.id);
+                setValue('aircraftLabel', profile.registration);
+              }}
+              primary={selectedAircraftId === profile.id}
+            />
+          ))}
+        </View>
+        {aircraftError !== null && (
+          <Text style={[styles.error, { color: theme.attention }]}>{aircraftError}</Text>
+        )}
         <View style={styles.formGap}>
-          <FormField control={control} label="Aircraft / source label" name="aircraftLabel" />
+          <FormField
+            control={control}
+            editable={selectedAircraftId === null}
+            label={selectedAircraftId === null ? 'Aircraft / source label' : 'Linked aircraft'}
+            name="aircraftLabel"
+          />
         </View>
         <Text style={[panelStyles.label, styles.formGap, { color: theme.secondary }]}>
           Category
@@ -397,10 +460,12 @@ function ActiveChecklist({
 
 function FormField({
   control,
+  editable = true,
   label,
   name,
 }: {
   readonly control: ReturnType<typeof useForm<ChecklistForm>>['control'];
+  readonly editable?: boolean;
   readonly label: string;
   readonly name:
     `items.${number}.challenge` | `items.${number}.response` | 'aircraftLabel' | 'title';
@@ -416,6 +481,7 @@ function FormField({
           <TextInput
             accessibilityLabel={label}
             autoCorrect={false}
+            editable={editable}
             onBlur={onBlur}
             onChangeText={onChange}
             spellCheck={false}
@@ -452,6 +518,12 @@ const styles = StyleSheet.create({
     fontFamily: typography.display,
     fontSize: 22,
     fontWeight: '700',
+    marginTop: spacing.sm,
+  },
+  aircraftChoices: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
     marginTop: spacing.sm,
   },
   categories: {

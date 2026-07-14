@@ -53,8 +53,11 @@ export const listAircraftProfiles = async (
       units_json, performance_json, notes, source, verification_status, revision
      FROM aircraft_profiles
      WHERE deleted_at IS NULL
-     ORDER BY display_name, registration`,
+     ORDER BY display_name, registration
+     LIMIT 101`,
   );
+  if (rows.length > 100)
+    throw new Error('Aircraft profile collection exceeds supported limits.');
   return decodeAircraftProfileRows(rows);
 };
 
