@@ -30,7 +30,16 @@ silently treating them as zero.
 
 ## Current limitations
 
-The built-in weight-and-balance sandbox remains fictional and separate from saved profiles.
-Profile editing, deletion, selection by a flight, envelope authoring, fuel-density conversion,
-take-off and landing models, source-document links, and conflict-safe revision updates remain
-open. Native persistence recovery and visual/accessibility validation are release blockers.
+The Aircraft workspace can select a saved profile and calculate total mass, moment, and CG arm
+from its entered empty mass and station arms plus user-entered occupant and fuel mass. It
+compares total mass with the entered maximum. Fuel stays in kilograms: the profile's litre
+capacity is not converted because no fuel type or density source exists.
+
+This summary deliberately returns no envelope result. The UI says `CG ENVELOPE NOT EVALUATED`
+until bounded envelope geometry and source/revision provenance are modeled. The separate
+built-in polygon sandbox remains fictional.
+
+Profile editing, deletion, selection by a saved flight, envelope authoring, fuel-density
+conversion, take-off and landing models, source-document links, and conflict-safe revision
+updates remain open. Native persistence recovery and visual/accessibility validation are release
+blockers.

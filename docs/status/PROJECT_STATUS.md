@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 177 passed across twenty-eight test files.
+- Unit tests: 178 passed across twenty-eight test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,159 modules, 5.4 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -72,7 +72,9 @@ performance data.
 - User-entered aircraft profiles now persist locally with explicit kilogram, metre, litre, and
   knot units, immutable unverified provenance, schema revision, parameterized writes, and a
   fail-closed JSON read boundary. The fictional loading sandbox remains separate; approved
-  source linking, profile editing, envelope authoring, and native recovery are open.
+  source linking, profile editing, envelope authoring, and native recovery are open. A selected
+  profile can calculate mass, moment, CG arm, and entered maximum-mass status, while explicitly
+  withholding any CG-envelope decision.
 - An explicit user action can now select a foreground-only device-location source. Permission,
   service, provider-error, null-telemetry, and stale-sample states fail closed; metric provider
   values convert to cockpit units at a pure boundary, and source changes clear prior samples.

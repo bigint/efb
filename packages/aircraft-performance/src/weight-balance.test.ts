@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { kilograms, metres } from '@driftline/data-contracts';
 
-import { calculateWeightBalance, type WeightBalanceInput } from './weight-balance';
+import {
+  calculateLoadingSummary,
+  calculateWeightBalance,
+  type WeightBalanceInput,
+} from './weight-balance';
 
 const envelope = [
   { arm: metres(0.8), mass: kilograms(600) },
@@ -28,6 +32,15 @@ describe('generic weight and balance', () => {
     expect(result.totalMoment).toBe(922);
     expect(result.centreOfGravityArm).toBeCloseTo(0.9604, 4);
     expect(result.violations).toEqual([]);
+  });
+
+  it('reports mass and moment without inventing a CG envelope decision', () => {
+    expect(
+      calculateLoadingSummary({
+        maximumMass: validInput.maximumMass,
+        stations: validInput.stations,
+      }),
+    ).toMatchObject({ massWithinLimit: true, totalMass: 960, totalMoment: 922 });
   });
 
   it('treats an envelope boundary as valid', () => {

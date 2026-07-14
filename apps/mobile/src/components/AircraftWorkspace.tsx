@@ -6,6 +6,7 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   aircraftProfileSchema,
+  calculateLoadingSummary,
   calculateWeightBalance,
   type AircraftProfile,
 } from '@driftline/aircraft-performance';
@@ -69,6 +70,7 @@ export function AircraftWorkspace() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [readBlocked, setReadBlocked] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [emptyMass, setEmptyMass] = useState('700');
   const [occupantMass, setOccupantMass] = useState('160');
   const [fuelMass, setFuelMass] = useState('100');
@@ -96,6 +98,38 @@ export function AircraftWorkspace() {
       return null;
     }
   }, [emptyMass, fuelMass, occupantMass]);
+  const selectedProfile = profiles.find(({ id }) => id === selectedProfileId) ?? null;
+  const profileLoading = useMemo(() => {
+    if (selectedProfile === null) return null;
+    const inputs = [occupantMass, fuelMass];
+    if (inputs.some((value) => value.trim().length === 0)) return null;
+    const values = inputs.map(Number);
+    if (values.some((value) => !Number.isFinite(value) || value < 0)) return null;
+    try {
+      return calculateLoadingSummary({
+        maximumMass: kilograms(selectedProfile.planning.maximumMassKg),
+        stations: [
+          {
+            arm: metres(selectedProfile.planning.emptyArmM),
+            id: 'empty-aircraft',
+            mass: kilograms(selectedProfile.planning.emptyMassKg),
+          },
+          {
+            arm: metres(selectedProfile.planning.occupantArmM),
+            id: 'occupants',
+            mass: kilograms(values[0] ?? Number.NaN),
+          },
+          {
+            arm: metres(selectedProfile.planning.fuelArmM),
+            id: 'fuel',
+            mass: kilograms(values[1] ?? Number.NaN),
+          },
+        ],
+      });
+    } catch {
+      return null;
+    }
+  }, [fuelMass, occupantMass, selectedProfile]);
 
   const reload = useCallback(async () => {
     try {
@@ -171,7 +205,59 @@ export function AircraftWorkspace() {
           <Text style={[panelStyles.copy, { color: theme.secondary }]}>No saved aircraft.</Text>
         </Card>
       ) : (
-        profiles.map((profile) => <SavedProfile key={profile.id} profile={profile} />)
+        profiles.map((profile) => (
+          <SavedProfile
+            key={profile.id}
+            onUse={() => setSelectedProfileId(profile.id)}
+            profile={profile}
+            selected={profile.id === selectedProfileId}
+          />
+        ))
+      )}
+      {selectedProfile !== null && (
+        <>
+          <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
+            Profile loading summary
+          </Text>
+          <Card>
+            <Text style={[styles.warning, { color: theme.attention }]}>
+              {selectedProfile.registration} · UNVERIFIED · CG ENVELOPE NOT EVALUATED
+            </Text>
+            <Text style={[panelStyles.copy, styles.note, { color: theme.secondary }]}>
+              Empty mass {selectedProfile.planning.emptyMassKg} KG is fixed from this profile.
+              Enter occupant and fuel mass in kilograms; no litre-to-mass conversion is applied.
+            </Text>
+            <View style={styles.inputs}>
+              <MassInput label="Occupants" onChange={setOccupantMass} value={occupantMass} />
+              <MassInput label="Fuel" onChange={setFuelMass} value={fuelMass} />
+            </View>
+            <View style={styles.outputs}>
+              <Output
+                label="Total mass"
+                value={profileLoading === null ? '—' : `${profileLoading.totalMass} KG`}
+              />
+              <Output
+                label="Calculated CG"
+                value={
+                  profileLoading === null
+                    ? '—'
+                    : `${profileLoading.centreOfGravityArm.toFixed(3)} M`
+                }
+              />
+              <Output
+                label="Maximum mass"
+                value={
+                  profileLoading === null
+                    ? 'INVALID INPUT'
+                    : profileLoading.massWithinLimit
+                      ? 'WITHIN ENTERED LIMIT'
+                      : 'ABOVE ENTERED LIMIT'
+                }
+              />
+              <Output label="CG envelope" value="NOT EVALUATED" />
+            </View>
+          </Card>
+        </>
       )}
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
         New profile
@@ -356,7 +442,15 @@ function ProfileInput({
   );
 }
 
-function SavedProfile({ profile }: { readonly profile: AircraftProfile }) {
+function SavedProfile({
+  onUse,
+  profile,
+  selected,
+}: {
+  readonly onUse: () => void;
+  readonly profile: AircraftProfile;
+  readonly selected: boolean;
+}) {
   const theme = useDriftlineTheme();
   return (
     <View style={[styles.savedProfile, { borderColor: theme.separator }]}>
@@ -369,6 +463,13 @@ function SavedProfile({ profile }: { readonly profile: AircraftProfile }) {
       <Text style={[styles.warning, { color: theme.attention }]}>
         {profile.planning.cruiseSpeedKt} KT · {profile.planning.usableFuelLitres} L · UNVERIFIED
       </Text>
+      <View style={styles.profileAction}>
+        <Action
+          disabled={selected}
+          label={selected ? 'Selected' : 'Use for loading'}
+          onPress={onUse}
+        />
+      </View>
     </View>
   );
 }
@@ -440,6 +541,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   outputValue: { fontFamily: 'Menlo', fontSize: 16, fontWeight: '800' },
+  profileAction: { alignItems: 'flex-start', marginTop: spacing.sm },
   save: { alignItems: 'flex-start', marginTop: spacing.lg },
   savedProfile: { borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: spacing.lg },
   scroll: { paddingBottom: spacing.xxl },

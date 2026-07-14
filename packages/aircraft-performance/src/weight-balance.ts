@@ -20,6 +20,11 @@ export interface WeightBalanceInput {
   readonly stations: readonly LoadingStation[];
 }
 
+export interface LoadingSummaryInput {
+  readonly maximumMass: Kilograms;
+  readonly stations: readonly LoadingStation[];
+}
+
 export interface StationResult extends LoadingStation {
   readonly moment: KilogramMetres;
 }
@@ -32,6 +37,14 @@ export interface WeightBalanceResult {
   readonly totalMass: Kilograms;
   readonly totalMoment: KilogramMetres;
   readonly violations: readonly ('above-maximum-mass' | 'outside-envelope')[];
+}
+
+export interface LoadingSummary {
+  readonly centreOfGravityArm: Metres;
+  readonly massWithinLimit: boolean;
+  readonly stations: readonly StationResult[];
+  readonly totalMass: Kilograms;
+  readonly totalMoment: KilogramMetres;
 }
 
 const kilogramMetres = (value: number): KilogramMetres => {
@@ -76,9 +89,7 @@ const pointInEnvelope = (point: EnvelopePoint, envelope: readonly EnvelopePoint[
   return inside;
 };
 
-export const calculateWeightBalance = (input: WeightBalanceInput): WeightBalanceResult => {
-  if (input.envelope.length < 3)
-    throw new RangeError('A CG envelope requires at least three points');
+export const calculateLoadingSummary = (input: LoadingSummaryInput): LoadingSummary => {
   if (input.maximumMass <= 0) throw new RangeError('Maximum mass must be positive');
   const ids = new Set<string>();
   const stations = input.stations.map((station): StationResult => {
@@ -96,20 +107,29 @@ export const calculateWeightBalance = (input: WeightBalanceInput): WeightBalance
   );
   const centreOfGravityArm = metres(totalMoment / totalMass);
   const massWithinLimit = totalMass <= input.maximumMass;
-  const insideEnvelope = pointInEnvelope(
-    { arm: centreOfGravityArm, mass: totalMass },
-    input.envelope,
-  );
-  const violations: WeightBalanceResult['violations'][number][] = [];
-  if (!massWithinLimit) violations.push('above-maximum-mass');
-  if (!insideEnvelope) violations.push('outside-envelope');
   return {
     centreOfGravityArm,
-    insideEnvelope,
     massWithinLimit,
     stations,
     totalMass,
     totalMoment,
+  };
+};
+
+export const calculateWeightBalance = (input: WeightBalanceInput): WeightBalanceResult => {
+  if (input.envelope.length < 3)
+    throw new RangeError('A CG envelope requires at least three points');
+  const summary = calculateLoadingSummary(input);
+  const insideEnvelope = pointInEnvelope(
+    { arm: summary.centreOfGravityArm, mass: summary.totalMass },
+    input.envelope,
+  );
+  const violations: WeightBalanceResult['violations'][number][] = [];
+  if (!summary.massWithinLimit) violations.push('above-maximum-mass');
+  if (!insideEnvelope) violations.push('outside-envelope');
+  return {
+    ...summary,
+    insideEnvelope,
     violations,
   };
 };
