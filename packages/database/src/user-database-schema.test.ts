@@ -51,6 +51,7 @@ describe('user database migration plan', () => {
       'logbook_entries',
       'logbook_entry_attachments',
       'airport_favourites',
+      'weather_cache',
     ]) {
       expect(schema).toContain(`CREATE TABLE ${table}`);
     }
@@ -174,6 +175,37 @@ describe('user database migration plan', () => {
     expect(database.prepare(`SELECT identifier FROM airport_favourites`).all()).toEqual([
       { identifier: 'DVL1' },
     ]);
+    database.close();
+  });
+
+  it('requires weather cache product timestamp shape', () => {
+    const database = new DatabaseSync(':memory:');
+    for (const migration of userDatabaseMigrations) {
+      for (const statement of migration.statements) database.exec(statement);
+    }
+    const insert = database.prepare(
+      `INSERT INTO weather_cache
+        (product, station, raw_text, retrieved_at, observed_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    );
+    expect(() =>
+      insert.run(
+        'METAR',
+        'KMCI',
+        'METAR KMCI 141200Z 00000KT 10SM CLR 20/10 A2992',
+        '2026-07-14T12:01:00.000Z',
+        null,
+      ),
+    ).toThrow(/CHECK constraint failed/u);
+    expect(() =>
+      insert.run(
+        'TAF',
+        'KMCI',
+        'TAF KMCI 141100Z 1412/1512 00000KT P6SM SKC',
+        '2026-07-14T12:01:00.000Z',
+        null,
+      ),
+    ).not.toThrow();
     database.close();
   });
 

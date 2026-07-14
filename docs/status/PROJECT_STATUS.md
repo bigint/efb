@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 248 passed across thirty-eight test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,163 modules, 5.5 MB
+- Unit tests: 251 passed across thirty-nine test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,170 modules, 5.6 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -42,8 +42,11 @@ performance data.
   input unverified and currency-unknown. An on-demand AWC client retrieves one bounded raw METAR
   with a one-minute request interval, provider/station validation, source provenance, and
   currency evaluation. The same client retrieves one bounded raw TAF with station binding and a
-  shared request gate, but does not decode forecast groups or evaluate validity. Offline cache,
-  native network QA, and briefing completeness remain open.
+  shared request gate, but does not decode forecast groups or evaluate validity. Successful raw
+  reports now persist in a bounded per-product/station SQLite cache with receipt/source times.
+  Reads revalidate and reparse source text, cached results are visibly labelled, METAR currency
+  is recomputed, and TAF validity remains unevaluated. Native network/cache recovery QA and
+  briefing completeness remain open.
 - A typed true-reference wind triangle returns heading, signed correction, and groundspeed or an
   explicit no-solution state. Route legs can now produce wind-adjusted ETE or identify the
   blocking leg, and Plan exposes a clearly labelled constant-wind sandbox. Winds-aloft sourcing
@@ -57,9 +60,10 @@ performance data.
   explicitly stating that filesystem contents have not been rehashed. The manager separately
   reports validated native available/total device capacity without treating it as reserved
   application space or package-fit evidence.
-- User database migration v7 stores normalized airport favourites independently from replaceable
-  aviation datasets. Places can add/remove and visibly mark favourites; a corrupt favourite
-  collection disables only preference decoration while airport browsing remains available.
+- User database migration v8 stores normalized airport favourites independently from replaceable
+  aviation datasets and adds the bounded raw-weather cache. Places can add/remove and visibly
+  mark favourites; a corrupt favourite collection disables only preference decoration while
+  airport browsing remains available.
 - Airport dossiers expose runway geometry and full available provenance metadata, rank nearby
   demonstration airports by validated great-circle distance, and explicitly mark frequencies,
   services, fuel, notes, NOTAM, and sunrise/sunset as unavailable rather than inventing values.

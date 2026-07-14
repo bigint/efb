@@ -13,9 +13,10 @@ groups remain in `unparsedBodyGroups`; they are never silently discarded or turn
 operational value.
 
 The raw report and provenance remain attached. Observation day resolution requires a trusted
-receipt timestamp and considers adjacent UTC months. Weather retrieval, caching, expiry,
-flight-category classification, TAF decoding, runway visual range, international metre
-visibility, weather-code semantics, and complete briefing UI are not yet credited as
-implemented. The mobile workspace can retrieve a single bounded raw TAF from AWC, but it does
-not parse or evaluate any forecast group, issue time, validity window, amendment, or currency
-state.
+receipt timestamp and considers adjacent UTC months. The mobile workspace can retrieve one
+latest METAR or bounded raw TAF from AWC and retains successful raw products in a small,
+timestamped SQLite cache. Cache reads revalidate and reparse their source text; a cached METAR
+has currency recomputed against the current clock, while cached TAF validity remains explicitly
+unevaluated. Background retrieval, briefing completeness, flight-category classification, TAF
+decoding, runway visual range, international metre visibility, weather-code semantics, and
+operational weather availability are not yet credited as implemented.

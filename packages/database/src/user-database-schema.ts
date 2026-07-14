@@ -1,4 +1,4 @@
-export const USER_DATABASE_VERSION = 7;
+export const USER_DATABASE_VERSION = 8;
 
 export interface UserDatabaseMigration {
   readonly statements: readonly string[];
@@ -298,6 +298,23 @@ export const userDatabaseMigrations: readonly UserDatabaseMigration[] = [
       ) STRICT`,
       `CREATE INDEX airport_favourites_created_at_idx
         ON airport_favourites (created_at DESC, identifier)`,
+    ],
+  },
+  {
+    version: 8,
+    statements: [
+      `CREATE TABLE weather_cache (
+        product TEXT NOT NULL CHECK (product IN ('METAR', 'TAF')),
+        station TEXT NOT NULL CHECK (length(station) = 4 AND station = upper(station)),
+        raw_text TEXT NOT NULL CHECK (length(raw_text) BETWEEN 1 AND 8192),
+        retrieved_at TEXT NOT NULL,
+        observed_at TEXT,
+        PRIMARY KEY (product, station),
+        CHECK ((product = 'METAR' AND observed_at IS NOT NULL)
+          OR (product = 'TAF' AND observed_at IS NULL))
+      ) STRICT, WITHOUT ROWID`,
+      `CREATE INDEX weather_cache_retrieved_at_idx
+        ON weather_cache (retrieved_at DESC, product, station)`,
     ],
   },
 ] as const;

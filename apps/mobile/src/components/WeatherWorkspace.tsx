@@ -1,5 +1,6 @@
 import { radii, spacing, typography } from '@driftline/design-system';
-import { useState } from 'react';
+import { useSQLiteContext } from 'expo-sqlite';
+import { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -12,6 +13,12 @@ import {
 } from '@driftline/weather';
 
 import { useDriftlineTheme } from '@/theme';
+import {
+  cacheMetar,
+  cacheTaf,
+  listCachedWeather,
+  type CachedWeather,
+} from '@/database/weather-cache-repository';
 
 import { Action, Card, PanelHeader, panelStyles } from './PanelPrimitives';
 
@@ -20,12 +27,17 @@ interface DecoderForm {
 }
 
 export function WeatherWorkspace() {
+  const database = useSQLiteContext();
   const theme = useDriftlineTheme();
+  const [cached, setCached] = useState<readonly CachedWeather[]>([]);
+  const [cacheError, setCacheError] = useState<string | null>(null);
+  const [metarCached, setMetarCached] = useState(false);
   const [observation, setObservation] = useState<MetarObservation | null>(null);
   const [taf, setTaf] = useState<AwcTafReport | null>(null);
   const [station, setStation] = useState('');
   const [liveError, setLiveError] = useState<string | null>(null);
   const [loadingLive, setLoadingLive] = useState(false);
+  const [tafCached, setTafCached] = useState(false);
   const {
     control,
     formState: { errors },
@@ -33,6 +45,20 @@ export function WeatherWorkspace() {
     reset,
     setError,
   } = useForm<DecoderForm>({ defaultValues: { raw: '' } });
+
+  const reloadCache = useCallback(async () => {
+    try {
+      setCached(await listCachedWeather(database));
+      setCacheError(null);
+    } catch {
+      setCached([]);
+      setCacheError('Local weather cache unavailable; live and manual tools remain available.');
+    }
+  }, [database]);
+
+  useEffect(() => {
+    void reloadCache();
+  }, [reloadCache]);
 
   const decode = ({ raw }: DecoderForm) => {
     const receivedAt = new Date().toISOString();
@@ -54,6 +80,7 @@ export function WeatherWorkspace() {
         receivedAt,
       });
       setObservation(parsed);
+      setMetarCached(false);
     } catch {
       setObservation(null);
       setError('raw', {
@@ -65,13 +92,22 @@ export function WeatherWorkspace() {
   const clear = () => {
     reset({ raw: '' });
     setObservation(null);
+    setMetarCached(false);
   };
 
   const fetchLive = async () => {
     setLoadingLive(true);
     try {
-      setObservation(await awcMetarClient.fetchLatest(station));
-      setLiveError(null);
+      const latest = await awcMetarClient.fetchLatest(station);
+      setObservation(latest);
+      setMetarCached(false);
+      try {
+        await cacheMetar(database, latest);
+        await reloadCache();
+        setLiveError(null);
+      } catch {
+        setLiveError('Live METAR shown, but its local cache write failed.');
+      }
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'Live weather lookup failed.';
       setLiveError(
@@ -85,8 +121,16 @@ export function WeatherWorkspace() {
   const fetchLiveTaf = async () => {
     setLoadingLive(true);
     try {
-      setTaf(await awcMetarClient.fetchLatestTaf(station));
-      setLiveError(null);
+      const latest = await awcMetarClient.fetchLatestTaf(station);
+      setTaf(latest);
+      setTafCached(false);
+      try {
+        await cacheTaf(database, latest);
+        await reloadCache();
+        setLiveError(null);
+      } catch {
+        setLiveError('Live raw TAF shown, but its local cache write failed.');
+      }
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'Live TAF lookup failed.';
       setLiveError(taf === null ? message : `${message} Previous raw TAF retained.`);
@@ -109,7 +153,8 @@ export function WeatherWorkspace() {
         <Text style={[panelStyles.copy, styles.intro, { color: theme.secondary }]}>
           Retrieve one latest raw METAR or TAF by four-character station identifier. All AWC
           products share one foreground-only request limit of once per minute. This is not a
-          complete weather briefing and no offline cache is retained.
+          complete weather briefing. Successful raw reports are cached locally with their
+          retrieval timestamps.
         </Text>
         <View style={styles.liveRow}>
           <TextInput
@@ -149,7 +194,62 @@ export function WeatherWorkspace() {
           </Text>
         )}
       </Card>
-      {taf !== null && <RawTaf report={taf} />}
+      <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
+        Timestamped local cache
+      </Text>
+      <Card>
+        <Text style={[styles.warning, { color: theme.attention }]}>
+          CACHED RAW PRODUCTS · NOT A CURRENT BRIEFING
+        </Text>
+        {cacheError !== null && (
+          <Text accessibilityRole="alert" style={[styles.error, { color: theme.danger }]}>
+            {cacheError}
+          </Text>
+        )}
+        {cached.length === 0 && cacheError === null ? (
+          <Text style={[panelStyles.copy, styles.intro, { color: theme.secondary }]}>
+            No cached AWC reports.
+          </Text>
+        ) : (
+          <View style={styles.cacheList}>
+            {cached.map((record) => {
+              const value = record.product === 'METAR' ? record.observation : record.report;
+              return (
+                <View
+                  key={`${record.product}-${value.station}`}
+                  style={[styles.cacheRow, { borderColor: theme.separator }]}
+                >
+                  <View style={styles.cacheCopy}>
+                    <Text style={[styles.cacheTitle, { color: theme.primary }]}>
+                      {value.station} · {record.product}
+                    </Text>
+                    <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+                      Retrieved UTC {value.receivedAt}
+                    </Text>
+                  </View>
+                  <Action
+                    label="Load cached"
+                    onPress={() => {
+                      setStation(value.station);
+                      if (record.product === 'METAR') {
+                        setObservation(record.observation);
+                        setMetarCached(true);
+                      } else {
+                        setTaf(record.report);
+                        setTafCached(true);
+                      }
+                    }}
+                  />
+                </View>
+              );
+            })}
+          </View>
+        )}
+        <View style={styles.cacheRefresh}>
+          <Action label="Refresh cache" onPress={() => void reloadCache()} />
+        </View>
+      </Card>
+      {taf !== null && <RawTaf cached={tafCached} report={taf} />}
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
         Manual offline decoder
       </Text>
@@ -198,12 +298,20 @@ export function WeatherWorkspace() {
         </View>
       </Card>
 
-      {observation !== null && <DecodedObservation observation={observation} />}
+      {observation !== null && (
+        <DecodedObservation cached={metarCached} observation={observation} />
+      )}
     </ScrollView>
   );
 }
 
-function RawTaf({ report }: { readonly report: AwcTafReport }) {
+function RawTaf({
+  cached,
+  report,
+}: {
+  readonly cached: boolean;
+  readonly report: AwcTafReport;
+}) {
   const theme = useDriftlineTheme();
   return (
     <View style={styles.decoded}>
@@ -212,7 +320,7 @@ function RawTaf({ report }: { readonly report: AwcTafReport }) {
           {report.station} · RAW TAF
         </Text>
         <Text style={[styles.sourceState, { color: theme.attention }]}>
-          VALIDITY NOT EVALUATED · GROUPS NOT DECODED
+          {cached ? 'CACHED RAW · ' : ''}VALIDITY NOT EVALUATED · GROUPS NOT DECODED
         </Text>
       </View>
       <Card>
@@ -228,7 +336,13 @@ function RawTaf({ report }: { readonly report: AwcTafReport }) {
   );
 }
 
-function DecodedObservation({ observation }: { readonly observation: MetarObservation }) {
+function DecodedObservation({
+  cached,
+  observation,
+}: {
+  readonly cached: boolean;
+  readonly observation: MetarObservation;
+}) {
   const theme = useDriftlineTheme();
   const currency = evaluateMetarCurrency(observation, new Date());
   const wind = observation.wind;
@@ -247,7 +361,8 @@ function DecodedObservation({ observation }: { readonly observation: MetarObserv
             { color: currency.kind === 'current' ? theme.accent : theme.danger },
           ]}
         >
-          CURRENCY {currency.kind === 'current' ? 'CURRENT' : currency.reason.toUpperCase()}
+          {cached ? 'CACHED · ' : ''}CURRENCY{' '}
+          {currency.kind === 'current' ? 'CURRENT' : currency.reason.toUpperCase()}
         </Text>
       </View>
       <Card>
@@ -326,6 +441,17 @@ function Fact({ label, value }: { readonly label: string; readonly value: string
 
 const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
+  cacheCopy: { flex: 1 },
+  cacheList: { marginTop: spacing.md },
+  cacheRefresh: { alignItems: 'flex-start', marginTop: spacing.md },
+  cacheRow: {
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  cacheTitle: { fontFamily: typography.mono, fontSize: 13, fontWeight: '800' },
   decoded: { gap: spacing.md, marginTop: spacing.xl },
   error: {
     fontFamily: typography.body,
