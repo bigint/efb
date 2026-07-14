@@ -40,6 +40,11 @@ Retention values are proposed maxima and require product/legal approval.
 | Support bundle                                        | user-requested diagnosis                  | preview and explicit share; one case purpose                                                    | delete after case closure plus proposed 30 days                  |
 | Export/deletion request record                        | demonstrate request handling              | minimal identity, scope, timestamps, result                                                     | jurisdictionally approved audit period, not exported content     |
 
+Android Auto Backup is disabled in the application manifest so local routes, logbook data, and
+imported documents are not silently copied by that platform facility. iOS per-file backup
+exclusion and restore inspection still require native implementation and device evidence; the
+product must not claim that the explicit-cloud-backup policy is fully enforced on iOS yet.
+
 The production data map must name controller/processor, system, region, subprocessor, legal
 basis, recipients, retention, deletion mechanism, and owner for every row before collection
 begins.

@@ -104,6 +104,8 @@ performance data.
   reject duplicate parent identities even when called outside their normal bounded query path.
 - iOS no longer advertises document-browser access to the UUID-owned document container; imports
   remain picker-driven and exports remain explicit verified share actions.
+- Android Auto Backup is disabled for local operational/user data. iOS per-file backup exclusion
+  and restore evidence remain an explicit privacy release blocker.
 - Checklist template/history decoders apply the same direct-call collection limits and reject
   duplicate parent rows before grouping relational items or completions.
 - Saved-flight reconstruction bounds plans/waypoints, rejects duplicate plan parents, and

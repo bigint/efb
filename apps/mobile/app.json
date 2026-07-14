@@ -14,6 +14,7 @@
       }
     },
     "android": {
+      "allowBackup": false,
       "package": "computer.rag.driftline",
       "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
     },
