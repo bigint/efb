@@ -29,6 +29,12 @@ export function NativePositionController() {
         lifecycle.cancelled ||
         expectedGeneration !== generation ||
         AppState.currentState !== 'active';
+      const fail = () => {
+        if (isStale()) return;
+        generation += 1;
+        stop();
+        setDevicePositionStatus('error');
+      };
       try {
         const permission = await Location.getForegroundPermissionsAsync();
         if (isStale()) return;
@@ -71,9 +77,7 @@ export function NativePositionController() {
               timestamp,
             });
           },
-          () => {
-            if (!isStale()) setDevicePositionStatus('error');
-          },
+          fail,
         );
         if (isStale()) {
           nextSubscription.remove();
@@ -83,7 +87,7 @@ export function NativePositionController() {
         subscription = nextSubscription;
         setDevicePositionStatus('watching');
       } catch {
-        if (!isStale()) setDevicePositionStatus('error');
+        fail();
       }
     };
 
