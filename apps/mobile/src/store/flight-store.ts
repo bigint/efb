@@ -1,13 +1,17 @@
 import { createMMKV } from 'react-native-mmkv';
-import { z } from 'zod';
 import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 
 import { demoAirports } from '@driftline/aviation-domain';
 
+import {
+  parsePersistedFlightState,
+  sanitisePersistedJson,
+  type Workspace,
+} from '@/domain/persisted-flight';
 import type { PositionScenario, SimulationSample } from '@/domain/position-source';
 
-export type Workspace = 'map' | 'plan' | 'places' | 'aircraft' | 'system';
+export type { Workspace } from '@/domain/persisted-flight';
 
 interface FlightState {
   readonly positionSample: SimulationSample | null;
@@ -26,22 +30,12 @@ interface FlightState {
   tickSimulation: (sampledAt: number) => void;
 }
 
-const persistedFlightSchema = z
-  .object({
-    positionScenario: z.discriminatedUnion('kind', [
-      z.object({ kind: z.literal('disabled') }).strict(),
-      z.object({ gpsAvailable: z.boolean(), kind: z.literal('simulated') }).strict(),
-    ]),
-    routeIdentifiers: z.array(z.string().trim().min(1).max(16)).max(100),
-    selectedAirport: z.string().trim().min(1).max(16).nullable(),
-    workspace: z.enum(['map', 'plan', 'places', 'aircraft', 'system']),
-  })
-  .strict();
-
 const storage = createMMKV({ id: 'driftline-preferences' });
+const PERSISTENCE_VERSION = 2;
 
 const zustandStorage: StateStorage = {
-  getItem: (name) => storage.getString(name) ?? null,
+  getItem: (name) =>
+    sanitisePersistedJson(storage.getString(name) ?? null, PERSISTENCE_VERSION),
   removeItem: (name) => storage.remove(name),
   setItem: (name, value) => storage.set(name, value),
 };
@@ -89,6 +83,7 @@ export const useFlightStore = create<FlightState>()(
       tickSimulation: (sampledAt) =>
         set((state) => {
           if (
+            !Number.isFinite(sampledAt) ||
             state.positionScenario.kind !== 'simulated' ||
             !state.positionScenario.gpsAvailable ||
             initialPosition === undefined
@@ -111,11 +106,12 @@ export const useFlightStore = create<FlightState>()(
     }),
     {
       merge: (persisted, current) => {
-        const parsed = persistedFlightSchema.safeParse(persisted);
-        if (!parsed.success) {
-          return { ...current, positionSample: null, positionScenario: { kind: 'disabled' } };
-        }
-        return { ...current, ...parsed.data, positionSample: null };
+        const parsed = parsePersistedFlightState(persisted);
+        return {
+          ...current,
+          ...parsed,
+          positionSample: null,
+        };
       },
       name: 'flight-workspace-v2',
       partialize: ({ positionScenario, routeIdentifiers, selectedAirport, workspace }) => ({
@@ -125,7 +121,7 @@ export const useFlightStore = create<FlightState>()(
         workspace,
       }),
       storage: createJSONStorage(() => zustandStorage),
-      version: 2,
+      version: PERSISTENCE_VERSION,
     },
   ),
 );

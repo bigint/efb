@@ -33,4 +33,23 @@ describe('position source evaluation', () => {
   ] as const)('fails closed for %s', (scenario, value, now, reason) => {
     expect(evaluatePosition(scenario, value, now)).toEqual({ kind: 'unavailable', reason });
   });
+
+  it.each([
+    [{ ...sample, sampledAt: Number.NaN }, 10_500],
+    [{ ...sample, horizontalAccuracyMetres: Number.NaN }, 10_500],
+    [{ ...sample, horizontalAccuracyMetres: -1 }, 10_500],
+    [{ ...sample, latitude: 91 }, 10_500],
+    [{ ...sample, groundspeedKnots: -1 }, 10_500],
+  ] as const)('rejects a non-finite or out-of-domain sample %#', (value, now) => {
+    expect(evaluatePosition({ gpsAvailable: true, kind: 'simulated' }, value, now)).toEqual({
+      kind: 'unavailable',
+      reason: 'sample-invalid',
+    });
+  });
+
+  it('rejects a non-finite evaluation clock', () => {
+    expect(
+      evaluatePosition({ gpsAvailable: true, kind: 'simulated' }, sample, Number.NaN),
+    ).toEqual({ kind: 'unavailable', reason: 'clock-invalid' });
+  });
 });

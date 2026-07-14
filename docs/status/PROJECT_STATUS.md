@@ -28,12 +28,15 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across eight implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 48 passed across nine test files.
+- Unit tests: 60 passed across ten test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,059 modules, 4.9 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
-  generic typed weight-and-balance core. Independent re-review is pending.
+  generic typed weight-and-balance core. Independent re-review keeps Phase 1 blocked.
+- Independent QA found malformed-JSON, non-finite-position, and duplicate-route recovery
+  defects; all three now have fail-closed boundaries and permanent regression tests. A second
+  re-review of these follow-up fixes is pending.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated
