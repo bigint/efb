@@ -261,6 +261,37 @@ describe('offline region lifecycle', () => {
     expect(evaluateOfflineRegionAvailability(state, now).kind).toBe('invalid-generation');
   });
 
+  it('revalidates restored generation evidence before reporting current data', () => {
+    const base = generation(1);
+    const unsafeManifest: OfflineRegionState = {
+      ...initial,
+      active: {
+        activatedAt: '2026-07-14T12:00:00.000Z',
+        generation: {
+          ...base,
+          manifest: {
+            ...base.manifest,
+            files: [{ ...base.manifest.files[0]!, path: '../escape.sqlite' }],
+          },
+        },
+      },
+    };
+    const futureActivation: OfflineRegionState = {
+      ...initial,
+      active: {
+        activatedAt: '2026-07-14T12:00:00.001Z',
+        generation: base,
+      },
+    };
+
+    expect(evaluateOfflineRegionAvailability(unsafeManifest, now).kind).toBe(
+      'invalid-generation',
+    );
+    expect(evaluateOfflineRegionAvailability(futureActivation, now).kind).toBe(
+      'invalid-generation',
+    );
+  });
+
   it('rejects activation commits outside the verified clock window', () => {
     const attemptId = 'attempt-1';
     let state = step(initial, {

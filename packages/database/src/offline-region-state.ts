@@ -1,4 +1,8 @@
-import { decideDatasetActivation, type ActivationBlock } from './dataset-activation';
+import {
+  decideDatasetActivation,
+  isVerifiedDatasetGenerationValidAt,
+  type ActivationBlock,
+} from './dataset-activation';
 import { MAX_DATASET_TOTAL_BYTES, type VerifiedDatasetGeneration } from './dataset-manifest';
 
 export const MAX_OFFLINE_DATASET_BYTES = MAX_DATASET_TOTAL_BYTES;
@@ -305,6 +309,17 @@ export const evaluateOfflineRegionAvailability = (
   if (state.active === null) return { kind: 'absent' };
   const nowMs = now.getTime();
   if (!Number.isFinite(nowMs)) return { active: state.active, kind: 'clock-invalid' };
+  const activatedAt = Date.parse(state.active.activatedAt);
+  const integrityCheckedAt = Date.parse(state.active.generation.integrityCheckedAt);
+  if (
+    !isVerifiedDatasetGenerationValidAt(state.active.generation, nowMs) ||
+    !Number.isFinite(activatedAt) ||
+    !Number.isFinite(integrityCheckedAt) ||
+    activatedAt < integrityCheckedAt ||
+    activatedAt > nowMs
+  ) {
+    return { active: state.active, kind: 'invalid-generation' };
+  }
   const effectiveAt = Date.parse(state.active.generation.manifest.effectiveAt);
   const expiresAt = Date.parse(state.active.generation.manifest.expiresAt);
   if (

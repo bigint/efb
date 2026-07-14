@@ -32,6 +32,27 @@ const isSha256 = (value: string): boolean => /^[a-f0-9]{64}$/u.test(value);
 const isSignatureKeyId = (value: string): boolean =>
   value.length >= 1 && value.length <= 128 && /^[A-Za-z0-9._:-]+$/u.test(value);
 
+export const isVerifiedDatasetGenerationValidAt = (
+  generation: VerifiedDatasetGeneration,
+  nowMs: number,
+): boolean => {
+  if (!Number.isFinite(nowMs)) return false;
+  const generatedAt = Date.parse(generation.manifest.generatedAt);
+  const signatureVerifiedAt = Date.parse(generation.signatureVerifiedAt);
+  const integrityCheckedAt = Date.parse(generation.integrityCheckedAt);
+  return (
+    datasetManifestSchema.safeParse(generation.manifest).success &&
+    isSha256(generation.manifestDigest) &&
+    isSignatureKeyId(generation.signatureKeyId) &&
+    Number.isFinite(generatedAt) &&
+    Number.isFinite(signatureVerifiedAt) &&
+    Number.isFinite(integrityCheckedAt) &&
+    generatedAt <= signatureVerifiedAt &&
+    signatureVerifiedAt <= integrityCheckedAt &&
+    integrityCheckedAt <= nowMs
+  );
+};
+
 /**
  * Pure pre-activation policy. Filesystem/SQLite adapters still must activate the verified
  * generation atomically and retain the prior generation for rollback.
@@ -83,20 +104,7 @@ export const decideDatasetActivation = ({
     return { allowed: false, block: 'candidate-manifest-invalid' };
   }
   if (current === null) return { allowed: true, replacesSequence: null };
-  const currentSignatureVerifiedAt = Date.parse(current.signatureVerifiedAt);
-  const currentIntegrityCheckedAt = Date.parse(current.integrityCheckedAt);
-  const currentGeneratedAt = Date.parse(current.manifest.generatedAt);
-  if (
-    !datasetManifestSchema.safeParse(current.manifest).success ||
-    !isSha256(current.manifestDigest) ||
-    !isSignatureKeyId(current.signatureKeyId) ||
-    !Number.isFinite(currentSignatureVerifiedAt) ||
-    !Number.isFinite(currentIntegrityCheckedAt) ||
-    !Number.isFinite(currentGeneratedAt) ||
-    currentGeneratedAt > currentSignatureVerifiedAt ||
-    currentSignatureVerifiedAt > currentIntegrityCheckedAt ||
-    currentIntegrityCheckedAt > nowMs
-  ) {
+  if (!isVerifiedDatasetGenerationValidAt(current, nowMs)) {
     return { allowed: false, block: 'current-generation-invalid' };
   }
   if (

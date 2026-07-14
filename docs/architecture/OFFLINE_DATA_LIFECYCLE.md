@@ -56,6 +56,8 @@ generation before sequence or rollback decisions. Constructing a TypeScript-shap
 bypass those checks. Verification must occur after manifest generation, integrity checks must
 occur after signature verification, and neither verification timestamp may be in the future. The
 final activation commit must fall between the integrity check and the supplied trusted clock.
+Availability checks revalidate that same manifest, digest, signing identity, verification
+chronology, and activation timestamp before an installed generation can be labelled current.
 
 The manager independently reads native total and available device-storage bytes. Values must be
 positive/non-negative safe integers with available no greater than total before the UI derives
