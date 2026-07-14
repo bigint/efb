@@ -20,6 +20,12 @@ framework-independent calculator returns:
 - remaining distance as direct current-to-next distance plus every later route leg; and
 - ETE to next and route end only when finite groundspeed is greater than zero.
 
+The strip adds each next-leg ETE beside next distance. A destination ETA is a transient UTC
+clock addition from the current system time and route-end ETE; it is never stored in the plan.
+The clock boundary distinguishes missing duration, invalid system time, and estimates beyond the
+supported seven-day range. The display always includes `Z` and the UTC calendar date so local
+timezone and midnight rollover are not implicit.
+
 The map strip currently displays groundspeed, altitude, reported course, next/distance, signed
 cross-track side, remaining distance/ETE, explicit position-source health, and device battery
 state. Source health includes simulated/device identity, sample age, and horizontal accuracy; an
@@ -52,8 +58,7 @@ not hold a stale rotation. Returning to north-up removes automatic centring.
 
 This is a navigation-dashboard subset, not a flight director or certified instrument. Track-up
 uses reported course, never an inferred heading. It has no automatic waypoint sequencing, turn
-anticipation, magnetic course, heading source, pressure altitude, vertical navigation,
-destination clock ETA, arrival detection, or route-deviation alerting. Calculations use the
-documented spherical Earth model and fictional demonstration waypoints. Native battery/event
-behavior, lifecycle, accessibility, visual, energy, and independent-flight-fixture evidence are
-open release blockers.
+anticipation, magnetic course, heading source, pressure altitude, vertical navigation, arrival
+detection, or route-deviation alerting. Calculations use the documented spherical Earth model
+and fictional demonstration waypoints. Native battery/event behavior, lifecycle, accessibility,
+visual, energy, and independent-flight-fixture evidence are open release blockers.

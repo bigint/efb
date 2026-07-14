@@ -18,6 +18,7 @@ import {
 import { position as geospatialPosition } from '@driftline/geospatial';
 
 import { evaluatePosition } from '@/domain/position-source';
+import { estimateArrivalUtc } from '@/domain/arrival-estimate';
 import { resolveMapCamera, type MapOrientationMode } from '@/domain/map-camera';
 import { useDevicePower } from '@/hooks/use-device-power';
 import { useFlightStore } from '@/store/flight-store';
@@ -74,7 +75,8 @@ export function MapWorkspace() {
   const selectAirport = useFlightStore((state) => state.selectAirport);
   const setWorkspace = useFlightStore((state) => state.setWorkspace);
 
-  const position = evaluatePosition(positionScenario, positionSample, Date.now());
+  const nowMilliseconds = Date.now();
+  const position = evaluatePosition(positionScenario, positionSample, nowMilliseconds);
   const mapCamera = resolveMapCamera(orientationMode, position);
   const routeResolution = resolveRouteIdentifiers(
     routeIdentifiers,
@@ -141,6 +143,10 @@ export function MapWorkspace() {
           waypoints: routeResolution.waypoints,
         })
       : null;
+  const destinationArrival = estimateArrivalUtc(
+    nowMilliseconds,
+    activeNavigation?.status === 'ready' ? activeNavigation.estimatedMinutesRemaining : null,
+  );
 
   return (
     <View style={styles.container}>
@@ -319,7 +325,7 @@ export function MapWorkspace() {
             value={activeNavigation?.status === 'ready' ? activeNavigation.nextIdentifier : '—'}
             unit={
               activeNavigation?.status === 'ready'
-                ? `${activeNavigation.distanceToNext.toFixed(1)} NM`
+                ? `${activeNavigation.distanceToNext.toFixed(1)} NM · ${activeNavigation.estimatedMinutesToNext === null ? 'ETE —' : `${activeNavigation.estimatedMinutesToNext.toFixed(0)} MIN`}`
                 : activeLegIndex === null
                   ? 'SELECT LEG'
                   : 'POSITION/ROUTE'
@@ -360,6 +366,19 @@ export function MapWorkspace() {
               position.kind === 'available'
                 ? `${position.sample.horizontalAccuracyMetres === null ? 'ACC —' : `±${position.sample.horizontalAccuracyMetres.toFixed(0)} M`} · ${Math.floor(position.ageMilliseconds / 1_000)} S`
                 : position.reason.replaceAll('-', ' ').toUpperCase()
+            }
+          />
+          <NavValue
+            label="ETA"
+            value={
+              destinationArrival.kind === 'ready'
+                ? `${destinationArrival.isoUtc.slice(11, 16)}Z`
+                : '—'
+            }
+            unit={
+              destinationArrival.kind === 'ready'
+                ? `${destinationArrival.isoUtc.slice(0, 10)} · DEST`
+                : destinationArrival.reason.replaceAll('-', ' ').toUpperCase()
             }
           />
           <NavValue

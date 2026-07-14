@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 266 passed across forty-two test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,177 modules, 5.6 MB
+- Unit tests: 268 passed across forty-three test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,178 modules, 5.6 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -129,8 +129,9 @@ performance data.
   conflict UI remain open.
 - Plan now requires explicit transient active-leg selection; every route mutation clears it.
   With a fresh position, the map derives next distance, true bearing, signed cross-track,
-  remaining distance, and groundspeed-based ETE through a pure spherical calculator. There is no
-  automatic sequencing, magnetic course, destination clock ETA, or certification claim.
+  remaining distance, and groundspeed-based next/route ETE through a pure spherical calculator.
+  It also displays a bounded transient destination UTC ETA with explicit date rollover and clock
+  failure states. There is no automatic sequencing, magnetic course, or certification claim.
 - The map navigation strip now exposes position source, sample age, horizontal accuracy, battery
   percentage, charging state, and system low-power mode. Unsupported or malformed native battery
   telemetry fails to an explicit unavailable state; physical-device events, energy impact, and
