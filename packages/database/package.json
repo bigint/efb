@@ -1,5 +1,5 @@
 {
-  "name": "@driftline/geospatial",
+  "name": "@driftline/database",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,10 +10,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@driftline/data-contracts": "workspace:*"
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "fast-check": "^4.9.0",
     "typescript": "catalog:"
   }
 }
