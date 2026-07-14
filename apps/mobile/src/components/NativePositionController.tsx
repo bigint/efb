@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 import { useEffect } from 'react';
+import { AppState } from 'react-native';
 
 import { useFlightStore } from '@/store/flight-store';
 
@@ -15,13 +16,22 @@ export function NativePositionController() {
   useEffect(() => {
     if (!deviceEnabled) return;
     const lifecycle = { cancelled: false };
-    const isCancelled = () => lifecycle.cancelled;
+    let generation = 0;
     let subscription: Location.LocationSubscription | null = null;
 
-    const start = async () => {
+    const stop = () => {
+      subscription?.remove();
+      subscription = null;
+    };
+
+    const start = async (expectedGeneration: number) => {
+      const isStale = () =>
+        lifecycle.cancelled ||
+        expectedGeneration !== generation ||
+        AppState.currentState !== 'active';
       try {
         const permission = await Location.getForegroundPermissionsAsync();
-        if (isCancelled()) return;
+        if (isStale()) return;
         if (!permission.granted) {
           setDevicePositionStatus(
             permission.canAskAgain ? 'permission-required' : 'permission-denied',
@@ -29,19 +39,19 @@ export function NativePositionController() {
           return;
         }
         const servicesEnabled = await Location.hasServicesEnabledAsync();
-        if (isCancelled()) return;
+        if (isStale()) return;
         if (!servicesEnabled) {
           setDevicePositionStatus('service-disabled');
           return;
         }
-        setDevicePositionStatus('watching');
-        subscription = await Location.watchPositionAsync(
+        const nextSubscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
             distanceInterval: 1,
             timeInterval: 1_000,
           },
           ({ coords, timestamp }) => {
+            if (isStale()) return;
             ingestDeviceLocation({
               accuracyMetres: nonNegativeOrNull(coords.accuracy),
               altitudeMetres:
@@ -61,18 +71,35 @@ export function NativePositionController() {
               timestamp,
             });
           },
-          () => setDevicePositionStatus('error'),
+          () => {
+            if (!isStale()) setDevicePositionStatus('error');
+          },
         );
-        if (isCancelled()) subscription.remove();
+        if (isStale()) {
+          nextSubscription.remove();
+          return;
+        }
+        stop();
+        subscription = nextSubscription;
+        setDevicePositionStatus('watching');
       } catch {
-        if (!isCancelled()) setDevicePositionStatus('error');
+        if (!isStale()) setDevicePositionStatus('error');
       }
     };
 
-    void start();
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      generation += 1;
+      stop();
+      setDevicePositionStatus('checking');
+      if (state === 'active') void start(generation);
+    });
+    if (AppState.currentState === 'active') void start(generation);
+    else setDevicePositionStatus('checking');
     return () => {
       lifecycle.cancelled = true;
-      subscription?.remove();
+      generation += 1;
+      appStateSubscription.remove();
+      stop();
     };
   }, [deviceEnabled, ingestDeviceLocation, setDevicePositionStatus]);
 

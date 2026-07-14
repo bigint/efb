@@ -15,8 +15,11 @@ changes clear the prior sample, so simulated and device telemetry cannot be comb
 
 On selection, the controller checks foreground permission and whether system location services
 are enabled before starting a best-for-navigation foreground subscription. The subscription is
-owned above individual workspaces and is removed when the source changes or the application
-shell unmounts. Provider errors clear all live telemetry and require a source restart.
+owned above individual workspaces. Native AppState background/inactive transitions remove it and
+set the source back to `checking`, which also clears the last sample; returning active rechecks
+permission/services before creating a new watcher. A generation token makes late setup results,
+position callbacks, and provider errors from an older lifecycle no-ops. Source changes and shell
+unmount also remove the watcher. Provider errors clear all live telemetry.
 
 The existing persisted preference key is retained. Persistence v3 stores only device intent in
 the `checking` state; it never restores a prior `watching` assertion. Older v2 route and
@@ -62,5 +65,6 @@ post-flight record.
 Pure tests cover unit conversion, nullable provider values, device status mapping, freshness,
 invalid samples, ownship labels, and persistence recovery. Expo Doctor and the production
 JavaScript/Hermes export validate configuration and bundling only. Native permission prompts,
-denied/restricted states, foreground/background transitions, provider loss, energy use, accuracy
-behavior, and physical-device visual/accessibility behavior remain open release blockers.
+denied/restricted states, the implemented foreground/background transition, provider loss,
+energy use, accuracy behavior, and physical-device visual/accessibility behavior remain open
+release blockers.

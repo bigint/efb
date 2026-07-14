@@ -152,9 +152,11 @@ performance data.
 - An explicit user action can now select a foreground-only device-location source. Permission,
   service, provider-error, null-telemetry, and stale-sample states fail closed; metric provider
   values convert to cockpit units at a pure boundary, and source changes clear prior samples.
-  The own-ship marker exposes source, accuracy, and true-track/platform-course semantics through
-  both shape/text and an accessible image label. Native permission, lifecycle, accuracy, energy,
-  and physical-device evidence remain open.
+  App background explicitly removes the watcher and sample; active rechecks permission/services,
+  with generation guards blocking callbacks from an older lifecycle. The own-ship marker exposes
+  source, accuracy, and true-track/platform-course semantics through both shape/text and an
+  accessible image label. Native permission, lifecycle, accuracy, energy, and physical-device
+  evidence remain open.
 - Dedicated high-contrast day and night palettes follow iOS Increase Contrast and Android High
   contrast text, including live setting-change subscriptions. Automated token checks enforce
   documented semantic contrast thresholds, and the demonstration map uses the selected palette.
