@@ -7,6 +7,7 @@ import { AircraftWorkspace } from '@/components/AircraftWorkspace';
 import { MapWorkspace } from '@/components/MapWorkspace';
 import { PlacesWorkspace } from '@/components/PlacesWorkspace';
 import { PlanWorkspace } from '@/components/PlanWorkspace';
+import { RecordsWorkspace } from '@/components/RecordsWorkspace';
 import { StatusPlane } from '@/components/StatusPlane';
 import { SystemWorkspace } from '@/components/SystemWorkspace';
 import { WeatherWorkspace } from '@/components/WeatherWorkspace';
@@ -32,6 +33,8 @@ export default function HomeScreen() {
         return <PlacesWorkspace />;
       case 'plan':
         return <PlanWorkspace />;
+      case 'records':
+        return <RecordsWorkspace />;
       case 'system':
         return <SystemWorkspace />;
       case 'weather':

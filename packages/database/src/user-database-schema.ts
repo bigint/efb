@@ -1,4 +1,4 @@
-export const USER_DATABASE_VERSION = 1;
+export const USER_DATABASE_VERSION = 2;
 
 export interface UserDatabaseMigration {
   readonly statements: readonly string[];
@@ -122,6 +122,76 @@ export const userDatabaseMigrations: readonly UserDatabaseMigration[] = [
       ) STRICT`,
       `CREATE INDEX logbook_entries_flight_date_idx
         ON logbook_entries (flight_date DESC)`,
+      `CREATE TABLE offline_regions (
+        region_id TEXT PRIMARY KEY NOT NULL,
+        jurisdiction TEXT NOT NULL,
+        active_dataset_id TEXT,
+        state TEXT NOT NULL CHECK (state IN ('absent', 'downloading', 'ready', 'failed', 'expired')),
+        byte_length INTEGER NOT NULL DEFAULT 0 CHECK (byte_length >= 0),
+        last_checked_at TEXT
+      ) STRICT`,
+    ],
+  },
+  {
+    version: 2,
+    statements: [
+      `ALTER TABLE logbook_entries RENAME TO logbook_entries_v1`,
+      `CREATE TABLE logbook_entries (
+        id TEXT PRIMARY KEY NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        flight_date TEXT NOT NULL,
+        jurisdiction TEXT NOT NULL,
+        aircraft_id TEXT REFERENCES aircraft_profiles(id) ON DELETE SET NULL,
+        aircraft_registration TEXT NOT NULL,
+        departure_identifier TEXT NOT NULL,
+        arrival_identifier TEXT NOT NULL,
+        block_minutes INTEGER NOT NULL CHECK (block_minutes >= 0),
+        flight_minutes INTEGER NOT NULL CHECK (flight_minutes >= 0),
+        day_minutes INTEGER NOT NULL DEFAULT 0 CHECK (day_minutes >= 0),
+        pic_minutes INTEGER NOT NULL DEFAULT 0 CHECK (pic_minutes >= 0),
+        sic_minutes INTEGER NOT NULL DEFAULT 0 CHECK (sic_minutes >= 0),
+        dual_minutes INTEGER NOT NULL DEFAULT 0 CHECK (dual_minutes >= 0),
+        instructor_minutes INTEGER NOT NULL DEFAULT 0 CHECK (instructor_minutes >= 0),
+        night_minutes INTEGER NOT NULL DEFAULT 0 CHECK (night_minutes >= 0),
+        instrument_minutes INTEGER NOT NULL DEFAULT 0 CHECK (instrument_minutes >= 0),
+        approaches INTEGER NOT NULL DEFAULT 0 CHECK (approaches >= 0),
+        landings_day INTEGER NOT NULL DEFAULT 0 CHECK (landings_day >= 0),
+        landings_night INTEGER NOT NULL DEFAULT 0 CHECK (landings_night >= 0),
+        remarks TEXT NOT NULL DEFAULT '',
+        compliance_status TEXT NOT NULL CHECK (compliance_status = 'not-evaluated'),
+        CHECK (flight_minutes <= block_minutes),
+        CHECK (day_minutes + night_minutes <= flight_minutes),
+        CHECK (pic_minutes + sic_minutes <= flight_minutes),
+        CHECK (dual_minutes <= flight_minutes),
+        CHECK (instructor_minutes <= flight_minutes),
+        CHECK (night_minutes <= flight_minutes),
+        CHECK (instrument_minutes <= flight_minutes)
+      ) STRICT`,
+      `INSERT INTO logbook_entries (
+        id, created_at, updated_at, flight_date, jurisdiction, aircraft_id,
+        aircraft_registration, departure_identifier, arrival_identifier, block_minutes,
+        flight_minutes, day_minutes, pic_minutes, sic_minutes, dual_minutes,
+        instructor_minutes, night_minutes, instrument_minutes, approaches,
+        landings_day, landings_night, remarks, compliance_status
+      )
+      SELECT
+        id, created_at, updated_at, flight_date, jurisdiction, aircraft_id,
+        aircraft_registration, departure_identifier, arrival_identifier, block_minutes,
+        flight_minutes, flight_minutes - night_minutes, pic_minutes, sic_minutes, 0,
+        0, night_minutes, instrument_minutes, approaches,
+        landings_day, landings_night, remarks, 'not-evaluated'
+      FROM logbook_entries_v1`,
+      `DROP TABLE logbook_entries_v1`,
+      `CREATE INDEX logbook_entries_flight_date_idx
+        ON logbook_entries (flight_date DESC)`,
+      `CREATE TABLE logbook_entry_attachments (
+        entry_id TEXT NOT NULL REFERENCES logbook_entries(id) ON DELETE CASCADE,
+        document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE RESTRICT,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (entry_id, document_id)
+      ) STRICT, WITHOUT ROWID`,
+      `DROP TABLE IF EXISTS offline_regions`,
     ],
   },
 ] as const;

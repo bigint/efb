@@ -6,6 +6,7 @@ import { SQLiteProvider } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 
 import { initialiseLocalDatabases, USER_DATABASE_NAME } from '@/database/user-database';
+import { LocalDatabaseBoundary } from '@/components/LocalDatabaseBoundary';
 import { useFlightStore } from '@/store/flight-store';
 
 export default function RootLayout() {
@@ -26,10 +27,12 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <SQLiteProvider databaseName={USER_DATABASE_NAME} onInit={initialiseLocalDatabases}>
-      <QueryClientProvider client={queryClient}>
-        <Stack screenOptions={{ headerShown: false }} />
-      </QueryClientProvider>
-    </SQLiteProvider>
+    <LocalDatabaseBoundary>
+      <SQLiteProvider databaseName={USER_DATABASE_NAME} onInit={initialiseLocalDatabases}>
+        <QueryClientProvider client={queryClient}>
+          <Stack screenOptions={{ headerShown: false }} />
+        </QueryClientProvider>
+      </SQLiteProvider>
+    </LocalDatabaseBoundary>
   );
 }

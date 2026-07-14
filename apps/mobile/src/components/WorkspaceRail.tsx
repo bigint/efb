@@ -10,6 +10,7 @@ const items: readonly { label: string; mark: string; value: Workspace }[] = [
   { label: 'Places', mark: '⌖', value: 'places' },
   { label: 'Weather', mark: '≋', value: 'weather' },
   { label: 'Aircraft', mark: '△', value: 'aircraft' },
+  { label: 'Records', mark: '▤', value: 'records' },
   { label: 'System', mark: '◫', value: 'system' },
 ];
 

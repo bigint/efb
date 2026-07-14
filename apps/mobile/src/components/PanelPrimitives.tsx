@@ -36,11 +36,13 @@ export function Card({ children }: PropsWithChildren) {
 
 export function Action({
   destructive = false,
+  disabled = false,
   label,
   onPress,
   primary = false,
 }: {
   readonly destructive?: boolean;
+  readonly disabled?: boolean;
   readonly label: string;
   readonly onPress: () => void;
   readonly primary?: boolean;
@@ -55,11 +57,14 @@ export function Action({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.action,
         { backgroundColor, borderColor: primary ? theme.accent : theme.separator },
         pressed && styles.pressed,
+        disabled && styles.disabled,
       ]}
     >
       <Text style={[styles.actionText, { color }]}>{label}</Text>
@@ -103,6 +108,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   card: { borderRadius: radii.panel, borderWidth: 1, padding: spacing.lg },
+  disabled: { opacity: 0.45 },
   eyebrow: {
     fontFamily: typography.mono,
     fontSize: 10,

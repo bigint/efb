@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 104 passed across sixteen test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,106 modules, 5.2 MB
+- Unit tests: 121 passed across eighteen test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,117 modules, 5.2 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -49,6 +49,12 @@ performance data.
   active data independent from update failure while rejecting cross-attempt, incomplete,
   wrong-region, invalid-time, and unauthorized-rollback transitions. Filesystem, signature, and
   atomic activation adapters remain open.
+- A local Records workspace now writes validated logbook entries through parameterized SQLite
+  transactions, restores and revalidates them for totals, and labels regulatory compliance as
+  unevaluated. Migration v2 preserves v1 rows and moves attachments to relational references; a
+  database failure stops the normal shell. Native recovery and visual/accessibility QA remain
+  open. React Native Web is not a usable visual-QA surface because the current MapLibre native
+  module fails its web codegen boundary before render.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated

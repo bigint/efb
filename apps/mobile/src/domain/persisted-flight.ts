@@ -8,6 +8,7 @@ export const workspaceSchema = z.enum([
   'places',
   'weather',
   'aircraft',
+  'records',
   'system',
 ]);
 export type Workspace = z.infer<typeof workspaceSchema>;

@@ -14,6 +14,12 @@ const validState = {
 };
 
 describe('persisted flight recovery', () => {
+  it('accepts the records workspace as a recoverable destination', () => {
+    expect(parsePersistedFlightState({ ...validState, workspace: 'records' }).workspace).toBe(
+      'records',
+    );
+  });
+
   it('accepts an exact valid persisted state', () => {
     expect(parsePersistedFlightState(validState)).toEqual(validState);
     expect(parsePersistedFlightState({ ...validState, workspace: 'weather' }).workspace).toBe(
