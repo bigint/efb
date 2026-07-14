@@ -131,8 +131,9 @@ performance data.
   or altitude transitions fail into an explicit simulated GPS outage. Configuration persists but
   live samples do not. A session pause keeps a fresh stationary simulated sample and resumes
   without accumulating paused time. The source-aware timer reducer now leaves device telemetry
-  untouched and fails invalid simulator clocks/origins into outage. Native timer, lifecycle, and
-  physical-device behavior remain unverified.
+  untouched and fails invalid simulator clocks/origins into outage. Native AppState now stops
+  the root interval outside active state and performs a conservative immediate tick on return.
+  Native timer, lifecycle, and physical-device behavior remain unverified.
 - User-entered aircraft profiles now persist locally with explicit kilogram, metre, litre, and
   knot units, immutable unverified provenance, schema revision, parameterized writes, and a
   fail-closed JSON read boundary. User fields can advance through compare-and-swap revisions

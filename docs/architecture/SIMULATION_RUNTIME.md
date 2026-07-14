@@ -40,6 +40,11 @@ strict no-op for device and disabled sources, preventing simulator housekeeping 
 fresh native telemetry. Non-finite clocks and unavailable simulator origins instead fail the
 simulated source into an explicit GPS outage.
 
+The root timer itself exists only while native AppState is active. Background/inactive stops the
+interval; returning active performs one immediate tick and restarts the one-second cadence. The
+existing greater-than-five-second rule holds position and altitude on that resume tick, so
+background duration is not replayed as movement.
+
 These rules bound each foreground update and make process suspension conservative. They do not
 model turns, acceleration, randomized GNSS error, sensor latency, or real aircraft dynamics.
 
