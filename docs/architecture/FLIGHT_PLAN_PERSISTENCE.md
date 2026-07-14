@@ -66,6 +66,13 @@ timestamp such as `2026-07-14T12:30:00Z`; locale-dependent or offset-bearing tex
 rather than guessed. Clearing an optional field persists `NULL`, and an unavailable linked
 aircraft is preserved unless the user explicitly unassigns or replaces it.
 
+The current resolved route can be shared as a GPX 1.1 route snapshot. Export is bounded to the
+same 100-waypoint ceiling, revalidates every coordinate, rejects duplicate identifiers and XML
+control characters, escapes XML text, and verifies the cache write before opening the native
+share sheet. The file deliberately contains no invented altitude or timestamp. Both UI and file
+metadata label the fictional demonstration route unverified and unsuitable as authoritative
+navigation data; closing a share sheet is not presented as proof of delivery.
+
 ## Repository semantics
 
 Creation inserts the flight and all ordered waypoints in one exclusive SQLite transaction with

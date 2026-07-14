@@ -28,6 +28,7 @@ import {
   replaceSavedFlightPlan,
 } from '@/database/flight-plan-repository';
 import { listAircraftProfiles } from '@/database/aircraft-profile-repository';
+import { exportRouteGpx } from '@/database/route-gpx-export';
 import { parseSavedPlanEditor } from '@/domain/saved-plan-editor';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
@@ -47,6 +48,8 @@ export function PlanWorkspace() {
   const [editingNotes, setEditingNotes] = useState('');
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [exportingGpx, setExportingGpx] = useState(false);
+  const [gpxStatus, setGpxStatus] = useState<string | null>(null);
   const [savedPlans, setSavedPlans] = useState<readonly SavedFlightPlan[]>([]);
   const [saveTitle, setSaveTitle] = useState('');
   const [persistenceError, setPersistenceError] = useState<string | null>(null);
@@ -296,6 +299,25 @@ export function PlanWorkspace() {
     );
   };
 
+  const shareCurrentRoute = async () => {
+    if (routeResolution.status !== 'resolved' || routeResolution.waypoints.length < 2) return;
+    setExportingGpx(true);
+    try {
+      const result = await exportRouteGpx(routeResolution.waypoints);
+      setGpxStatus(
+        result.kind === 'share-sheet-closed'
+          ? `Share sheet closed. ${result.temporaryFileRetained ? 'Temporary cache cleanup failed.' : 'The temporary file was removed.'} Confirm the destination separately.`
+          : `Native sharing unavailable. The GPX remains in app cache at ${result.uri}`,
+      );
+    } catch (caught) {
+      setGpxStatus(
+        caught instanceof Error ? caught.message : 'Unable to create the GPX snapshot.',
+      );
+    } finally {
+      setExportingGpx(false);
+    }
+  };
+
   return (
     <ScrollView
       contentContainerStyle={styles.scroll}
@@ -354,6 +376,38 @@ export function PlanWorkspace() {
             }
           />
         </View>
+      </Card>
+
+      <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
+        Export
+      </Text>
+      <Card>
+        <Text style={[styles.assumptionWarning, { color: theme.attention }]}>
+          FICTIONAL / UNVERIFIED · NOT AUTHORITATIVE NAVIGATION DATA
+        </Text>
+        <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+          Shares only the current resolved draft route as a bounded GPX snapshot. It does not
+          include live data, altitude, timing, weather, or fuel assumptions.
+        </Text>
+        <View style={styles.retry}>
+          <Action
+            disabled={
+              exportingGpx ||
+              routeResolution.status !== 'resolved' ||
+              routeResolution.waypoints.length < 2
+            }
+            label={exportingGpx ? 'Preparing GPX…' : 'Share current route GPX'}
+            onPress={() => void shareCurrentRoute()}
+          />
+        </View>
+        {gpxStatus !== null && (
+          <Text
+            accessibilityRole="alert"
+            style={[panelStyles.copy, { color: theme.secondary }]}
+          >
+            {gpxStatus}
+          </Text>
+        )}
       </Card>
 
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
