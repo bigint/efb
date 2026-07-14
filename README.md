@@ -14,13 +14,17 @@ education, pre-flight planning, and non-certified situational awareness.
 - Offline native demonstration map with a graticule, fictional airports, route line, Skia
   own-ship glyph, navigation strip, and explicit GPS failure injection
 - Adaptive iPad rail and compact iPhone navigation
-- Persistent route editing, local airport search/details, generic aircraft profile, and a
-  clearly fictional weight-and-balance sandbox, and data/source status
+- Ephemeral route editing plus durable revisioned flight drafts, local airport search/details,
+  user-entered aircraft profiles, an explicitly fictional weight-and-balance sandbox, and
+  data/source status
 - Framework-independent typed units, provenance contracts, great-circle calculations,
   cross-/along-track calculations, true-reference wind-triangle solving, and route summaries
   with deterministic and property-based tests
-- Conservative METAR/SPECI parsing contracts that retain raw text, provenance, uncertainty, and
-  unsupported groups without pretending live weather is configured
+- Conservative METAR/SPECI parsing plus bounded on-demand AWC raw METAR and TAF retrieval. Raw
+  text, source/retrieval time, uncertainty, and unsupported groups remain visible; the result is
+  explicitly supplemental and not a complete briefing
+- App-private PDF import with post-copy SHA-256 verification and non-destructive storage audit,
+  immutable checklist completion/abandonment history, and a bounded offline logbook dashboard
 
 ## Run
 
