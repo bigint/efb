@@ -67,6 +67,10 @@ mistaken for successful replacement.
   receipt/source times, and is never called a briefing. METAR currency is recomputed against the
   current clock; TAF header validity is recomputed against the current UTC clock while forecast
   groups remain undecoded.
+- While a product is displayed, its currency/validity clock refreshes every 30 seconds and
+  immediately when the native app returns active. A report therefore transitions out of
+  `CURRENT` without requiring unrelated interaction. Explicit display-clear actions do not
+  delete the separately managed cache.
 - Each station/product can be removed through a destructive native confirmation. A separate
   confirmed clear-all operation remains available when a corrupt row makes the bounded list
   unreadable. Successful deletion also removes any matching cached product from the rendered

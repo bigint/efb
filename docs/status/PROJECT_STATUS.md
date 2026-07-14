@@ -54,10 +54,12 @@ performance data.
   times. Reads revalidate and reparse source text, cached results are visibly labelled, METAR
   currency and TAF header validity are recomputed. Confirmed per-product and clear-all deletion
   let users remove local raw products, including recovery when the cache cannot be listed.
-  Decoded observations derive a separately labelled U.S. NWS display category from the worse
-  parsed ceiling/visibility input, preserve threshold evidence, and fail closed on incomplete or
-  ambiguous inputs. The category is not presented as worldwide or regulatory. Native
-  network/cache recovery QA and briefing completeness remain open.
+  Displayed currency/validity reevaluates every 30 seconds and on app resume, with separate
+  non-destructive display clear controls. Decoded observations derive a separately labelled U.S.
+  NWS display category from the worse parsed ceiling/visibility input, preserve threshold
+  evidence, and fail closed on incomplete or ambiguous inputs. The category is not presented as
+  worldwide or regulatory. Native network/cache recovery QA and briefing completeness remain
+  open.
 - A typed true-reference wind triangle returns heading, signed correction, and groundspeed or an
   explicit no-solution state. Route legs can now produce wind-adjusted ETE or identify the
   blocking leg, and Plan exposes a clearly labelled constant-wind sandbox. Winds-aloft sourcing

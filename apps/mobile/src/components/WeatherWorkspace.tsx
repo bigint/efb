@@ -2,7 +2,7 @@ import { radii, spacing, typography } from '@driftline/design-system';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, AppState, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   awcMetarClient,
@@ -45,6 +45,7 @@ export function WeatherWorkspace() {
   const [liveError, setLiveError] = useState<string | null>(null);
   const [loadingLive, setLoadingLive] = useState(false);
   const [tafCached, setTafCached] = useState(false);
+  const [weatherClock, setWeatherClock] = useState(() => new Date());
   const {
     control,
     formState: { errors },
@@ -66,6 +67,20 @@ export function WeatherWorkspace() {
   useEffect(() => {
     void reloadCache();
   }, [reloadCache]);
+
+  useEffect(() => {
+    if (observation === null && taf === null) return undefined;
+    const refreshClock = () => setWeatherClock(new Date());
+    refreshClock();
+    const interval = setInterval(refreshClock, 30_000);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshClock();
+    });
+    return () => {
+      clearInterval(interval);
+      subscription.remove();
+    };
+  }, [observation, taf]);
 
   const decode = ({ raw }: DecoderForm) => {
     const receivedAt = new Date().toISOString();
@@ -282,6 +297,24 @@ export function WeatherWorkspace() {
             {liveError}
           </Text>
         )}
+        <View style={styles.actions}>
+          <Action
+            disabled={loadingLive || observation === null}
+            label="Clear displayed METAR"
+            onPress={() => {
+              setObservation(null);
+              setMetarCached(false);
+            }}
+          />
+          <Action
+            disabled={loadingLive || taf === null}
+            label="Clear displayed TAF"
+            onPress={() => {
+              setTaf(null);
+              setTafCached(false);
+            }}
+          />
+        </View>
       </Card>
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
         Timestamped local cache
@@ -360,7 +393,7 @@ export function WeatherWorkspace() {
           </Text>
         )}
       </Card>
-      {taf !== null && <RawTaf cached={tafCached} report={taf} />}
+      {taf !== null && <RawTaf cached={tafCached} now={weatherClock} report={taf} />}
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
         Manual offline decoder
       </Text>
@@ -410,7 +443,7 @@ export function WeatherWorkspace() {
       </Card>
 
       {observation !== null && (
-        <DecodedObservation cached={metarCached} observation={observation} />
+        <DecodedObservation cached={metarCached} now={weatherClock} observation={observation} />
       )}
     </ScrollView>
   );
@@ -418,13 +451,15 @@ export function WeatherWorkspace() {
 
 function RawTaf({
   cached,
+  now,
   report,
 }: {
   readonly cached: boolean;
+  readonly now: Date;
   readonly report: AwcTafReport;
 }) {
   const theme = useDriftlineTheme();
-  const validity = evaluateTafValidity(report, new Date());
+  const validity = evaluateTafValidity(report, now);
   let timeline: ReturnType<typeof parseTafTimeline> | null = null;
   try {
     timeline = parseTafTimeline(report);
@@ -497,13 +532,15 @@ function RawTaf({
 
 function DecodedObservation({
   cached,
+  now,
   observation,
 }: {
   readonly cached: boolean;
+  readonly now: Date;
   readonly observation: MetarObservation;
 }) {
   const theme = useDriftlineTheme();
-  const currency = evaluateMetarCurrency(observation, new Date());
+  const currency = evaluateMetarCurrency(observation, now);
   const flightCategory = classifyUsFlightCategory(observation);
   const wind = observation.wind;
   const visibility = observation.visibility;
