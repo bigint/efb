@@ -1,5 +1,10 @@
 import { dataProvenanceSchema } from '@driftline/data-contracts';
-import { parseMetar, type AwcTafReport, type MetarObservation } from '@driftline/weather';
+import {
+  parseMetar,
+  parseTafHeader,
+  type AwcTafReport,
+  type MetarObservation,
+} from '@driftline/weather';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { z } from 'zod';
 
@@ -64,15 +69,31 @@ export const decodeCachedWeather = (
       if (matches.length !== 1 || header?.[1] !== record.station) {
         throw new Error('Cached TAF station binding is invalid');
       }
+      const parsed = parseTafHeader({
+        provenance: retrievalProvenance(record.retrievedAt),
+        raw: record.raw,
+        receivedAt: record.retrievedAt,
+      });
+      if (parsed.station !== record.station)
+        throw new Error('Cached TAF station binding is invalid');
+      const report = {
+        ...parsed,
+        provenance: dataProvenanceSchema.parse({
+          confidence: 'high',
+          datasetVersion: 'awc-data-api-v4-raw',
+          effectiveAt: parsed.validFrom,
+          expiresAt: parsed.validTo,
+          jurisdiction: 'WORLDWIDE',
+          origin: 'real',
+          retrievedAt: record.retrievedAt,
+          source: 'NOAA/NWS Aviation Weather Center Data API · local cache',
+          sourceTimestamp: parsed.issuedAt,
+          verificationStatus: 'source-verified',
+        }),
+      };
       return {
         product: 'TAF',
-        report: {
-          product: 'TAF',
-          provenance: retrievalProvenance(record.retrievedAt),
-          raw: record.raw,
-          receivedAt: record.retrievedAt,
-          station: record.station,
-        },
+        report,
       };
     }
     const preliminary = parseMetar({

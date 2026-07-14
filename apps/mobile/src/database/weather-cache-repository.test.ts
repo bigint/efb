@@ -45,4 +45,23 @@ describe('weather cache SQLite boundary', () => {
       ]),
     ).toThrow('TAF');
   });
+
+  it('reparses cached TAF header timing and cache provenance', () => {
+    const cached = decodeCachedWeather([
+      {
+        observed_at: null,
+        product: 'TAF',
+        raw_text: 'TAF KMCI 141100Z 1412/1512 00000KT P6SM SKC',
+        retrieved_at: '2026-07-14T11:05:00.000Z',
+        station: 'KMCI',
+      },
+    ]);
+    const record = cached[0];
+    expect(record?.product).toBe('TAF');
+    if (record?.product !== 'TAF') throw new Error('Expected cached TAF');
+    expect(record.report.issuedAt).toBe('2026-07-14T11:00:00.000Z');
+    expect(record.report.validFrom).toBe('2026-07-14T12:00:00.000Z');
+    expect(record.report.validTo).toBe('2026-07-15T12:00:00.000Z');
+    expect(record.report.provenance.source).toContain('local cache');
+  });
 });

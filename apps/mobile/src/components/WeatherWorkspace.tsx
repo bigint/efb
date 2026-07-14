@@ -7,6 +7,7 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   awcMetarClient,
   evaluateMetarCurrency,
+  evaluateTafValidity,
   parseMetar,
   type AwcTafReport,
   type MetarObservation,
@@ -313,6 +314,7 @@ function RawTaf({
   readonly report: AwcTafReport;
 }) {
   const theme = useDriftlineTheme();
+  const validity = evaluateTafValidity(report, new Date());
   return (
     <View style={styles.decoded}>
       <View>
@@ -320,7 +322,11 @@ function RawTaf({
           {report.station} · RAW TAF
         </Text>
         <Text style={[styles.sourceState, { color: theme.attention }]}>
-          {cached ? 'CACHED RAW · ' : ''}VALIDITY NOT EVALUATED · GROUPS NOT DECODED
+          {cached ? 'CACHED RAW · ' : ''}VALIDITY{' '}
+          {validity.kind === 'current'
+            ? 'CURRENT'
+            : validity.reason.replaceAll('-', ' ').toUpperCase()}{' '}
+          · GROUPS NOT DECODED
         </Text>
       </View>
       <Card>
@@ -329,6 +335,10 @@ function RawTaf({
         </Text>
       </Card>
       <Card>
+        <Fact label="Issue state" value={report.amendment.toUpperCase()} />
+        <Fact label="Issued UTC" value={report.issuedAt} />
+        <Fact label="Valid from UTC" value={report.validFrom} />
+        <Fact label="Valid to UTC" value={report.validTo} />
         <Fact label="Source" value={report.provenance.source} />
         <Fact label="Retrieved UTC" value={report.receivedAt} />
       </Card>

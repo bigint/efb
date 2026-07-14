@@ -16,7 +16,9 @@ The raw report and provenance remain attached. Observation day resolution requir
 receipt timestamp and considers adjacent UTC months. The mobile workspace can retrieve one
 latest METAR or bounded raw TAF from AWC and retains successful raw products in a small,
 timestamped SQLite cache. Cache reads revalidate and reparse their source text; a cached METAR
-has currency recomputed against the current clock, while cached TAF validity remains explicitly
-unevaluated. Background retrieval, briefing completeness, flight-category classification, TAF
-decoding, runway visual range, international metre visibility, weather-code semantics, and
+has currency recomputed against the current clock. TAF parsing is deliberately limited to header
+amendment state, issue time, and a resolved UTC validity window; current/not-yet-valid/expired
+is recomputed on display. Forecast change groups and their weather semantics remain raw and
+uninterpreted. Background retrieval, briefing completeness, flight-category classification, full
+TAF decoding, runway visual range, international metre visibility, weather-code semantics, and
 operational weather availability are not yet credited as implemented.

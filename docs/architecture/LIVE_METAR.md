@@ -33,9 +33,10 @@ requested station. Unsupported body groups remain visible instead of being guess
 
 A TAF response may contain at most 64 non-empty lines and 8,192 characters. It must contain
 exactly one TAF header, at the start of the response, for the requested station. Control
-characters outside normal whitespace are rejected. Forecast groups, issue time, validity period,
-amendments, and currency are not interpreted; the UI displays source-verified raw text and
-explicitly says validity is not evaluated.
+characters outside normal whitespace are rejected. A conservative header decoder resolves
+original/amended/corrected state, issue UTC, and validity start/end across adjacent UTC months;
+impossible or greater-than-48-hour windows fail closed. Forecast change groups and weather
+content remain raw and uninterpreted.
 
 Successful data carries explicit AWC source, retrieval time, observation source time, API model
 version, worldwide jurisdiction, real origin, and source-verified status. Product currency uses
@@ -57,7 +58,8 @@ mistaken for successful replacement.
   fails closed if that supported collection size is exceeded.
 - Loading cached data is an explicit user action. The result says `CACHED`, retains its original
   receipt/source times, and is never called a briefing. METAR currency is recomputed against the
-  current clock; TAF validity remains unevaluated.
+  current clock; TAF header validity is recomputed against the current UTC clock while forecast
+  groups remain undecoded.
 - A cache-write failure does not hide a successfully retrieved live report. It is reported as a
   separate continuity failure.
 
@@ -65,7 +67,8 @@ mistaken for successful replacement.
 
 The live card says `SUPPLEMENTAL WEATHER ONLY`, states the shared one-request-per-minute limit,
 and does not call either result a briefing. Decoded METAR output displays source and retrieval
-UTC alongside observation UTC. Raw TAF output is visually separated from decoded observations.
+UTC alongside observation UTC. Raw TAF output is visually separated from decoded observations
+and shows issue/amendment/valid-from/valid-to evidence plus current/not-yet-valid/expired state.
 Manual pasted reports remain unverified and currency-unknown.
 
 ## Verification boundary
@@ -73,8 +76,8 @@ Manual pasted reports remain unverified and currency-unknown.
 Unit tests use an injected fetcher and clock to cover METAR and TAF success, shared throttling,
 no data, provider throttling, timeout, clock reversal, station mismatch, invalid identifiers,
 and multiple-report bodies. Schema/repository tests cover timestamp shape, station/time
-rebinding, multiple TAF rejection, and explicit local-cache provenance. Direct HTTPS smoke
-requests to the documented endpoints returned current raw METAR and multiline TAF reports on
-2026-07-14. Native network loss, captive portals, TLS interception, app lifecycle,
-physical-device rendering, cache recovery, provider schema changes, forecast decoding, and
-briefing completeness remain release blockers.
+rebinding, multiple TAF rejection, header month rollover, hour-24 validity, expiry, and explicit
+local-cache provenance. Direct HTTPS smoke requests to the documented endpoints returned current
+raw METAR and multiline TAF reports on 2026-07-14. Native network loss, captive portals, TLS
+interception, app lifecycle, physical-device rendering, cache recovery, provider schema changes,
+forecast decoding, and briefing completeness remain release blockers.

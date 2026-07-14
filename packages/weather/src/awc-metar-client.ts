@@ -1,6 +1,7 @@
 import { dataProvenanceSchema, type DataProvenance } from '@driftline/data-contracts';
 
 import { parseMetar, type MetarObservation } from './metar';
+import { parseTafHeader, type TafReport } from './taf';
 
 const AWC_ENDPOINTS = {
   METAR: 'https://aviationweather.gov/api/data/metar',
@@ -35,13 +36,7 @@ export class AwcMetarError extends Error {
   }
 }
 
-export interface AwcTafReport {
-  readonly product: 'TAF';
-  readonly provenance: DataProvenance;
-  readonly raw: string;
-  readonly receivedAt: string;
-  readonly station: string;
-}
+export type AwcTafReport = TafReport;
 
 type Fetcher = (input: string, init: RequestInit) => Promise<Response>;
 type Clock = () => Date;
@@ -98,16 +93,36 @@ export class AwcMetarClient {
     if (headerMatches.length !== 1) {
       throw new AwcMetarError('response-invalid', 'Provider returned an invalid raw TAF body.');
     }
-    const header = /^TAF(?:\s+(?:AMD|COR))?\s+([A-Z0-9]{4})\b/u.exec(raw);
-    if (header?.[1] !== station) {
+    let preliminary: TafReport;
+    try {
+      preliminary = parseTafHeader({
+        provenance: this.createRetrievalProvenance(receivedAt),
+        raw,
+        receivedAt: receivedAt.toISOString(),
+      });
+    } catch {
+      throw new AwcMetarError(
+        'response-invalid',
+        'Provider TAF header failed the local parser.',
+      );
+    }
+    if (preliminary.station !== station) {
       throw new AwcMetarError('station-mismatch', 'Provider returned a different TAF station.');
     }
     return {
-      product: 'TAF',
-      provenance: this.createRetrievalProvenance(receivedAt),
-      raw,
-      receivedAt: receivedAt.toISOString(),
-      station,
+      ...preliminary,
+      provenance: dataProvenanceSchema.parse({
+        confidence: 'high',
+        datasetVersion: 'awc-data-api-v4-raw',
+        effectiveAt: preliminary.validFrom,
+        expiresAt: preliminary.validTo,
+        jurisdiction: 'WORLDWIDE',
+        origin: 'real',
+        retrievedAt: receivedAt.toISOString(),
+        source: 'NOAA/NWS Aviation Weather Center Data API',
+        sourceTimestamp: preliminary.issuedAt,
+        verificationStatus: 'source-verified',
+      }),
     };
   }
 
