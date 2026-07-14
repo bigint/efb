@@ -76,5 +76,16 @@ describe('generic weight and balance', () => {
         stations: [{ arm: metres(1), id: 'zero', mass: kilograms(0) }],
       }),
     ).toThrow(RangeError);
+    expect(() =>
+      calculateWeightBalance({
+        ...validInput,
+        envelope: [
+          { arm: metres(0.8), mass: kilograms(600) },
+          { arm: metres(1.1), mass: kilograms(1_200) },
+          { arm: metres(0.8), mass: kilograms(1_200) },
+          { arm: metres(1.2), mass: kilograms(600) },
+        ],
+      }),
+    ).toThrow('intersect');
   });
 });

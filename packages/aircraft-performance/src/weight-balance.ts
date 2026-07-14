@@ -89,6 +89,76 @@ const pointInEnvelope = (point: EnvelopePoint, envelope: readonly EnvelopePoint[
   return inside;
 };
 
+const orientation = (start: EnvelopePoint, end: EnvelopePoint, point: EnvelopePoint): number =>
+  (end.arm - start.arm) * (point.mass - start.mass) -
+  (end.mass - start.mass) * (point.arm - start.arm);
+
+const segmentsIntersect = (
+  firstStart: EnvelopePoint,
+  firstEnd: EnvelopePoint,
+  secondStart: EnvelopePoint,
+  secondEnd: EnvelopePoint,
+): boolean => {
+  const values = [
+    orientation(firstStart, firstEnd, secondStart),
+    orientation(firstStart, firstEnd, secondEnd),
+    orientation(secondStart, secondEnd, firstStart),
+    orientation(secondStart, secondEnd, firstEnd),
+  ];
+  const signs = values.map((value) => (Math.abs(value) <= 1e-9 ? 0 : Math.sign(value)));
+  if (signs[0] !== signs[1] && signs[2] !== signs[3]) return true;
+  return (
+    (signs[0] === 0 && pointOnSegment(secondStart, firstStart, firstEnd)) ||
+    (signs[1] === 0 && pointOnSegment(secondEnd, firstStart, firstEnd)) ||
+    (signs[2] === 0 && pointOnSegment(firstStart, secondStart, secondEnd)) ||
+    (signs[3] === 0 && pointOnSegment(firstEnd, secondStart, secondEnd))
+  );
+};
+
+export const assertValidCgEnvelope = (envelope: readonly EnvelopePoint[]): void => {
+  if (envelope.length < 3 || envelope.length > 100) {
+    throw new RangeError('A CG envelope requires 3 to 100 points');
+  }
+  const keys = new Set<string>();
+  let twiceArea = 0;
+  envelope.forEach((point, index) => {
+    if (!Number.isFinite(point.arm) || !Number.isFinite(point.mass) || point.mass <= 0) {
+      throw new RangeError('CG envelope points require finite arms and positive masses');
+    }
+    const key = `${point.arm}:${point.mass}`;
+    if (keys.has(key)) throw new RangeError('CG envelope points must be unique');
+    keys.add(key);
+    const next = envelope[(index + 1) % envelope.length];
+    if (next === undefined) throw new Error('CG envelope indexing invariant failed');
+    twiceArea += point.arm * next.mass - next.arm * point.mass;
+  });
+  if (Math.abs(twiceArea) <= 1e-9) {
+    throw new RangeError('CG envelope must enclose a non-zero area');
+  }
+  for (let first = 0; first < envelope.length; first += 1) {
+    const firstEndIndex = (first + 1) % envelope.length;
+    for (let second = first + 1; second < envelope.length; second += 1) {
+      const secondEndIndex = (second + 1) % envelope.length;
+      if (firstEndIndex === second || secondEndIndex === first) continue;
+      const firstStart = envelope[first];
+      const firstEnd = envelope[firstEndIndex];
+      const secondStart = envelope[second];
+      const secondEnd = envelope[secondEndIndex];
+      if (
+        firstStart === undefined ||
+        firstEnd === undefined ||
+        secondStart === undefined ||
+        secondEnd === undefined
+      ) {
+        throw new Error('CG envelope indexing invariant failed');
+      }
+      if (segmentsIntersect(firstStart, firstEnd, secondStart, secondEnd)) {
+        throw new RangeError('CG envelope edges must not intersect');
+      }
+    }
+  }
+};
+
 export const calculateLoadingSummary = (input: LoadingSummaryInput): LoadingSummary => {
   if (input.maximumMass <= 0) throw new RangeError('Maximum mass must be positive');
   const ids = new Set<string>();
@@ -117,8 +187,7 @@ export const calculateLoadingSummary = (input: LoadingSummaryInput): LoadingSumm
 };
 
 export const calculateWeightBalance = (input: WeightBalanceInput): WeightBalanceResult => {
-  if (input.envelope.length < 3)
-    throw new RangeError('A CG envelope requires at least three points');
+  assertValidCgEnvelope(input.envelope);
   const summary = calculateLoadingSummary(input);
   const insideEnvelope = pointInEnvelope(
     { arm: summary.centreOfGravityArm, mass: summary.totalMass },

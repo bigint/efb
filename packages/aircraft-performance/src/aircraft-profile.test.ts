@@ -36,6 +36,46 @@ describe('aircraft profile', () => {
     });
   });
 
+  it('upgrades legacy planning payloads without inventing a CG envelope', () => {
+    expect(aircraftProfileSchema.parse(fixture()).planning.cgEnvelope).toBeNull();
+  });
+
+  it('accepts a bounded envelope and rejects duplicate or degenerate points', () => {
+    const cgEnvelope = [
+      { armM: 0.8, massKg: 600 },
+      { armM: 1.1, massKg: 600 },
+      { armM: 1, massKg: 1_200 },
+    ];
+    expect(
+      aircraftProfileSchema.parse({
+        ...fixture(),
+        planning: { ...fixture().planning, cgEnvelope },
+      }).planning.cgEnvelope,
+    ).toEqual(cgEnvelope);
+    expect(() =>
+      aircraftProfileSchema.parse({
+        ...fixture(),
+        planning: {
+          ...fixture().planning,
+          cgEnvelope: [cgEnvelope[0], cgEnvelope[0], cgEnvelope[1]],
+        },
+      }),
+    ).toThrow('unique');
+    expect(() =>
+      aircraftProfileSchema.parse({
+        ...fixture(),
+        planning: {
+          ...fixture().planning,
+          cgEnvelope: [
+            { armM: 0.8, massKg: 600 },
+            { armM: 0.9, massKg: 800 },
+            { armM: 1, massKg: 1_000 },
+          ],
+        },
+      }),
+    ).toThrow('non-zero');
+  });
+
   it('rejects maximum mass below empty mass', () => {
     const source = fixture();
     expect(() =>

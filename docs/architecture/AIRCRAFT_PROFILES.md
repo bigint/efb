@@ -13,7 +13,8 @@ User profiles live in the versioned user SQLite database. A profile records:
 - registration, type designator, display name, timestamps, and revision;
 - fixed provenance values `user-entered` and `unverified`;
 - an explicit units object: kilograms, metres, litres, knots;
-- cruise speed, fuel capacity and burn, empty and maximum mass, and station arms; and
+- cruise speed, fuel capacity and burn, empty and maximum mass, station arms, and an optional
+  user-entered CG polygon of 3 to 20 arm/mass points; and
 - optional notes reserved by the persistence model.
 
 Migration v5 adds provenance and revision columns without reinterpreting legacy JSON. Reads
@@ -35,6 +36,11 @@ implicit unit systems are rejected. Display names reject control characters befo
 cross-library selectors. Required numeric form fields reject blanks rather than silently
 treating them as zero.
 
+Envelope vertices use explicit metres and kilograms and must be entered in perimeter order. The
+boundary rejects duplicate points, non-positive mass, zero-area polygons, and intersecting
+non-adjacent edges. The generic calculator repeats these geometry checks independently before a
+point-in-polygon decision; malformed geometry cannot become a convincing inside result.
+
 ## Current limitations
 
 The Aircraft workspace can select a saved profile and calculate total mass, moment, and CG arm
@@ -42,13 +48,16 @@ from its entered empty mass and station arms plus user-entered occupant and fuel
 compares total mass with the entered maximum. Fuel stays in kilograms: the profile's litre
 capacity is not converted because no fuel type or density source exists.
 
-This summary deliberately returns no envelope result. The UI says `CG ENVELOPE NOT EVALUATED`
-until bounded envelope geometry and source/revision provenance are modeled. The separate
-built-in polygon sandbox remains fictional.
+When the selected profile has no envelope, the summary says `NOT PROVIDED`. When a validated
+polygon exists, the same loading calculation reports inside/outside the entered envelope and
+continues to label both the data and limits `USER-ENTERED` and `UNVERIFIED`. This is a geometric
+decision against user input, not a statement that the polygon came from an approved source. The
+separate built-in polygon sandbox remains fictional.
 
-Profile deletion, revision history/rollback, envelope authoring, fuel-density conversion,
-take-off and landing models, source-document links, and editing profile notes remain open.
-Native persistence recovery and visual/accessibility validation are release blockers.
+Profile deletion, revision history/rollback, arbitrary loading-station authoring, scenario
+saving, envelope graph rendering, fuel-density conversion, take-off and landing models,
+source-document links, and editing profile notes remain open. Native persistence recovery and
+visual/accessibility validation are release blockers.
 
 Checklist authoring can link a validated local profile UUID and derives the template label from
 its normalized registration. This is referential organization only; it does not verify the

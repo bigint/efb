@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+import { kilograms, metres } from '@driftline/data-contracts';
+
+import { assertValidCgEnvelope } from './weight-balance';
+
 const boundedNumber = (maximum: number) => z.number().finite().min(0).max(maximum);
 const hasNoControlCharacters = (value: string): boolean =>
   [...value].every((character) => {
@@ -18,6 +22,19 @@ export const aircraftProfileUnitsSchema = z
 
 export const aircraftPlanningValuesSchema = z
   .object({
+    cgEnvelope: z
+      .array(
+        z
+          .object({
+            armM: boundedNumber(20),
+            massKg: boundedNumber(100_000).positive(),
+          })
+          .strict(),
+      )
+      .min(3)
+      .max(20)
+      .nullable()
+      .default(null),
     cruiseSpeedKt: boundedNumber(1_000).positive(),
     emptyArmM: boundedNumber(20),
     emptyMassKg: boundedNumber(100_000).positive(),
@@ -35,6 +52,22 @@ export const aircraftPlanningValuesSchema = z
         message: 'Maximum mass cannot be below empty mass',
         path: ['maximumMassKg'],
       });
+    }
+    if (values.cgEnvelope !== null) {
+      try {
+        assertValidCgEnvelope(
+          values.cgEnvelope.map(({ armM, massKg }) => ({
+            arm: metres(armM),
+            mass: kilograms(massKg),
+          })),
+        );
+      } catch (caught) {
+        context.addIssue({
+          code: 'custom',
+          message: caught instanceof Error ? caught.message : 'CG envelope is invalid',
+          path: ['cgEnvelope'],
+        });
+      }
     }
   });
 

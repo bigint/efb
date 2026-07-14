@@ -30,6 +30,7 @@ const facts = [
 ] as const;
 
 interface ProfileForm {
+  readonly cgEnvelope: string;
   readonly cruiseSpeedKt: string;
   readonly displayName: string;
   readonly emptyArmM: string;
@@ -44,6 +45,7 @@ interface ProfileForm {
 }
 
 const profileDefaults = (): ProfileForm => ({
+  cgEnvelope: '',
   cruiseSpeedKt: '',
   displayName: '',
   emptyArmM: '',
@@ -65,6 +67,9 @@ const requiredNumber = (value: string, label: string): number => {
 };
 
 const profileFormFromRecord = (profile: AircraftProfile): ProfileForm => ({
+  cgEnvelope:
+    profile.planning.cgEnvelope?.map(({ armM, massKg }) => `${armM},${massKg}`).join('\n') ??
+    '',
   cruiseSpeedKt: String(profile.planning.cruiseSpeedKt),
   displayName: profile.displayName,
   emptyArmM: String(profile.planning.emptyArmM),
@@ -78,7 +83,29 @@ const profileFormFromRecord = (profile: AircraftProfile): ProfileForm => ({
   usableFuelLitres: String(profile.planning.usableFuelLitres),
 });
 
+const envelopeFromForm = (value: string): AircraftProfile['planning']['cgEnvelope'] => {
+  if (value.trim().length === 0) return null;
+  const lines = value
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  if (lines.length < 3 || lines.length > 20) {
+    throw new Error('CG envelope requires 3 to 20 non-empty points.');
+  }
+  return lines.map((line, index) => {
+    const parts = line.split(',').map((part) => part.trim());
+    if (parts.length !== 2) {
+      throw new Error(`CG envelope line ${index + 1} must be arm M,mass KG.`);
+    }
+    return {
+      armM: requiredNumber(parts[0] ?? '', `CG envelope line ${index + 1} arm`),
+      massKg: requiredNumber(parts[1] ?? '', `CG envelope line ${index + 1} mass`),
+    };
+  });
+};
+
 const planningFromForm = (form: ProfileForm): AircraftProfile['planning'] => ({
+  cgEnvelope: envelopeFromForm(form.cgEnvelope),
   cruiseSpeedKt: requiredNumber(form.cruiseSpeedKt, 'Cruise speed'),
   emptyArmM: requiredNumber(form.emptyArmM, 'Empty arm'),
   emptyMassKg: requiredNumber(form.emptyMassKg, 'Empty mass'),
@@ -134,7 +161,7 @@ export function AircraftWorkspace() {
     const values = inputs.map(Number);
     if (values.some((value) => !Number.isFinite(value) || value < 0)) return null;
     try {
-      return calculateLoadingSummary({
+      const input = {
         maximumMass: kilograms(selectedProfile.planning.maximumMassKg),
         stations: [
           {
@@ -153,7 +180,16 @@ export function AircraftWorkspace() {
             mass: kilograms(values[1] ?? Number.NaN),
           },
         ],
-      });
+      };
+      return selectedProfile.planning.cgEnvelope === null
+        ? calculateLoadingSummary(input)
+        : calculateWeightBalance({
+            ...input,
+            envelope: selectedProfile.planning.cgEnvelope.map(({ armM, massKg }) => ({
+              arm: metres(armM),
+              mass: kilograms(massKg),
+            })),
+          });
     } catch {
       return null;
     }
@@ -275,7 +311,7 @@ export function AircraftWorkspace() {
           </Text>
           <Card>
             <Text style={[styles.warning, { color: theme.attention }]}>
-              {selectedProfile.registration} · UNVERIFIED · CG ENVELOPE NOT EVALUATED
+              {selectedProfile.registration} · UNVERIFIED · USER-ENTERED LIMITS
             </Text>
             <Text style={[panelStyles.copy, styles.note, { color: theme.secondary }]}>
               Empty mass {selectedProfile.planning.emptyMassKg} KG is fixed from this profile.
@@ -308,7 +344,18 @@ export function AircraftWorkspace() {
                       : 'ABOVE ENTERED LIMIT'
                 }
               />
-              <Output label="CG envelope" value="NOT EVALUATED" />
+              <Output
+                label="CG envelope"
+                value={
+                  profileLoading === null
+                    ? 'INVALID INPUT'
+                    : !('insideEnvelope' in profileLoading)
+                      ? 'NOT PROVIDED'
+                      : profileLoading.insideEnvelope
+                        ? 'INSIDE ENTERED ENVELOPE'
+                        : 'OUTSIDE ENTERED ENVELOPE'
+                }
+              />
             </View>
           </Card>
         </>
@@ -392,7 +439,18 @@ export function AircraftWorkspace() {
             onChange={setProfileForm}
             numeric
           />
+          <ProfileInput
+            form={profileForm}
+            label="CG envelope · one ARM M,MASS KG point per line · optional"
+            multiline
+            name="cgEnvelope"
+            onChange={setProfileForm}
+          />
         </View>
+        <Text style={[panelStyles.copy, styles.envelopeHelp, { color: theme.secondary }]}>
+          Enter polygon vertices in perimeter order. Example: 0.80,600. Leave empty to keep CG
+          envelope evaluation unavailable.
+        </Text>
         <View style={styles.save}>
           <Action
             disabled={saving || readBlocked}
@@ -478,12 +536,14 @@ export function AircraftWorkspace() {
 function ProfileInput({
   form,
   label,
+  multiline = false,
   name,
   numeric = false,
   onChange,
 }: {
   readonly form: ProfileForm;
   readonly label: string;
+  readonly multiline?: boolean;
   readonly name: keyof ProfileForm;
   readonly numeric?: boolean;
   readonly onChange: (value: ProfileForm) => void;
@@ -497,9 +557,11 @@ function ProfileInput({
         autoCapitalize={name === 'displayName' ? 'words' : 'characters'}
         autoCorrect={false}
         keyboardType={numeric ? 'decimal-pad' : 'default'}
+        multiline={multiline}
         onChangeText={(value) => onChange({ ...form, [name]: value })}
         style={[
           styles.input,
+          multiline && styles.multilineInput,
           {
             backgroundColor: theme.panelRaised,
             borderColor: theme.separator,
@@ -534,6 +596,12 @@ function SavedProfile({
       </View>
       <Text style={[styles.warning, { color: theme.attention }]}>
         {profile.planning.cruiseSpeedKt} KT · {profile.planning.usableFuelLitres} L · UNVERIFIED
+      </Text>
+      <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+        CG envelope:{' '}
+        {profile.planning.cgEnvelope === null
+          ? 'not provided'
+          : `${profile.planning.cgEnvelope.length} user-entered points`}
       </Text>
       <View style={styles.profileAction}>
         <Action
@@ -590,6 +658,7 @@ function Output({ label, value }: { readonly label: string; readonly value: stri
 }
 
 const styles = StyleSheet.create({
+  envelopeHelp: { marginTop: spacing.md },
   error: { fontSize: 13, marginTop: spacing.md },
   fact: { gap: spacing.xs, minWidth: 210 },
   facts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xl, marginTop: spacing.xl },
@@ -605,6 +674,7 @@ const styles = StyleSheet.create({
   inputGroup: { flex: 1, gap: spacing.xs, minWidth: 150 },
   inputs: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.lg },
   name: { fontFamily: 'Avenir Next Condensed', fontSize: 24, fontWeight: '700' },
+  multilineInput: { minHeight: 112, paddingTop: spacing.md, textAlignVertical: 'top' },
   note: { marginTop: spacing.lg, maxWidth: 680 },
   output: { gap: spacing.xs, minWidth: 150 },
   outputs: {
