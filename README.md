@@ -34,6 +34,7 @@ education, pre-flight planning, and non-certified situational awareness.
 ```sh
 pnpm install
 pnpm verify
+pnpm --dir apps/mobile doctor
 pnpm --filter @driftline/mobile start
 ```
 
@@ -42,4 +43,5 @@ the native project with `pnpm --filter @driftline/mobile ios` or `android` after
 toolchain is installed.
 
 Architecture, licensing research, operational limitations, security, and verification gates live
-in [`docs/`](docs/).
+in [`docs/`](docs/). The current evidence and explicit native/device blockers are maintained in
+[`docs/status/PROJECT_STATUS.md`](docs/status/PROJECT_STATUS.md).
