@@ -176,7 +176,12 @@ export function MapWorkspace() {
         ))}
         {ownship !== null && ownshipOrigin !== null && (
           <Marker anchor="center" id="ownship" lngLat={[ownship.longitude, ownship.latitude]}>
-            <OwnshipGlyph origin={ownshipOrigin} />
+            <OwnshipGlyph
+              accuracyMetres={ownship.horizontalAccuracyMetres}
+              origin={ownshipOrigin}
+              trackDegrees={ownship.trackDegrees}
+              trackReference={ownship.trackReference}
+            />
           </Marker>
         )}
       </Map>

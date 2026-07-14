@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 234 passed across thirty-four test files.
+- Unit tests: 237 passed across thirty-five test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,163 modules, 5.5 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -94,7 +94,9 @@ performance data.
 - An explicit user action can now select a foreground-only device-location source. Permission,
   service, provider-error, null-telemetry, and stale-sample states fail closed; metric provider
   values convert to cockpit units at a pure boundary, and source changes clear prior samples.
-  Native permission, lifecycle, accuracy, energy, and physical-device evidence remain open.
+  The own-ship marker exposes source, accuracy, and true-track/platform-course semantics through
+  both shape/text and an accessible image label. Native permission, lifecycle, accuracy, energy,
+  and physical-device evidence remain open.
 - Dedicated high-contrast day and night palettes follow iOS Increase Contrast and Android High
   contrast text, including live setting-change subscriptions. Automated token checks enforce
   documented semantic contrast thresholds, and the demonstration map uses the selected palette.

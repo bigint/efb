@@ -38,8 +38,11 @@ true-referenced. Samples older than three seconds disappear from the map and sta
 ## Visual framing
 
 Simulation retains the purple app frame and purple ownship. Device position uses the normal
-accent colour and `DEVICE POSITION` / `foreground location` labels. Unknown accuracy is stated
-instead of formatted as a numeric radius. A position-source failure removes groundspeed,
+accent colour and `DEVICE POSITION` / `foreground location` labels. The map marker includes a
+source, horizontal-accuracy, and course badge. A known course rotates an asymmetric directional
+glyph; missing course uses a non-directional ring. Unknown accuracy is stated instead of
+formatted as a numeric value. The accessible marker label distinguishes true track from the
+platform course and does not claim heading. A position-source failure removes groundspeed,
 altitude, and ownship values.
 
 Airport details derive a read-only great-circle distance and initial true bearing only while the
@@ -51,7 +54,7 @@ sequencing or a direct-to command.
 ## Verification boundary
 
 Pure tests cover unit conversion, nullable provider values, device status mapping, freshness,
-invalid samples, and persistence recovery. Expo Doctor and the production JavaScript/Hermes
-export validate configuration and bundling only. Native permission prompts, denied/restricted
-states, foreground/background transitions, provider loss, energy use, accuracy behavior, and
-physical-device visual/accessibility behavior remain open release blockers.
+invalid samples, ownship labels, and persistence recovery. Expo Doctor and the production
+JavaScript/Hermes export validate configuration and bundling only. Native permission prompts,
+denied/restricted states, foreground/background transitions, provider loss, energy use, accuracy
+behavior, and physical-device visual/accessibility behavior remain open release blockers.

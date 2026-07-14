@@ -142,14 +142,13 @@ data provenance, not a preference.
 ### Loading, empty, stale, failure, and recovery states
 
 The System workspace provides useful unavailable strings and the Plan workspace provides a route
-empty state. GPS outage blanks speed and altitude and replaces own-ship with an X, which is a
-good color-independent degradation start (`apps/mobile/src/components/MapWorkspace.tsx:147-171`
-and `apps/mobile/src/components/OwnshipGlyph.tsx:8-19`).
+empty state. GPS outage blanks speed and altitude, removes own-ship, and retains a textual
+outage state. The available own-ship marker now combines source, accuracy,
+directional/non-directional shape, and course text rather than relying on colour.
 
 The full content-state grammar is not implemented. There are no loading, partial,
 permission-denied, corrupt, stale-with-age, retry, map-initialization-failure, or
-storage-pressure surfaces. The global status metadata is a static string rather than source
-time, fix age, accuracy, or expiry (`apps/mobile/src/components/StatusPlane.tsx:34-39`). Map
+storage-pressure surfaces. Position status now includes source, fix age, and accuracy, but map
 initialization has no fallback, so a native map failure can leave a blank workspace instead of
 preserving text planning.
 
@@ -161,6 +160,8 @@ preserving text planning.
   (`apps/mobile/src/components/WorkspaceRail.tsx:34-61`).
 - Actions, Places results, `NEAREST`, and the status plane expose button roles.
 - GPS outage changes both text and shape, not only color.
+- Own-ship is an accessible image with a composed source, accuracy, and
+  true-track/platform-course label; its visible badge carries the same distinctions.
 - The shared `cockpitTarget` is 48 points, and the main button primitive uses it.
 
 ### Required target policy
@@ -179,12 +180,11 @@ Simulator mouse success is not evidence.
 
 ### VoiceOver and semantic gaps
 
-- `OwnshipGlyph` supplies an `accessibilityLabel` on a plain `View` but does not explicitly mark
-  the view accessible. The Skia documentation recommends accessibility properties on the Canvas
-  or overlaid React Native views for internal elements. Spoken exposure must be verified, not
-  assumed (`apps/mobile/src/components/OwnshipGlyph.tsx:8-19`).
-- Map airport markers have `onPress` but no explicit role, state, hint, or combined airport
-  label.
+- `OwnshipGlyph` now explicitly exposes an image role and composed label through its React
+  Native wrapper. Spoken exposure and focus order still require verification in the native
+  accessibility tree.
+- Map airport markers now expose a button role and combined identifier/demonstration label, but
+  hints, selected state, and map-wide focus order remain unverified.
 - The map's native compass, scale bar, gestures, marker order, and modal focus behavior have no
   recorded accessibility evidence.
 - Status text includes visual separators and dense metadata but has no composed accessibility
