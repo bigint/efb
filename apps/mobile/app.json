@@ -21,7 +21,6 @@
     "plugins": [
       "expo-router",
       "expo-location",
-      "expo-sensors",
       "expo-sqlite",
       "@maplibre/maplibre-react-native",
       [

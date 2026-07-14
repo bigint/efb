@@ -106,6 +106,8 @@ performance data.
   remain picker-driven and exports remain explicit verified share actions.
 - Android Auto Backup is disabled for local operational/user data. iOS per-file backup exclusion
   and restore evidence remain an explicit privacy release blocker.
+- The unused Expo Sensors native plugin/dependency is removed; only capabilities with an active
+  implementation remain in the current native dependency surface.
 - Checklist template/history decoders apply the same direct-call collection limits and reject
   duplicate parent rows before grouping relational items or completions.
 - Saved-flight reconstruction bounds plans/waypoints, rejects duplicate plan parents, and
