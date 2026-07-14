@@ -34,7 +34,10 @@ normal, abnormal, or emergency procedure content. Every template and active run 
   snapshots. History rows and their relational completions are read in one exclusive
   transaction, decoded through the same domain boundary as an active run, and a malformed
   historical row disables only the history view rather than hiding otherwise valid templates or
-  the open run.
+  the open run. Each row can expand its immutable snapshot to show start/terminal UTC, elapsed
+  seconds, state/template revision, full challenge/response text, critical flags, and the exact
+  completed/unchecked outcome for every item. Expansion never creates a transition or reads the
+  current mutable template.
 - The active template collection is bounded to 100 templates and 10,000 item rows. Items are
   joined only from non-deleted templates, so an obsolete soft-deleted template cannot poison the
   active library read.
@@ -52,6 +55,6 @@ preserved snapshot and the one-open-run constraint.
 
 Physical-device process-death and concurrent-view tests, recovery during abandonment, retaining
 the full template-revision lineage outside run snapshots, handling a later-renamed aircraft
-profile, detailed history inspection, export/backup, VoiceOver sequencing, Dynamic Type, and
-comparison against approved aircraft material remain open. A saved checklist is not approved
-merely because every box is checked.
+profile, export/backup, VoiceOver sequencing, Dynamic Type, and comparison against approved
+aircraft material remain open. A saved checklist is not approved merely because every box is
+checked.

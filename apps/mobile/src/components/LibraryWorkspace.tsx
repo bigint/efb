@@ -34,6 +34,7 @@ import {
   replaceChecklistTemplate,
 } from '@/database/checklist-repository';
 import { listAircraftProfiles } from '@/database/aircraft-profile-repository';
+import { presentChecklistHistory } from '@/domain/checklist-history';
 import { useDriftlineTheme } from '@/theme';
 
 import { Action, Card, PanelHeader, panelStyles } from './PanelPrimitives';
@@ -70,6 +71,7 @@ export function LibraryWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<readonly ChecklistRun[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [expandedHistoryRunId, setExpandedHistoryRunId] = useState<string | null>(null);
   const [readBlocked, setReadBlocked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedAircraftId, setSelectedAircraftId] = useState<string | null>(null);
@@ -306,23 +308,69 @@ export function LibraryWorkspace() {
           <Text style={[panelStyles.copy, { color: theme.secondary }]}>No terminal runs.</Text>
         </Card>
       ) : (
-        history.map((run) => (
-          <View key={run.id} style={[styles.history, { borderColor: theme.separator }]}>
-            <Text style={[styles.templateTitle, { color: theme.primary }]}>
-              {run.templateSnapshot.title}
-            </Text>
-            <Text style={[panelStyles.copy, { color: theme.secondary }]}>
-              {run.templateSnapshot.aircraftLabel} · {run.templateSnapshot.category} ·{' '}
-              {run.itemCount} items
-            </Text>
-            <Text style={[styles.historyMeta, { color: theme.secondary }]}>
-              {run.abandonedAt === null ? 'COMPLETED' : 'ABANDONED'} ·{' '}
-              {run.completedSequences.length}/{run.itemCount} ITEMS · LOCKED SNAPSHOT · REV{' '}
-              {run.templateRevision} ·{' '}
-              {new Date(run.completedAt ?? run.abandonedAt ?? run.startedAt).toLocaleString()}
-            </Text>
-          </View>
-        ))
+        history.map((run) => {
+          const presentation = presentChecklistHistory(run);
+          const expanded = expandedHistoryRunId === run.id;
+          return (
+            <View key={run.id} style={[styles.history, { borderColor: theme.separator }]}>
+              <Text style={[styles.templateTitle, { color: theme.primary }]}>
+                {run.templateSnapshot.title}
+              </Text>
+              <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+                {run.templateSnapshot.aircraftLabel} · {run.templateSnapshot.category} ·{' '}
+                {run.itemCount} items
+              </Text>
+              <Text style={[styles.historyMeta, { color: theme.secondary }]}>
+                {presentation.status.toUpperCase()} · {run.completedSequences.length}/
+                {run.itemCount} ITEMS · LOCKED SNAPSHOT · REV {run.templateRevision} ·{' '}
+                {presentation.terminalAt} · {Math.floor(presentation.elapsedSeconds / 60)}M{' '}
+                {presentation.elapsedSeconds % 60}S
+              </Text>
+              <View style={styles.historyAction}>
+                <Action
+                  label={expanded ? 'Hide locked snapshot' : 'Inspect locked snapshot'}
+                  onPress={() => setExpandedHistoryRunId(expanded ? null : run.id)}
+                />
+              </View>
+              {expanded && (
+                <View style={styles.historyItems}>
+                  <Text style={[styles.notice, { color: theme.attention }]}>
+                    READ ONLY · USER-AUTHORED · UNVERIFIED
+                  </Text>
+                  <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+                    Started {run.startedAt} · {presentation.status.toUpperCase()}{' '}
+                    {presentation.terminalAt} · state revision {run.stateRevision}
+                  </Text>
+                  {presentation.items.map((item) => (
+                    <View
+                      key={item.sequence}
+                      style={[styles.historyItem, { borderColor: theme.separator }]}
+                    >
+                      <Text
+                        accessibilityLabel={`Item ${item.sequence + 1} ${item.completed ? 'completed' : 'not completed'}${item.isCritical ? ', critical' : ''}`}
+                        style={[
+                          styles.historyCheck,
+                          { color: item.completed ? theme.accent : theme.secondary },
+                        ]}
+                      >
+                        {item.completed ? '✓' : '—'}
+                      </Text>
+                      <View style={styles.runCopy}>
+                        <Text style={[styles.challenge, { color: theme.primary }]}>
+                          {item.challenge}
+                          {item.isCritical ? ' · CRITICAL' : ''}
+                        </Text>
+                        <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+                          {item.response}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          );
+        })
       )}
 
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
@@ -688,6 +736,17 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.md,
   },
+  historyAction: { alignItems: 'flex-start', marginTop: spacing.sm },
+  historyCheck: { fontFamily: typography.mono, fontSize: 16, fontWeight: '800', width: 24 },
+  historyItem: {
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 58,
+    paddingVertical: spacing.sm,
+  },
+  historyItems: { gap: spacing.xs, marginTop: spacing.md },
   historyMeta: {
     fontFamily: typography.mono,
     fontSize: 9,

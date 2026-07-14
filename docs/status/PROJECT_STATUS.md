@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 310 passed across fifty-eight test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,198 modules, 5.7 MB
+- Unit tests: 313 passed across fifty-nine test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,199 modules, 5.7 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -100,7 +100,9 @@ performance data.
   can link validated local aircraft profiles and can be edited through an atomic
   compare-and-swap next revision without changing existing run snapshots. Migration v6 adds
   immutable abandonment history and a database-level one-open-run constraint. Every surface
-  remains unverified; native concurrency, recovery, and accessibility evidence are open.
+  remains unverified. Recent terminal runs can expand a read-only locked snapshot with exact
+  UTC, elapsed time, revision evidence, full item text/critical flags, and each completed or
+  unchecked outcome; native concurrency, recovery, and accessibility evidence are open.
 - PDF-only document import now validates UUID paths, MIME and bounded container markers; copies
   into app-private storage; verifies SHA-256 after the copy; and persists revalidated metadata
   and bookmark relations. The reader is explicitly disabled pending native malformed-file,
