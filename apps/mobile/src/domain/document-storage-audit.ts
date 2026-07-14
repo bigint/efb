@@ -20,12 +20,39 @@ export interface DocumentStorageAudit {
   readonly unexpectedLocationDocumentIds: readonly string[];
 }
 
+const MAXIMUM_STORAGE_RECORDS = 10_000;
+const validUri = (value: string): boolean =>
+  value.length >= 8 &&
+  value.length <= 2_048 &&
+  value.startsWith('file://') &&
+  [...value].every((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code >= 32 && code !== 127;
+  });
+const validId = (value: string): boolean =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value);
+
 export const reconcileDocumentStorageIndex = (
   expectations: readonly DocumentStorageExpectation[],
   entries: readonly DocumentStorageEntry[],
 ): DocumentStorageAudit => {
+  if (
+    expectations.length > MAXIMUM_STORAGE_RECORDS ||
+    entries.length > MAXIMUM_STORAGE_RECORDS
+  ) {
+    throw new RangeError('Document storage audit exceeds the supported record limit');
+  }
   const entryByUri = new Map<string, DocumentStorageEntry>();
   for (const entry of entries) {
+    const kind: unknown = entry.kind;
+    if (
+      !validUri(entry.uri) ||
+      (kind !== 'directory' && kind !== 'file') ||
+      (entry.byteLength !== null &&
+        (!Number.isSafeInteger(entry.byteLength) || entry.byteLength < 0))
+    ) {
+      throw new RangeError('Document storage entry is invalid');
+    }
     if (entryByUri.has(entry.uri))
       throw new Error('Document storage contains duplicate entries');
     entryByUri.set(entry.uri, entry);
@@ -35,6 +62,16 @@ export const reconcileDocumentStorageIndex = (
   const sizeMismatchDocumentIds: string[] = [];
   const unexpectedLocationDocumentIds: string[] = [];
   for (const expectation of expectations) {
+    if (
+      !validId(expectation.id) ||
+      !validUri(expectation.expectedUri) ||
+      !validUri(expectation.recordedUri) ||
+      !Number.isSafeInteger(expectation.byteLength) ||
+      expectation.byteLength <= 0 ||
+      expectation.byteLength > 25_000_000
+    ) {
+      throw new RangeError('Document storage expectation is invalid');
+    }
     if (expectedUris.has(expectation.expectedUri)) {
       throw new Error('Document storage expectations contain a duplicate path');
     }

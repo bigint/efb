@@ -5,7 +5,7 @@ import { reconcileDocumentStorageIndex } from './document-storage-audit';
 const expectation = {
   byteLength: 1_024,
   expectedUri: 'file:///documents/driftline-documents/id.pdf',
-  id: 'id',
+  id: '019f5f42-a146-7c00-861d-7ad2313bbbd4',
   recordedUri: 'file:///documents/driftline-documents/id.pdf',
 };
 
@@ -27,11 +27,15 @@ describe('document storage audit', () => {
   });
 
   it('reports missing, moved, changed-size, and orphaned records without mutating input', () => {
-    const moved = { ...expectation, id: 'moved', recordedUri: 'file:///elsewhere/moved.pdf' };
+    const moved = {
+      ...expectation,
+      id: '019f5f42-a146-7c00-861d-7ad2313bbbd5',
+      recordedUri: 'file:///elsewhere/moved.pdf',
+    };
     const missing = {
       ...expectation,
       expectedUri: 'file:///documents/driftline-documents/missing.pdf',
-      id: 'missing',
+      id: '019f5f42-a146-7c00-861d-7ad2313bbbd6',
       recordedUri: 'file:///documents/driftline-documents/missing.pdf',
     };
     expect(
@@ -43,11 +47,11 @@ describe('document storage audit', () => {
         ],
       ),
     ).toMatchObject({
-      missingDocumentIds: ['missing'],
+      missingDocumentIds: ['019f5f42-a146-7c00-861d-7ad2313bbbd6'],
       orphanEntryCount: 1,
-      sizeMismatchDocumentIds: ['moved'],
+      sizeMismatchDocumentIds: ['019f5f42-a146-7c00-861d-7ad2313bbbd5'],
       status: 'attention',
-      unexpectedLocationDocumentIds: ['moved'],
+      unexpectedLocationDocumentIds: ['019f5f42-a146-7c00-861d-7ad2313bbbd5'],
     });
   });
 
@@ -56,5 +60,11 @@ describe('document storage audit', () => {
     expect(() => reconcileDocumentStorageIndex([expectation], [entry, entry])).toThrow(
       'duplicate entries',
     );
+    expect(() =>
+      reconcileDocumentStorageIndex([{ ...expectation, id: 'unsafe\nid' }], [entry]),
+    ).toThrow('expectation');
+    expect(() =>
+      reconcileDocumentStorageIndex([expectation], [{ ...entry, byteLength: -1 }]),
+    ).toThrow('entry');
   });
 });
