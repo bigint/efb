@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+const hasNoControlCharacters = (value: string): boolean =>
+  [...value].every((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code >= 32 && code !== 127;
+  });
+
 export const flightWaypointSchema = z
   .object({
     identifier: z
@@ -24,7 +30,12 @@ export const savedFlightPlanSchema = z
     notes: z.string().max(10_000),
     revision: z.number().int().min(1),
     status: z.enum(['active', 'archived', 'draft']),
-    title: z.string().trim().min(1).max(120),
+    title: z
+      .string()
+      .trim()
+      .min(1)
+      .max(120)
+      .refine(hasNoControlCharacters, 'Saved flight title has control characters'),
     updatedAt: z.iso.datetime(),
     waypoints: z.array(flightWaypointSchema).max(100),
   })
@@ -59,6 +70,38 @@ export const savedFlightPlanSchema = z
 
 export type FlightWaypoint = z.infer<typeof flightWaypointSchema>;
 export type SavedFlightPlan = z.infer<typeof savedFlightPlanSchema>;
+
+export interface SavedFlightPlanRevision {
+  readonly aircraftId?: SavedFlightPlan['aircraftId'];
+  readonly altitudeFeet?: SavedFlightPlan['altitudeFeet'];
+  readonly departureTime?: SavedFlightPlan['departureTime'];
+  readonly notes?: SavedFlightPlan['notes'];
+  readonly status?: SavedFlightPlan['status'];
+  readonly title?: SavedFlightPlan['title'];
+  readonly waypoints?: SavedFlightPlan['waypoints'];
+}
+
+export const reviseSavedFlightPlan = (
+  source: SavedFlightPlan,
+  changes: SavedFlightPlanRevision,
+  updatedAt: string,
+): SavedFlightPlan => {
+  const plan = savedFlightPlanSchema.parse(source);
+  if (
+    !Number.isFinite(Date.parse(updatedAt)) ||
+    Date.parse(updatedAt) < Date.parse(plan.updatedAt)
+  ) {
+    throw new Error('Saved flight revision time cannot precede the current revision.');
+  }
+  return savedFlightPlanSchema.parse({
+    ...plan,
+    ...changes,
+    createdAt: plan.createdAt,
+    id: plan.id,
+    revision: plan.revision + 1,
+    updatedAt,
+  });
+};
 
 export interface AvailableFlightWaypoint {
   readonly identifier: string;

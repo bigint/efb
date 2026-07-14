@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveSavedFlightPlan, savedFlightPlanSchema } from './flight-plan';
+import {
+  resolveSavedFlightPlan,
+  reviseSavedFlightPlan,
+  savedFlightPlanSchema,
+} from './flight-plan';
 
 const fixture = () => ({
   aircraftId: null,
@@ -54,6 +58,12 @@ describe('saved flight plan', () => {
     ).toThrow('Updated time');
   });
 
+  it('rejects control characters in a title shown by native confirmation UI', () => {
+    expect(() =>
+      savedFlightPlanSchema.parse({ ...fixture(), title: 'Route\nArchive?' }),
+    ).toThrow('control characters');
+  });
+
   it('blocks loading when the active dataset no longer matches the saved waypoint snapshot', () => {
     const plan = savedFlightPlanSchema.parse(fixture());
     const available = plan.waypoints.map((waypoint) => ({ ...waypoint }));
@@ -61,5 +71,30 @@ describe('saved flight plan', () => {
     expect(
       resolveSavedFlightPlan(plan, [{ ...available[0]!, latitude: 12.1 }, available[1]!]),
     ).toEqual({ mismatchedIdentifiers: ['DVL1'], status: 'dataset-mismatch' });
+  });
+
+  it('creates the next revision without allowing identity fields to drift', () => {
+    const plan = savedFlightPlanSchema.parse(fixture());
+    expect(
+      reviseSavedFlightPlan(
+        plan,
+        { status: 'archived', title: 'Renamed route' },
+        '2026-07-14T10:01:00.000Z',
+      ),
+    ).toMatchObject({
+      createdAt: plan.createdAt,
+      id: plan.id,
+      revision: 2,
+      status: 'archived',
+      title: 'Renamed route',
+      waypoints: plan.waypoints,
+    });
+  });
+
+  it('rejects a revision timestamp older than the stored plan', () => {
+    const plan = savedFlightPlanSchema.parse(fixture());
+    expect(() =>
+      reviseSavedFlightPlan(plan, { title: 'Renamed route' }, '2026-07-14T09:59:59.000Z'),
+    ).toThrow('cannot precede');
   });
 });

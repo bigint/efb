@@ -24,6 +24,11 @@ The current Plan workspace saves resolved routes with at least two fictional dem
 waypoints as revision-one drafts. Planning wind assumptions are not saved and the UI does not
 claim otherwise.
 
+Saved drafts can be renamed and archived. Each action creates exactly the next revision and uses
+the same compare-and-swap update boundary; a conflict reloads current storage before reporting
+the error. Archive requires native destructive confirmation, hides the record from the active
+list, and retains its row and waypoint snapshot locally.
+
 ## Repository semantics
 
 Creation inserts the flight and all ordered waypoints in one exclusive SQLite transaction with
@@ -45,7 +50,8 @@ geometry under the same identifier.
 
 ## Current limitations
 
-The editor can create and load drafts; editing, archiving, plan selection across the whole
-shell, aircraft assignment, altitude/departure editing, assumption snapshots, outbox sync,
-conflict UI, and native process-death/visual/accessibility evidence remain open. The included
-waypoints are fictional and unverified, so saved routes are not suitable for navigation.
+The editor can create, load, rename, and archive drafts. Route replacement, archived-plan
+restore, plan selection across the whole shell, aircraft assignment, altitude/departure editing,
+assumption snapshots, outbox sync, richer conflict UI, and native
+process-death/visual/accessibility evidence remain open. The included waypoints are fictional
+and unverified, so saved routes are not suitable for navigation.

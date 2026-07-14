@@ -2,11 +2,12 @@ import { radii, spacing, typography } from '@driftline/design-system';
 import { randomUUID } from 'expo-crypto';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   demoAirports,
   resolveSavedFlightPlan,
+  reviseSavedFlightPlan,
   savedFlightPlanSchema,
   type SavedFlightPlan,
 } from '@driftline/aviation-domain';
@@ -17,7 +18,11 @@ import {
   resolveRouteIdentifiers,
 } from '@driftline/flight-planning';
 
-import { insertSavedFlightPlan, listSavedFlightPlans } from '@/database/flight-plan-repository';
+import {
+  insertSavedFlightPlan,
+  listSavedFlightPlans,
+  replaceSavedFlightPlan,
+} from '@/database/flight-plan-repository';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
 
@@ -26,6 +31,8 @@ import { Action, Card, PanelHeader, panelStyles } from './PanelPrimitives';
 export function PlanWorkspace() {
   const database = useSQLiteContext();
   const theme = useDriftlineTheme();
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
   const [savedPlans, setSavedPlans] = useState<readonly SavedFlightPlan[]>([]);
   const [saveTitle, setSaveTitle] = useState('');
   const [persistenceError, setPersistenceError] = useState<string | null>(null);
@@ -83,10 +90,12 @@ export function PlanWorkspace() {
       setSavedPlans(await listSavedFlightPlans(database));
       setPersistenceError(null);
       setReadBlocked(false);
+      return true;
     } catch {
       setSavedPlans([]);
       setPersistenceError('Saved flights unavailable: stored routes failed integrity checks.');
       setReadBlocked(true);
+      return false;
     }
   }, [database]);
 
@@ -128,6 +137,40 @@ export function PlanWorkspace() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const revisePlan = async (
+    plan: SavedFlightPlan,
+    changes: Parameters<typeof reviseSavedFlightPlan>[1],
+  ) => {
+    setSaving(true);
+    try {
+      const next = reviseSavedFlightPlan(plan, changes, new Date().toISOString());
+      await replaceSavedFlightPlan(database, plan.revision, next);
+      setEditingPlanId(null);
+      setEditingTitle('');
+      await reloadSavedPlans();
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Unable to revise flight.';
+      if (await reloadSavedPlans()) setPersistenceError(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmArchive = (plan: SavedFlightPlan) => {
+    Alert.alert(
+      'Archive saved flight?',
+      `${plan.title} will leave the active saved-flight list. Its record is retained locally.`,
+      [
+        { style: 'cancel', text: 'Cancel' },
+        {
+          onPress: () => void revisePlan(plan, { status: 'archived' }),
+          style: 'destructive',
+          text: 'Archive',
+        },
+      ],
+    );
   };
 
   return (
@@ -261,13 +304,65 @@ export function PlanWorkspace() {
                       </Text>
                     )}
                   </View>
-                  <Action
-                    disabled={resolution.status !== 'ready'}
-                    label="Load draft"
-                    onPress={() => {
-                      if (resolution.status === 'ready') replaceRoute(resolution.identifiers);
-                    }}
-                  />
+                  <View style={styles.savedActions}>
+                    <Action
+                      disabled={resolution.status !== 'ready'}
+                      label="Load draft"
+                      onPress={() => {
+                        if (resolution.status === 'ready') replaceRoute(resolution.identifiers);
+                      }}
+                    />
+                    <Action
+                      disabled={saving}
+                      label="Rename"
+                      onPress={() => {
+                        setEditingPlanId(plan.id);
+                        setEditingTitle(plan.title);
+                      }}
+                    />
+                    <Action
+                      destructive
+                      disabled={saving}
+                      label="Archive"
+                      onPress={() => confirmArchive(plan)}
+                    />
+                  </View>
+                  {editingPlanId === plan.id && (
+                    <View style={styles.renameEditor}>
+                      <TextInput
+                        accessibilityLabel={`New title for ${plan.title}`}
+                        autoFocus
+                        maxLength={120}
+                        onChangeText={setEditingTitle}
+                        style={[
+                          styles.input,
+                          styles.renameInput,
+                          {
+                            backgroundColor: theme.background,
+                            borderColor: theme.separator,
+                            color: theme.primary,
+                          },
+                        ]}
+                        value={editingTitle}
+                      />
+                      <View style={styles.savedActions}>
+                        <Action
+                          disabled={saving || editingTitle.trim().length === 0}
+                          label="Save title"
+                          onPress={() => void revisePlan(plan, { title: editingTitle })}
+                          primary
+                        />
+                        <Action
+                          disabled={saving}
+                          label="Cancel"
+                          onPress={() => {
+                            setEditingPlanId(null);
+                            setEditingTitle('');
+                          }}
+                        />
+                      </View>
+                    </View>
+                  )}
                 </View>
               );
             })
@@ -497,6 +592,8 @@ const styles = StyleSheet.create({
   routeCopy: { flex: 1 },
   routeList: { gap: spacing.sm },
   retry: { alignItems: 'flex-start', marginTop: spacing.sm },
+  renameEditor: { gap: spacing.sm, width: '100%' },
+  renameInput: { minWidth: 220 },
   saveRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -504,11 +601,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.md,
   },
+  savedActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   savedList: { gap: spacing.sm, marginTop: spacing.lg },
   savedPlan: {
     alignItems: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
     paddingTop: spacing.md,
   },
