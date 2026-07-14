@@ -4,7 +4,7 @@ The Records workspace is an offline, device-local ledger backed by the user SQLi
 captures date, aircraft registration, departure, arrival, block, flight, day, night, PIC, SIC,
 dual, instructor, instrument, approaches, landings, remarks, and relational document attachment
 references. The mobile form exposes each of those recorded fact fields plus saved-aircraft
-selection and up to 20 imported-document attachments. Editing, import, export, signatures, and
+selection and up to 20 imported-document attachments. Editing, import, signatures, and
 regulatory interpretation remain separate future workflows.
 
 ## Integrity boundaries
@@ -37,6 +37,21 @@ regulatory interpretation remain separate future workflows.
   the richer columns and attachment relation, and removes the obsolete dataset-state table.
 - A database initialization error renders a recovery surface rather than the normal app shell.
 
+## CSV snapshot boundary
+
+CSV export is available only when every summary-counted entry is loaded and the collection is no
+larger than 2,000 entries. Each row is domain-validated again before serialization, duplicate
+entry identifiers fail closed, and stored whole-minute/count values are exported without
+decimal-hour or locale conversion. All text cells are quoted, embedded quotes are escaped, and
+leading spreadsheet formula characters are prefixed defensively. Attachment UUIDs are included
+as references; attached documents are not bundled.
+
+The file is written to app cache, read back byte-for-byte as text before the native share sheet
+is opened, and removed after the sheet closes when cleanup succeeds. A share-sheet close is not
+called a successful transfer: the UI tells the user to confirm the destination. If native
+sharing is unavailable, the private cache URI remains visible. The snapshot is not a backup,
+signed record, regulatory export, or compliance report.
+
 ## Regulatory boundary
 
 Every entry has a jurisdiction label and the literal compliance state `not-evaluated`. The
@@ -45,7 +60,7 @@ and states that it does not determine regulator, licence, recency, endorsement, 
 compliance. Future jurisdiction modules may evaluate separately, but must never rewrite recorded
 flight facts or turn an unevaluated entry into a compliant claim by default.
 
-Native process-death, migration interruption, backup/export, accessibility, and physical-device
-tests remain required before this module can pass a release gate. Historical rows are
-semantically revalidated only when their page is browsed; aggregate totals do not imply
+Native process-death, migration interruption, backup/restore, share-sheet, accessibility, and
+physical-device tests remain required before this module can pass a release gate. Historical
+rows are semantically revalidated only when their page is browsed; aggregate totals do not imply
 regulatory or semantic validation of every historical row.

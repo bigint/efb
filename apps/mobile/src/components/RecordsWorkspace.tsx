@@ -30,6 +30,8 @@ import {
   loadLogbookDashboard,
   type LogbookPageCursor,
 } from '@/database/logbook-repository';
+import { exportLogbookCsv } from '@/database/logbook-export';
+import { LOGBOOK_CSV_ENTRY_LIMIT } from '@/domain/logbook-csv';
 import { useDriftlineTheme } from '@/theme';
 
 import { Action, Card, PanelHeader, panelStyles } from './PanelPrimitives';
@@ -108,6 +110,8 @@ export function RecordsWorkspace() {
   const [documents, setDocuments] = useState<readonly DocumentRecord[]>([]);
   const [entries, setEntries] = useState<readonly LogbookEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [nextCursor, setNextCursor] = useState<LogbookPageCursor | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
@@ -119,6 +123,31 @@ export function RecordsWorkspace() {
   const { control, handleSubmit, reset, setValue } = useForm<LogbookForm>({
     defaultValues: defaults(),
   });
+
+  const exportReady =
+    !readBlocked &&
+    entries.length > 0 &&
+    entries.length === summary.entries &&
+    entries.length <= LOGBOOK_CSV_ENTRY_LIMIT;
+
+  const shareCsv = async () => {
+    if (!exportReady || exporting) return;
+    setExporting(true);
+    try {
+      const result = await exportLogbookCsv(entries);
+      setExportStatus(
+        result.kind === 'share-sheet-closed'
+          ? `Share sheet closed for ${result.entryCount} entries. ${result.temporaryFileRetained ? 'Temporary cache cleanup failed.' : 'The temporary file was removed.'} Confirm the destination separately.`
+          : `Native sharing unavailable. A ${result.entryCount}-entry CSV remains in app cache at ${result.uri}`,
+      );
+    } catch (caught) {
+      setExportStatus(
+        caught instanceof Error ? caught.message : 'Unable to create the CSV snapshot.',
+      );
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const reload = useCallback(async () => {
     try {
@@ -262,6 +291,40 @@ export function RecordsWorkspace() {
         This local ledger does not determine whether an entry satisfies any regulator, licence,
         recency, endorsement, or record-retention requirement.
       </Text>
+      <Card>
+        <Text style={[panelStyles.label, { color: theme.secondary }]}>CSV SNAPSHOT</Text>
+        <Text style={[panelStyles.copy, styles.exportCopy, { color: theme.secondary }]}>
+          Exports exact validated integer minutes/counts and text facts for all loaded entries,
+          up to {LOGBOOK_CSV_ENTRY_LIMIT}. Attachment identifiers are included; document files
+          are not. Spreadsheet formula prefixes are neutralized. This is not a regulatory backup
+          or compliance report.
+        </Text>
+        <View style={styles.exportAction}>
+          <Action
+            disabled={!exportReady || exporting}
+            label={
+              exporting
+                ? 'Preparing CSV…'
+                : summary.entries > LOGBOOK_CSV_ENTRY_LIMIT
+                  ? `Export limit · ${summary.entries}/${LOGBOOK_CSV_ENTRY_LIMIT}`
+                  : entries.length !== summary.entries
+                    ? `Load all entries · ${entries.length}/${summary.entries}`
+                    : entries.length === 0
+                      ? 'No entries to export'
+                      : `Share ${entries.length}-entry CSV`
+            }
+            onPress={() => void shareCsv()}
+          />
+        </View>
+        {exportStatus !== null && (
+          <Text
+            accessibilityRole="alert"
+            style={[styles.exportStatus, { color: theme.attention }]}
+          >
+            {exportStatus}
+          </Text>
+        )}
+      </Card>
 
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
         Add entry
@@ -521,6 +584,9 @@ const styles = StyleSheet.create({
   entry: { borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: spacing.lg },
   entryHeading: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   error: { fontFamily: typography.body, fontSize: 13, marginTop: spacing.md },
+  exportAction: { alignItems: 'flex-start', marginTop: spacing.md },
+  exportCopy: { marginTop: spacing.xs },
+  exportStatus: { fontFamily: typography.body, fontSize: 12, marginTop: spacing.md },
   field: { flexBasis: 180, flexGrow: 1, gap: spacing.xs },
   fieldGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   fieldWide: { flexBasis: '100%' },
