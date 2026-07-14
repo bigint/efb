@@ -137,28 +137,35 @@ export const listChecklistTemplates = async (
 ): Promise<readonly ChecklistTemplate[]> => {
   const templateLimit = 100;
   const itemLimit = templateLimit * 100;
-  const [rows, items] = await Promise.all([
-    database.getAllAsync<ChecklistTemplateRow>(
-      `SELECT id, aircraft_id, aircraft_label, category, created_at, revision, source,
-        title, updated_at, verification_status
-       FROM checklist_templates
-       WHERE deleted_at IS NULL
-       ORDER BY updated_at DESC
-       LIMIT ${templateLimit + 1}`,
-    ),
-    database.getAllAsync<ChecklistItemRow>(
-      `SELECT item.template_id, item.sequence, item.challenge, item.response, item.is_critical
-       FROM checklist_items AS item
-       JOIN checklist_templates AS template ON template.id = item.template_id
-       WHERE template.deleted_at IS NULL
-       ORDER BY item.template_id, item.sequence
-       LIMIT ${itemLimit + 1}`,
-    ),
-  ]);
-  if (rows.length > templateLimit || items.length > itemLimit) {
-    throw new Error('Checklist template collection exceeds supported limits');
+  const result: { templates?: readonly ChecklistTemplate[] } = {};
+  await database.withExclusiveTransactionAsync(async (transaction) => {
+    const [rows, items] = await Promise.all([
+      transaction.getAllAsync<ChecklistTemplateRow>(
+        `SELECT id, aircraft_id, aircraft_label, category, created_at, revision, source,
+          title, updated_at, verification_status
+         FROM checklist_templates
+         WHERE deleted_at IS NULL
+         ORDER BY updated_at DESC
+         LIMIT ${templateLimit + 1}`,
+      ),
+      transaction.getAllAsync<ChecklistItemRow>(
+        `SELECT item.template_id, item.sequence, item.challenge, item.response, item.is_critical
+         FROM checklist_items AS item
+         JOIN checklist_templates AS template ON template.id = item.template_id
+         WHERE template.deleted_at IS NULL
+         ORDER BY item.template_id, item.sequence
+         LIMIT ${itemLimit + 1}`,
+      ),
+    ]);
+    if (rows.length > templateLimit || items.length > itemLimit) {
+      throw new Error('Checklist template collection exceeds supported limits');
+    }
+    result.templates = decodeChecklistTemplates(rows, items);
+  });
+  if (result.templates === undefined) {
+    throw new Error('Checklist template transaction produced no result');
   }
-  return decodeChecklistTemplates(rows, items);
+  return result.templates;
 };
 
 const insertChecklistItems = async (

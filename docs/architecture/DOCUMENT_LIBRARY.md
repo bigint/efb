@@ -19,8 +19,9 @@ never participates in path construction.
 
 SQLite stores app-private scope, display name, byte length, digest, folder, favourite/recent
 metadata, optional page count, text-index state, and relational bookmarks. Every row and
-bookmark is revalidated on read; corrupt metadata blocks the library instead of disappearing
-from results.
+bookmark is reconstructed inside one exclusive read snapshot and revalidated; concurrent
+bookmark/metadata writes cannot create a mixed-version library view. Corrupt metadata blocks the
+library instead of disappearing from results.
 
 ## Organization metadata
 

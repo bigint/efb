@@ -79,28 +79,35 @@ export const decodeDocumentRows = (
 export const listDocuments = async (
   database: SQLiteDatabase,
 ): Promise<readonly DocumentRecord[]> => {
-  const [rows, bookmarks] = await Promise.all([
-    database.getAllAsync<DocumentRow>(
-      `SELECT id, imported_at, display_name, local_uri, sha256, byte_length,
-        mime_type, source, deleted_at, storage_scope, folder, is_favourite,
-        last_opened_at, page_count, text_index_status
-       FROM documents WHERE deleted_at IS NULL
-       ORDER BY is_favourite DESC, COALESCE(last_opened_at, imported_at) DESC
-       LIMIT ${MAX_LIBRARY_DOCUMENTS + 1}`,
-    ),
-    database.getAllAsync<BookmarkRow>(
-      `SELECT bookmark.document_id, bookmark.page_index, bookmark.label, bookmark.created_at
-       FROM document_bookmarks AS bookmark
-       INNER JOIN documents AS document ON document.id = bookmark.document_id
-       WHERE document.deleted_at IS NULL
-       ORDER BY bookmark.document_id, bookmark.page_index, bookmark.label
-       LIMIT ${MAX_LIBRARY_BOOKMARKS + 1}`,
-    ),
-  ]);
-  if (rows.length > MAX_LIBRARY_DOCUMENTS || bookmarks.length > MAX_LIBRARY_BOOKMARKS) {
-    throw new Error('Document library exceeds supported collection limits');
+  const result: { documents?: readonly DocumentRecord[] } = {};
+  await database.withExclusiveTransactionAsync(async (transaction) => {
+    const [rows, bookmarks] = await Promise.all([
+      transaction.getAllAsync<DocumentRow>(
+        `SELECT id, imported_at, display_name, local_uri, sha256, byte_length,
+          mime_type, source, deleted_at, storage_scope, folder, is_favourite,
+          last_opened_at, page_count, text_index_status
+         FROM documents WHERE deleted_at IS NULL
+         ORDER BY is_favourite DESC, COALESCE(last_opened_at, imported_at) DESC
+         LIMIT ${MAX_LIBRARY_DOCUMENTS + 1}`,
+      ),
+      transaction.getAllAsync<BookmarkRow>(
+        `SELECT bookmark.document_id, bookmark.page_index, bookmark.label, bookmark.created_at
+         FROM document_bookmarks AS bookmark
+         INNER JOIN documents AS document ON document.id = bookmark.document_id
+         WHERE document.deleted_at IS NULL
+         ORDER BY bookmark.document_id, bookmark.page_index, bookmark.label
+         LIMIT ${MAX_LIBRARY_BOOKMARKS + 1}`,
+      ),
+    ]);
+    if (rows.length > MAX_LIBRARY_DOCUMENTS || bookmarks.length > MAX_LIBRARY_BOOKMARKS) {
+      throw new Error('Document library exceeds supported collection limits');
+    }
+    result.documents = decodeDocumentRows(rows, bookmarks);
+  });
+  if (result.documents === undefined) {
+    throw new Error('Document library transaction produced no result');
   }
-  return decodeDocumentRows(rows, bookmarks);
+  return result.documents;
 };
 
 export const insertDocument = async (

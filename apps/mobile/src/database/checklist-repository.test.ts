@@ -5,6 +5,7 @@ import {
   decodeChecklistRuns,
   decodeChecklistTemplates,
   listRecentTerminalChecklistRuns,
+  listChecklistTemplates,
   loadLatestOpenChecklistRun,
   replaceChecklistTemplate,
   type ChecklistItemRow,
@@ -62,6 +63,20 @@ describe('checklist SQLite read boundary', () => {
 
   it('fails closed when a template has no items', () => {
     expect(() => decodeChecklistTemplates([templateRow], [])).toThrow();
+  });
+
+  it('reconstructs templates and items in one exclusive snapshot', async () => {
+    let transactionCount = 0;
+    const database = {
+      getAllAsync: (sql: string) =>
+        Promise.resolve(sql.includes('FROM checklist_templates') ? [templateRow] : [itemRow]),
+      withExclusiveTransactionAsync: (operation: (transaction: unknown) => Promise<void>) => {
+        transactionCount += 1;
+        return operation(database);
+      },
+    };
+    await expect(listChecklistTemplates(database as never)).resolves.toHaveLength(1);
+    expect(transactionCount).toBe(1);
   });
 
   it('rejects invalid SQLite boolean encodings', () => {

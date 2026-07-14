@@ -41,8 +41,9 @@ normal, abnormal, or emergency procedure content. Every template and active run 
   and the exact completed/unchecked outcome for every item. Expansion never creates a transition
   or reads the current mutable template.
 - The active template collection is bounded to 100 templates and 10,000 item rows. Items are
-  joined only from non-deleted templates, so an obsolete soft-deleted template cannot poison the
-  active library read.
+  joined only from non-deleted templates, and both relations are reconstructed inside one
+  exclusive read snapshot. A concurrent template replacement cannot create a mixed-version view,
+  and an obsolete soft-deleted template cannot poison the active library read.
 
 ## Migration
 

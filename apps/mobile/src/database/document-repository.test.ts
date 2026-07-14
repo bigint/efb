@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { decodeDocumentRows } from './document-repository';
+import { decodeDocumentRows, listDocuments } from './document-repository';
 
 const row = {
   byte_length: 1024,
@@ -74,5 +74,19 @@ describe('document SQLite read boundary', () => {
         ],
       ),
     ).toThrow('control characters');
+  });
+
+  it('reconstructs document metadata and bookmarks in one exclusive snapshot', async () => {
+    let transactionCount = 0;
+    const database = {
+      getAllAsync: (sql: string) =>
+        Promise.resolve(sql.includes('FROM documents WHERE') ? [row] : []),
+      withExclusiveTransactionAsync: (operation: (transaction: unknown) => Promise<void>) => {
+        transactionCount += 1;
+        return operation(database);
+      },
+    };
+    await expect(listDocuments(database as never)).resolves.toHaveLength(1);
+    expect(transactionCount).toBe(1);
   });
 });

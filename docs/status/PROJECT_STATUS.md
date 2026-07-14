@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 339 passed across sixty-three test files.
+- Unit tests: 341 passed across sixty-three test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,206 modules, 5.7 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -104,17 +104,19 @@ performance data.
   remains unverified. Recent terminal runs can expand a read-only locked snapshot with exact
   UTC, elapsed time, revision evidence, full item text/critical flags, and each completed or
   unchecked outcome. Open/history completion relations now use domain-sized sentinel limits
-  before decoding to stop unbounded reads and silent truncation; native concurrency, recovery,
-  and accessibility evidence are open.
+  before decoding to stop unbounded reads and silent truncation. Template/item reconstruction
+  now uses one exclusive read snapshot; native concurrency, recovery, and accessibility evidence
+  are open.
 - PDF-only document import now validates UUID paths, MIME and bounded container markers; copies
   into app-private storage; verifies SHA-256 after the copy; and persists revalidated metadata
   and bookmark relations. The reader is explicitly disabled pending native malformed-file,
   accessibility, memory, and offline QA. A non-destructive private-storage audit reports
   missing, changed-size, misplaced, and unregistered entries without deleting bytes or rehashing
   on every load. Favourite, folder, and manual bookmark metadata can be edited with validated
-  labels and conflict-aware writes without enabling the reader. An explicit share action
-  reconstructs the UUID path, rereads the bounded PDF, rechecks container markers, length, and
-  SHA-256, and opens the native sheet only for an exact imported copy without claiming delivery.
+  labels and conflict-aware writes without enabling the reader; document/bookmark reconstruction
+  uses one exclusive read snapshot. An explicit share action reconstructs the UUID path, rereads
+  the bounded PDF, rechecks container markers, length, and SHA-256, and opens the native sheet
+  only for an exact imported copy without claiming delivery.
 - The development simulator now accepts a bounded starting airport, altitude, groundspeed, true
   track, vertical speed, and horizontal-accuracy profile. Position and climb updates are bounded
   to five-second ticks, longer lifecycle gaps pause in place, and invalid time, origin, track,
