@@ -34,12 +34,13 @@ digest, and SQLite adapters must report evidence into it; they do not redefine i
 
 ## Registry read boundary
 
-The System workspace now reads `control.sqlite` through a separate, read-only adapter. It joins
-active pointers to generation records, reparses each manifest, and requires dataset ID, region,
-jurisdiction, sequence, state, activation time, signature metadata, and manifest metadata to
-agree. It then requires an exact manifest-to-file-row match for path, media type, byte count,
-and SHA-256 before reporting a package. Recent transfer attempts are revalidated for bounded,
-monotonic byte counts, status/failure consistency, required candidate IDs, and timestamp order.
+The System workspace now reads `control.sqlite` through a separate, read-only adapter. Active
+pointers/generations, file rows, and the recent attempt window are read in one exclusive
+snapshot. The adapter reparses each manifest and requires dataset ID, region, jurisdiction,
+sequence, state, activation time, signature metadata, and manifest metadata to agree. It then
+requires an exact manifest-to-file-row match for path, media type, byte count, and SHA-256
+before reporting a package. Recent transfer attempts are revalidated for bounded, monotonic byte
+counts, status/failure consistency, required candidate IDs, and timestamp order.
 
 Registry queries and manifests are bounded to 100 active packages, 10,000 active file rows, and
 20 GiB aggregate package size. Excess collections fail closed. The manager states that the

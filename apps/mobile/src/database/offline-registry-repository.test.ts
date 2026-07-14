@@ -4,6 +4,7 @@ vi.mock('expo-sqlite', () => ({ openDatabaseAsync: vi.fn() }));
 
 import {
   decodeOfflineRegistry,
+  queryOfflineRegistry,
   type ActiveGenerationRow,
   type DatasetFileRow,
   type DownloadAttemptRow,
@@ -137,5 +138,30 @@ describe('offline registry SQLite read boundary', () => {
         new Date('2026-08-01T00:00:00.000Z'),
       ).activePackages[0]?.availability,
     ).toBe('expired');
+  });
+
+  it('queries pointers, files, and attempts in one exclusive snapshot', async () => {
+    let transactionCount = 0;
+    const database = {
+      getAllAsync: (sql: string) =>
+        Promise.resolve(
+          sql.includes('active_region_generations AS active') && sql.includes('generation.*')
+            ? [generationRow()]
+            : sql.includes('dataset_files')
+              ? [fileRow()]
+              : [attemptRow()],
+        ),
+      withExclusiveTransactionAsync: (operation: (transaction: unknown) => Promise<void>) => {
+        transactionCount += 1;
+        return operation(database);
+      },
+    };
+    await expect(
+      queryOfflineRegistry(database as never, new Date('2026-07-14T13:00:00.000Z')),
+    ).resolves.toMatchObject({
+      activePackages: [{ datasetId }],
+      attempts: [{ status: 'completed' }],
+    });
+    expect(transactionCount).toBe(1);
   });
 });

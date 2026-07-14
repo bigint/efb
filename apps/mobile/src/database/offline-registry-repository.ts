@@ -6,7 +6,7 @@ import {
   type OfflineRegionState,
   type VerifiedDatasetGeneration,
 } from '@driftline/database';
-import { openDatabaseAsync } from 'expo-sqlite';
+import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
 
 import { CONTROL_DATABASE_NAME } from './control-database';
 
@@ -281,11 +281,14 @@ export const decodeOfflineRegistry = (
   };
 };
 
-export const readOfflineRegistry = async (): Promise<OfflineRegistrySnapshot> => {
-  const database = await openDatabaseAsync(CONTROL_DATABASE_NAME);
-  try {
+export const queryOfflineRegistry = async (
+  database: SQLiteDatabase,
+  now = new Date(),
+): Promise<OfflineRegistrySnapshot> => {
+  const result: { snapshot?: OfflineRegistrySnapshot } = {};
+  await database.withExclusiveTransactionAsync(async (transaction) => {
     const [generationRows, fileRows, attemptRows] = await Promise.all([
-      database.getAllAsync<ActiveGenerationRow>(
+      transaction.getAllAsync<ActiveGenerationRow>(
         `SELECT
           active.region_id AS mapping_region_id,
           active.jurisdiction AS mapping_jurisdiction,
@@ -299,7 +302,7 @@ export const readOfflineRegistry = async (): Promise<OfflineRegistrySnapshot> =>
          ORDER BY active.region_id, active.jurisdiction
          LIMIT 101`,
       ),
-      database.getAllAsync<DatasetFileRow>(
+      transaction.getAllAsync<DatasetFileRow>(
         `SELECT file.*
          FROM dataset_files AS file
          JOIN active_region_generations AS active
@@ -307,11 +310,22 @@ export const readOfflineRegistry = async (): Promise<OfflineRegistrySnapshot> =>
          ORDER BY file.dataset_id, file.path
          LIMIT 10001`,
       ),
-      database.getAllAsync<DownloadAttemptRow>(
+      transaction.getAllAsync<DownloadAttemptRow>(
         `SELECT * FROM dataset_download_attempts ORDER BY updated_at DESC LIMIT 25`,
       ),
     ]);
-    return decodeOfflineRegistry(generationRows, fileRows, attemptRows, new Date());
+    result.snapshot = decodeOfflineRegistry(generationRows, fileRows, attemptRows, now);
+  });
+  if (result.snapshot === undefined) {
+    throw new Error('Offline registry transaction produced no result.');
+  }
+  return result.snapshot;
+};
+
+export const readOfflineRegistry = async (): Promise<OfflineRegistrySnapshot> => {
+  const database = await openDatabaseAsync(CONTROL_DATABASE_NAME);
+  try {
+    return await queryOfflineRegistry(database);
   } finally {
     await database.closeAsync();
   }
