@@ -7,7 +7,7 @@ import {
   type StyleSpecification,
 } from '@maplibre/maplibre-react-native';
 import { cockpitTarget, radii, spacing, typography } from '@driftline/design-system';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { demoAirports } from '@driftline/aviation-domain';
@@ -18,6 +18,7 @@ import {
 import { position as geospatialPosition } from '@driftline/geospatial';
 
 import { evaluatePosition } from '@/domain/position-source';
+import { resolveMapCamera, type MapOrientationMode } from '@/domain/map-camera';
 import { useDevicePower } from '@/hooks/use-device-power';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
@@ -51,6 +52,7 @@ const graticule = {
 export function MapWorkspace() {
   const devicePower = useDevicePower();
   const theme = useDriftlineTheme();
+  const [orientationMode, setOrientationMode] = useState<MapOrientationMode>('north-up');
   const activeLegIndex = useFlightStore((state) => state.activeLegIndex);
   const mapStyle = useMemo<StyleSpecification>(
     () => ({
@@ -73,6 +75,7 @@ export function MapWorkspace() {
   const setWorkspace = useFlightStore((state) => state.setWorkspace);
 
   const position = evaluatePosition(positionScenario, positionSample, Date.now());
+  const mapCamera = resolveMapCamera(orientationMode, position);
   const routeResolution = resolveRouteIdentifiers(
     routeIdentifiers,
     demoAirports.map((airport) => ({ identifier: airport.icao, position: airport.position })),
@@ -150,7 +153,12 @@ export function MapWorkspace() {
         scaleBar
         style={StyleSheet.absoluteFill}
       >
-        <Camera initialViewState={{ center: [77.6, 13.4], zoom: 5.7 }} />
+        <Camera
+          bearing={mapCamera.bearing}
+          duration={250}
+          initialViewState={{ center: [77.6, 13.4], zoom: 5.7 }}
+          {...(mapCamera.kind === 'track-up' ? { center: mapCamera.center } : {})}
+        />
         <GeoJSONSource data={graticule} id="graticule">
           <Layer
             id="grid-lines"
@@ -225,6 +233,37 @@ export function MapWorkspace() {
       </Map>
 
       <View pointerEvents="box-none" style={styles.overlay}>
+        <Pressable
+          accessibilityLabel={
+            orientationMode === 'north-up'
+              ? 'Map orientation north up. Switch to track up.'
+              : 'Map orientation track up requested. Switch to north up.'
+          }
+          accessibilityRole="button"
+          onPress={() =>
+            setOrientationMode((current) => (current === 'north-up' ? 'track-up' : 'north-up'))
+          }
+          style={({ pressed }) => [
+            styles.orientationControl,
+            { backgroundColor: theme.panelRaised, borderColor: theme.separator },
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text
+            style={[
+              styles.orientationText,
+              {
+                color: mapCamera.kind === 'track-up-unavailable' ? theme.danger : theme.primary,
+              },
+            ]}
+          >
+            {mapCamera.kind === 'north-up'
+              ? 'NORTH UP'
+              : mapCamera.kind === 'track-up'
+                ? `TRACK UP · ${mapCamera.bearing.toFixed(0).padStart(3, '0')}° ${mapCamera.reference === 'true' ? 'T' : 'PLATFORM'}`
+                : 'TRACK UP UNAVAILABLE · NORTH FALLBACK'}
+          </Text>
+        </Pressable>
         <View style={[styles.mapChip, { backgroundColor: theme.panelRaised }]}>
           <Text style={[styles.mapChipPrimary, { color: theme.primary }]}>
             {routeResolution.status === 'unresolved'
@@ -452,6 +491,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0,
+  },
+  orientationControl: {
+    alignSelf: 'flex-end',
+    borderRadius: radii.control,
+    borderWidth: 1,
+    minHeight: cockpitTarget,
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  orientationText: {
+    fontFamily: typography.mono,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.7,
   },
   pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
 });

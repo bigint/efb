@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 263 passed across forty-one test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,176 modules, 5.6 MB
+- Unit tests: 266 passed across forty-two test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,177 modules, 5.6 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -135,6 +135,10 @@ performance data.
   percentage, charging state, and system low-power mode. Unsupported or malformed native battery
   telemetry fails to an explicit unavailable state; physical-device events, energy impact, and
   endurance behavior remain unverified.
+- The map starts north-up and can explicitly follow a fresh reported true/platform course in
+  track-up. Missing or stale position/course returns the camera to north with a visible fallback
+  state rather than retaining rotation. Native gesture interaction and mounted-device camera
+  behavior remain unverified.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated

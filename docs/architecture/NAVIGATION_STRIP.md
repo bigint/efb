@@ -39,11 +39,21 @@ The selected leg is also drawn as a thicker accent line above a subdued full-rou
 named in the map evidence chip. This visual intent remains available when position is missing;
 derived navigation values do not.
 
+## Map orientation
+
+The map starts north-up and exposes one cockpit-sized control to request track-up. A track-up
+camera requires the same fresh validated position plus a finite reported course. It centres the
+ownship and rotates to that course, while retaining the literal `true` or `platform` reference
+in the control label. If position or course becomes unavailable, the requested mode remains
+visible but the camera returns to north with `TRACK UP UNAVAILABLE · NORTH FALLBACK`; it does
+not hold a stale rotation. Returning to north-up removes automatic centring.
+
 ## Limitations
 
-This is a navigation-dashboard subset, not a flight director or certified instrument. It has no
-automatic waypoint sequencing, turn anticipation, magnetic course, heading source, pressure
-altitude, vertical navigation, destination clock ETA, arrival detection, or route-deviation
-alerting. Calculations use the documented spherical Earth model and fictional demonstration
-waypoints. Native battery/event behavior, lifecycle, accessibility, visual, energy, and
-independent-flight-fixture evidence are open release blockers.
+This is a navigation-dashboard subset, not a flight director or certified instrument. Track-up
+uses reported course, never an inferred heading. It has no automatic waypoint sequencing, turn
+anticipation, magnetic course, heading source, pressure altitude, vertical navigation,
+destination clock ETA, arrival detection, or route-deviation alerting. Calculations use the
+documented spherical Earth model and fictional demonstration waypoints. Native battery/event
+behavior, lifecycle, accessibility, visual, energy, and independent-flight-fixture evidence are
+open release blockers.
