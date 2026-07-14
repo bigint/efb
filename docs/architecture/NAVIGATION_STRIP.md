@@ -25,6 +25,10 @@ cross-track side, and remaining distance/ETE. Platform course keeps the literal 
 reference; simulator course is true-referenced. Stale position, unresolved route data, no active
 leg, and missing groundspeed render unavailable values rather than retained numbers.
 
+The selected leg is also drawn as a thicker accent line above a subdued full-route line and is
+named in the map evidence chip. This visual intent remains available when position is missing;
+derived navigation values do not.
+
 ## Limitations
 
 This is a navigation-dashboard subset, not a flight director or certified instrument. It has no

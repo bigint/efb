@@ -99,6 +99,26 @@ export function MapWorkspace() {
     ],
     type: 'FeatureCollection' as const,
   };
+  const activeLegAirports =
+    activeLegIndex !== null && activeLegIndex >= 0 && activeLegIndex + 1 < routeAirports.length
+      ? routeAirports.slice(activeLegIndex, activeLegIndex + 2)
+      : [];
+  const activeLegGeoJson = {
+    features: [
+      {
+        geometry: {
+          coordinates: activeLegAirports.map(({ position: value }) => [
+            value.longitude,
+            value.latitude,
+          ]),
+          type: 'LineString' as const,
+        },
+        properties: {},
+        type: 'Feature' as const,
+      },
+    ],
+    type: 'FeatureCollection' as const,
+  };
   const ownship = position.kind === 'available' ? position.sample : null;
   const ownshipOrigin = position.kind === 'available' ? position.origin : null;
   const positionUnit =
@@ -137,7 +157,7 @@ export function MapWorkspace() {
           />
         </GeoJSONSource>
         {routeAirports.length >= 2 && (
-          <GeoJSONSource data={routeGeoJson} id="active-route">
+          <GeoJSONSource data={routeGeoJson} id="route">
             <Layer
               id="route-shadow"
               paint={{ 'line-color': theme.background, 'line-width': 8 }}
@@ -145,7 +165,21 @@ export function MapWorkspace() {
             />
             <Layer
               id="route-line"
-              paint={{ 'line-color': theme.accent, 'line-width': 4 }}
+              paint={{ 'line-color': theme.secondary, 'line-width': 3 }}
+              type="line"
+            />
+          </GeoJSONSource>
+        )}
+        {activeLegAirports.length === 2 && (
+          <GeoJSONSource data={activeLegGeoJson} id="active-leg">
+            <Layer
+              id="active-leg-shadow"
+              paint={{ 'line-color': theme.background, 'line-width': 10 }}
+              type="line"
+            />
+            <Layer
+              id="active-leg-line"
+              paint={{ 'line-color': theme.accent, 'line-width': 6 }}
               type="line"
             />
           </GeoJSONSource>
@@ -191,12 +225,18 @@ export function MapWorkspace() {
       <View pointerEvents="box-none" style={styles.overlay}>
         <View style={[styles.mapChip, { backgroundColor: theme.panelRaised }]}>
           <Text style={[styles.mapChipPrimary, { color: theme.primary }]}>
-            {routeResolution.status === 'unresolved' ? 'ROUTE BLOCKED' : 'OFFLINE DEMO GRID'}
+            {routeResolution.status === 'unresolved'
+              ? 'ROUTE BLOCKED'
+              : activeLegAirports.length === 2
+                ? `ACTIVE LEG · ${activeLegAirports.map(({ icao }) => icao).join(' → ')}`
+                : 'OFFLINE DEMO GRID'}
           </Text>
           <Text style={[styles.mapChipSecondary, { color: theme.secondary }]}>
             {routeResolution.status === 'unresolved'
               ? `Unresolved: ${routeResolution.unresolvedIdentifiers.join(', ')}`
-              : 'No chart data loaded'}
+              : activeLegAirports.length === 2
+                ? 'Explicit selection · no automatic sequencing'
+                : 'No chart data loaded'}
           </Text>
         </View>
         <View style={styles.navStrip}>
