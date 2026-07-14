@@ -41,6 +41,10 @@ describe('document SQLite read boundary', () => {
     expect(() => decodeDocumentRows([{ ...row, is_favourite: 2 }], [])).toThrow();
   });
 
+  it('rejects duplicate documents before relational reconstruction', () => {
+    expect(() => decodeDocumentRows([row, row], [])).toThrow('duplicate records');
+  });
+
   it('rejects orphan bookmark relations', () => {
     expect(() =>
       decodeDocumentRows(

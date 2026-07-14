@@ -19,5 +19,13 @@ describe('airport favourite SQLite boundary', () => {
         { created_at: '2026-07-14T10:01:00.000Z', identifier: 'dvl1' },
       ]),
     ).toThrow('unique');
+    expect(() =>
+      decodeAirportFavourites(
+        Array.from({ length: 101 }, (_, index) => ({
+          created_at: '2026-07-14T10:00:00.000Z',
+          identifier: `W${index}`,
+        })),
+      ),
+    ).toThrow('limits');
   });
 });

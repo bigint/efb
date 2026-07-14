@@ -37,7 +37,11 @@ export const decodeDocumentRows = (
   rows: readonly DocumentRow[],
   bookmarkRows: readonly BookmarkRow[],
 ): readonly DocumentRecord[] => {
+  if (rows.length > MAX_LIBRARY_DOCUMENTS || bookmarkRows.length > MAX_LIBRARY_BOOKMARKS) {
+    throw new Error('Document library exceeds supported collection limits');
+  }
   const ids = new Set(rows.map(({ id }) => id));
+  if (ids.size !== rows.length) throw new Error('Document library contains duplicate records');
   const bookmarks = new Map<string, BookmarkRow[]>();
   for (const bookmark of bookmarkRows) {
     if (!ids.has(bookmark.document_id)) {

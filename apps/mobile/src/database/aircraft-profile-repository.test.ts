@@ -49,6 +49,7 @@ describe('aircraft profile SQLite read boundary', () => {
         { ...row, units_json: JSON.stringify({ arm: 'in', fuel: 'gal', mass: 'lb' }) },
       ]),
     ).toThrow();
+    expect(() => decodeAircraftProfileRows([row, row])).toThrow('duplicates');
   });
 
   it('deletes an unreferenced current revision inside one exclusive transaction', async () => {

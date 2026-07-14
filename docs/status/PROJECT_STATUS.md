@@ -31,7 +31,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 369 passed across sixty-four test files.
+- Unit tests: 370 passed across sixty-four test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,207 modules, 5.7 MB
   uncompressed bundle artifact). Android production JavaScript/Hermes export passed (2,299
   modules, 5.9 MB uncompressed bundle artifact). Pinned CI now compiles both exports after the
@@ -99,6 +99,8 @@ performance data.
   lifecycle; repository reads reapply these chronology checks.
 - Logbook page decoding rejects oversized or duplicate entry collections, while aggregate reads
   reject duplicate jurisdictions and totals that contradict per-entry time invariants.
+- Document, aircraft-profile, and airport-favourite decoders enforce collection limits and
+  reject duplicate parent identities even when called outside their normal bounded query path.
 - Separate versioned user and control SQLite schemas now migrate before app render. Executable
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,

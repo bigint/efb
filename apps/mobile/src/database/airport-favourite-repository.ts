@@ -20,6 +20,9 @@ interface AirportFavouriteRow {
 export const decodeAirportFavourites = (
   rows: readonly AirportFavouriteRow[],
 ): readonly string[] => {
+  if (rows.length > 100) {
+    throw new Error('Airport favourite collection exceeds supported limits');
+  }
   const identifiers = rows.map((row) =>
     airportFavouriteSchema.parse({ createdAt: row.created_at, identifier: row.identifier }),
   );

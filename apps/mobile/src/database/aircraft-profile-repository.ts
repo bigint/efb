@@ -26,8 +26,13 @@ const parseJson = (source: string, label: string): unknown => {
 
 export const decodeAircraftProfileRows = (
   rows: readonly AircraftProfileRow[],
-): readonly AircraftProfile[] =>
-  rows.map((row) =>
+): readonly AircraftProfile[] => {
+  if (rows.length > 100)
+    throw new Error('Aircraft profile collection exceeds supported limits.');
+  const ids = new Set(rows.map(({ id }) => id));
+  if (ids.size !== rows.length)
+    throw new Error('Aircraft profile collection contains duplicates.');
+  return rows.map((row) =>
     aircraftProfileSchema.parse({
       createdAt: row.created_at,
       displayName: row.display_name,
@@ -43,6 +48,7 @@ export const decodeAircraftProfileRows = (
       verificationStatus: row.verification_status,
     }),
   );
+};
 
 export const listAircraftProfiles = async (
   database: SQLiteDatabase,
