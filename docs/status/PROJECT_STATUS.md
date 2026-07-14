@@ -97,6 +97,8 @@ performance data.
   snapshot; restored records are rechecked by the same schema.
 - Document bookmarks and last-opened metadata must fall within the imported-to-deleted
   lifecycle; repository reads reapply these chronology checks.
+- Logbook page decoding rejects oversized or duplicate entry collections, while aggregate reads
+  reject duplicate jurisdictions and totals that contradict per-entry time invariants.
 - Separate versioned user and control SQLite schemas now migrate before app render. Executable
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,

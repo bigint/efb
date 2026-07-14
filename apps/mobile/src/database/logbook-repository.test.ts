@@ -56,6 +56,19 @@ describe('logbook SQLite read boundary', () => {
     );
   });
 
+  it('fails closed on duplicate or oversized entry pages', () => {
+    expect(() => decodeLogbookRows([row, row], [])).toThrow('duplicate entries');
+    expect(() =>
+      decodeLogbookRows(
+        Array.from({ length: 101 }, (_, index) => ({
+          ...row,
+          id: `019f5f42-a146-7c00-861d-${String(index).padStart(12, '0')}`,
+        })),
+        [],
+      ),
+    ).toThrow('limits');
+  });
+
   it('fails closed on an attachment outside the bounded recent page', () => {
     expect(() =>
       decodeLogbookRows(
@@ -94,6 +107,15 @@ describe('logbook SQLite read boundary', () => {
     expect(() =>
       decodeLogbookSummary({ ...aggregate, flight_minutes: Number.MAX_SAFE_INTEGER + 1 }, []),
     ).toThrow('aggregate is invalid');
+    expect(() => decodeLogbookSummary({ ...aggregate, flight_minutes: 60 }, [])).toThrow(
+      'contradict',
+    );
+    expect(() =>
+      decodeLogbookSummary(aggregate, [
+        { jurisdiction: 'UNCLASSIFIED' },
+        { jurisdiction: 'UNCLASSIFIED' },
+      ]),
+    ).toThrow('duplicates');
   });
 
   it('uses a validated exclusive keyset cursor for older pages', async () => {

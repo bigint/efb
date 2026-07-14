@@ -86,13 +86,29 @@ export const decodeLogbookSummary = (
   if (jurisdictionRows.length > 100) {
     throw new Error('Logbook jurisdiction collection exceeds supported limits');
   }
+  const jurisdictionSet = new Set(jurisdictionRows.map(({ jurisdiction }) => jurisdiction));
+  if (jurisdictionSet.size !== jurisdictionRows.length) {
+    throw new Error('Logbook jurisdiction collection contains duplicates');
+  }
   const totals = Object.fromEntries(
     (Object.keys(row) as (keyof LogbookAggregateRow)[])
       .filter((key) => key !== 'entry_count')
       .map((key) => [key, requireAggregateInteger(row[key], key)]),
   ) as Record<Exclude<keyof LogbookAggregateRow, 'entry_count'>, number>;
+  const entries = requireAggregateInteger(row.entry_count, 'entry count');
+  if (
+    totals.flight_minutes > totals.block_minutes ||
+    totals.day_minutes + totals.night_minutes > totals.flight_minutes ||
+    totals.pic_minutes + totals.sic_minutes > totals.flight_minutes ||
+    totals.dual_minutes > totals.flight_minutes ||
+    totals.instructor_minutes > totals.flight_minutes ||
+    totals.instrument_minutes > totals.flight_minutes ||
+    (entries === 0 && Object.values(totals).some((value) => value !== 0))
+  ) {
+    throw new Error('Logbook aggregates contradict entry invariants');
+  }
   return {
-    entries: requireAggregateInteger(row.entry_count, 'entry count'),
+    entries,
     jurisdictions: jurisdictionRows.map(
       ({ jurisdiction }) =>
         logbookComplianceSchema.parse({ jurisdiction, status: 'not-evaluated' }).jurisdiction,
@@ -263,7 +279,11 @@ export const decodeLogbookRows = (
   rows: readonly LogbookRow[],
   attachmentRows: readonly AttachmentRow[],
 ): readonly LogbookEntry[] => {
+  if (rows.length > LOGBOOK_PAGE_LIMIT || attachmentRows.length > PAGE_ATTACHMENT_LIMIT) {
+    throw new Error('Logbook page exceeds supported limits');
+  }
   const ids = new Set(rows.map(({ id }) => id));
+  if (ids.size !== rows.length) throw new Error('Logbook page contains duplicate entries');
   const attachments = new Map<string, string[]>();
   for (const row of attachmentRows) {
     if (!ids.has(row.entry_id)) {
