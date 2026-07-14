@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
 import type { PositionScenario } from './position-source';
+import {
+  defaultSimulationProfile,
+  simulationProfileSchema,
+  type SimulationProfile,
+} from './simulation-profile';
 
 export const workspaceSchema = z.enum([
   'map',
@@ -18,6 +23,7 @@ export interface PersistedFlightState {
   readonly positionScenario: PositionScenario;
   readonly routeIdentifiers: string[];
   readonly selectedAirport: string | null;
+  readonly simulationProfile: SimulationProfile;
   readonly workspace: Workspace;
 }
 
@@ -25,6 +31,7 @@ export const safePersistedFlightState: PersistedFlightState = {
   positionScenario: { kind: 'disabled' },
   routeIdentifiers: [],
   selectedAirport: null,
+  simulationProfile: defaultSimulationProfile,
   workspace: 'system',
 };
 
@@ -44,6 +51,7 @@ const persistedFlightSchema = z
       .optional()
       .default([]),
     selectedAirport: z.string().trim().min(1).max(16).nullable(),
+    simulationProfile: simulationProfileSchema.optional().default(defaultSimulationProfile),
     workspace: workspaceSchema,
   })
   .strict();

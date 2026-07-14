@@ -31,6 +31,7 @@ describe('position source evaluation', () => {
       previous: null,
       sampledAt: 10_000,
       trackTrueDegrees: 90,
+      verticalSpeedFeetPerMinute: 0,
     });
     const second = advanceSimulationSample({
       altitudeFeet: 4_500,
@@ -40,6 +41,7 @@ describe('position source evaluation', () => {
       previous: first,
       sampledAt: 11_000,
       trackTrueDegrees: 90,
+      verticalSpeedFeetPerMinute: 600,
     });
     expect(second.latitude).toBeCloseTo(0, 10);
     expect(second.longitude).toBeGreaterThan(first.longitude);
@@ -51,6 +53,7 @@ describe('position source evaluation', () => {
     ).toBeCloseTo(120 / 3_600, 10);
     expect(second.trackDegrees).toBe(90);
     expect(second.trackReference).toBe('true');
+    expect(second.altitudeFeet).toBeCloseTo(4_510);
   });
 
   it('pauses movement across long lifecycle gaps and rejects clock reversal', () => {
@@ -63,6 +66,7 @@ describe('position source evaluation', () => {
       previous: null,
       sampledAt: 10_000,
       trackTrueDegrees: 90,
+      verticalSpeedFeetPerMinute: 500,
     });
     expect(
       advanceSimulationSample({
@@ -73,11 +77,13 @@ describe('position source evaluation', () => {
         previous: first,
         sampledAt: 20_000,
         trackTrueDegrees: 90,
+        verticalSpeedFeetPerMinute: 500,
       }),
     ).toMatchObject({
       latitude: first.latitude,
       longitude: first.longitude,
       sampledAt: 20_000,
+      altitudeFeet: first.altitudeFeet,
     });
     expect(() =>
       advanceSimulationSample({
@@ -88,8 +94,24 @@ describe('position source evaluation', () => {
         previous: first,
         sampledAt: 9_999,
         trackTrueDegrees: 90,
+        verticalSpeedFeetPerMinute: 0,
       }),
     ).toThrow('backwards');
+  });
+
+  it('rejects a climb that would leave the supported altitude envelope', () => {
+    expect(() =>
+      advanceSimulationSample({
+        altitudeFeet: 99_999,
+        groundspeedKnots: 120,
+        horizontalAccuracyMetres: 50,
+        origin: position(12, 77),
+        previous: { ...sample, altitudeFeet: 99_999 },
+        sampledAt: 11_000,
+        trackTrueDegrees: 90,
+        verticalSpeedFeetPerMinute: 6_000,
+      }),
+    ).toThrow('altitude');
   });
 
   it('exposes a fresh simulated sample with age and origin', () => {

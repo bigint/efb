@@ -11,6 +11,14 @@ const validState = {
   positionScenario: { gpsAvailable: true, kind: 'simulated' as const },
   routeIdentifiers: ['DVL1', 'DVL2'],
   selectedAirport: 'DVL1',
+  simulationProfile: {
+    altitudeFeet: 4_500,
+    groundspeedKnots: 118,
+    horizontalAccuracyMetres: 50,
+    startingAirportIdentifier: 'DVL1',
+    trackTrueDegrees: 68,
+    verticalSpeedFeetPerMinute: 0,
+  },
   workspace: 'map' as const,
 };
 

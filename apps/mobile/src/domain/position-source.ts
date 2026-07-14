@@ -63,6 +63,7 @@ interface AdvanceSimulationInput {
   readonly previous: PositionSample | null;
   readonly sampledAt: number;
   readonly trackTrueDegrees: number;
+  readonly verticalSpeedFeetPerMinute: number;
 }
 
 export const advanceSimulationSample = ({
@@ -73,6 +74,7 @@ export const advanceSimulationSample = ({
   previous,
   sampledAt,
   trackTrueDegrees,
+  verticalSpeedFeetPerMinute,
 }: AdvanceSimulationInput): PositionSample => {
   if (
     !Number.isFinite(sampledAt) ||
@@ -84,7 +86,10 @@ export const advanceSimulationSample = ({
     groundspeedKnots > MAX_GROUNDSPEED_KNOTS ||
     !Number.isFinite(horizontalAccuracyMetres) ||
     horizontalAccuracyMetres < 0 ||
-    horizontalAccuracyMetres > MAX_HORIZONTAL_ACCURACY_METRES
+    horizontalAccuracyMetres > MAX_HORIZONTAL_ACCURACY_METRES ||
+    !Number.isFinite(verticalSpeedFeetPerMinute) ||
+    verticalSpeedFeetPerMinute < -10_000 ||
+    verticalSpeedFeetPerMinute > 10_000
   ) {
     throw new RangeError('Simulation inputs are outside supported bounds');
   }
@@ -107,6 +112,14 @@ export const advanceSimulationSample = ({
   }
   if (deltaMilliseconds === 0) return previous;
   const current = position(previous.latitude, previous.longitude);
+  const currentAltitude = previous.altitudeFeet ?? altitudeFeet;
+  const nextAltitude =
+    deltaMilliseconds > MAX_CONTINUOUS_SIMULATION_TICK_MILLISECONDS
+      ? currentAltitude
+      : currentAltitude + (verticalSpeedFeetPerMinute * deltaMilliseconds) / 60_000;
+  if (nextAltitude < MIN_ALTITUDE_FEET || nextAltitude > MAX_ALTITUDE_FEET) {
+    throw new RangeError('Simulation altitude moved outside supported bounds');
+  }
   const next =
     deltaMilliseconds > MAX_CONTINUOUS_SIMULATION_TICK_MILLISECONDS
       ? current
@@ -116,7 +129,7 @@ export const advanceSimulationSample = ({
           nauticalMiles((groundspeedKnots * deltaMilliseconds) / 3_600_000),
         );
   return {
-    altitudeFeet,
+    altitudeFeet: nextAltitude,
     groundspeedKnots,
     horizontalAccuracyMetres,
     latitude: next.latitude,

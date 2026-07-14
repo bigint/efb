@@ -17,6 +17,11 @@ import {
   type PositionSample,
   type PositionScenario,
 } from '@/domain/position-source';
+import {
+  defaultSimulationProfile,
+  simulationProfileSchema,
+  type SimulationProfile,
+} from '@/domain/simulation-profile';
 
 export type { Workspace } from '@/domain/persisted-flight';
 
@@ -25,6 +30,7 @@ interface FlightState {
   readonly positionScenario: PositionScenario;
   readonly routeIdentifiers: string[];
   readonly selectedAirport: string | null;
+  readonly simulationProfile: SimulationProfile;
   readonly workspace: Workspace;
   addWaypoint: (identifier: string) => void;
   clearRoute: () => void;
@@ -39,12 +45,13 @@ interface FlightState {
   ) => void;
   setGpsOutage: (outage: boolean) => void;
   setSimulationEnabled: (enabled: boolean) => void;
+  setSimulationProfile: (profile: SimulationProfile) => void;
   setWorkspace: (workspace: Workspace) => void;
   tickSimulation: (sampledAt: number) => void;
 }
 
 const storage = createMMKV({ id: 'driftline-preferences' });
-const PERSISTENCE_VERSION = 4;
+const PERSISTENCE_VERSION = 5;
 
 const zustandStorage: StateStorage = {
   getItem: (name) =>
@@ -52,8 +59,6 @@ const zustandStorage: StateStorage = {
   removeItem: (name) => storage.remove(name),
   setItem: (name, value) => storage.set(name, value),
 };
-
-const initialPosition = demoAirports[0]?.position;
 
 export const useFlightStore = create<FlightState>()(
   persist(
@@ -94,6 +99,7 @@ export const useFlightStore = create<FlightState>()(
       routeIdentifiers: demoAirports.slice(0, 2).map(({ icao }) => icao),
       selectAirport: (selectedAirport) => set({ selectedAirport }),
       selectedAirport: demoAirports[0]?.icao ?? null,
+      simulationProfile: defaultSimulationProfile,
       setDevicePositionEnabled: (enabled) =>
         set({
           positionSample: null,
@@ -123,31 +129,58 @@ export const useFlightStore = create<FlightState>()(
             ? { gpsAvailable: true, kind: 'simulated' }
             : { kind: 'disabled' },
         }),
+      setSimulationProfile: (source) =>
+        set((state) => {
+          const profile = simulationProfileSchema.parse(source);
+          if (!demoAirports.some(({ icao }) => icao === profile.startingAirportIdentifier)) {
+            throw new Error('Simulation starting airport is unavailable');
+          }
+          return {
+            positionSample: null,
+            simulationProfile: profile,
+            positionScenario:
+              state.positionScenario.kind === 'simulated'
+                ? { gpsAvailable: true, kind: 'simulated' }
+                : state.positionScenario,
+          };
+        }),
       setWorkspace: (workspace) => set({ workspace }),
       tickSimulation: (sampledAt) =>
         set((state) => {
           if (
             !Number.isFinite(sampledAt) ||
             state.positionScenario.kind !== 'simulated' ||
-            !state.positionScenario.gpsAvailable ||
-            initialPosition === undefined
+            !state.positionScenario.gpsAvailable
           ) {
             return state.positionSample === null ? state : { positionSample: null };
+          }
+          const origin = demoAirports.find(
+            ({ icao }) => icao === state.simulationProfile.startingAirportIdentifier,
+          )?.position;
+          if (origin === undefined) {
+            return {
+              positionSample: null,
+              positionScenario: { gpsAvailable: false, kind: 'simulated' },
+            };
           }
           try {
             return {
               positionSample: advanceSimulationSample({
-                altitudeFeet: 4_500,
-                groundspeedKnots: 118,
-                horizontalAccuracyMetres: 50,
-                origin: initialPosition,
+                altitudeFeet: state.simulationProfile.altitudeFeet,
+                groundspeedKnots: state.simulationProfile.groundspeedKnots,
+                horizontalAccuracyMetres: state.simulationProfile.horizontalAccuracyMetres,
+                origin,
                 previous: state.positionSample,
                 sampledAt,
-                trackTrueDegrees: 68,
+                trackTrueDegrees: state.simulationProfile.trackTrueDegrees,
+                verticalSpeedFeetPerMinute: state.simulationProfile.verticalSpeedFeetPerMinute,
               }),
             };
           } catch {
-            return state.positionSample === null ? state : { positionSample: null };
+            return {
+              positionSample: null,
+              positionScenario: { gpsAvailable: false, kind: 'simulated' },
+            };
           }
         }),
       workspace: 'map',
@@ -162,14 +195,15 @@ export const useFlightStore = create<FlightState>()(
         };
       },
       migrate: (persistedState, storedVersion) =>
-        storedVersion <= 3 ? persistedState : safePersistedFlightState,
+        storedVersion <= 4 ? persistedState : safePersistedFlightState,
       name: 'flight-workspace-v2',
-      partialize: ({ positionScenario, selectedAirport, workspace }) => ({
+      partialize: ({ positionScenario, selectedAirport, simulationProfile, workspace }) => ({
         positionScenario:
           positionScenario.kind === 'device'
             ? { kind: 'device' as const, status: 'checking' as const }
             : positionScenario,
         selectedAirport,
+        simulationProfile,
         workspace,
       }),
       storage: createJSONStorage(() => zustandStorage),

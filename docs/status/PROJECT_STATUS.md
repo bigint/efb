@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 227 passed across thirty-three test files.
+- Unit tests: 234 passed across thirty-four test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,163 modules, 5.5 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -79,10 +79,11 @@ performance data.
   missing, changed-size, misplaced, and unregistered entries without deleting bytes or rehashing
   on every load. Favourite, folder, and manual bookmark metadata can be edited with validated
   labels and conflict-aware writes without enabling the reader.
-- The development simulator now advances a constant 118-knot profile on an explicitly true
-  068-degree great-circle track. Updates are bounded to five-second ticks, longer lifecycle gaps
-  pause in place, and invalid time or track data fails closed. Native timer, lifecycle, and
-  physical-device behavior remain unverified.
+- The development simulator now accepts a bounded starting airport, altitude, groundspeed, true
+  track, vertical speed, and horizontal-accuracy profile. Position and climb updates are bounded
+  to five-second ticks, longer lifecycle gaps pause in place, and invalid time, origin, track,
+  or altitude transitions fail into an explicit simulated GPS outage. Configuration persists but
+  live samples do not. Native timer, lifecycle, and physical-device behavior remain unverified.
 - User-entered aircraft profiles now persist locally with explicit kilogram, metre, litre, and
   knot units, immutable unverified provenance, schema revision, parameterized writes, and a
   fail-closed JSON read boundary. User fields can advance through compare-and-swap revisions
