@@ -66,6 +66,9 @@ describe('dataset manifest bounds', () => {
     expect(() => datasetManifestSchema.parse(manifest([file('unsafe path')]))).toThrow(
       'unsupported characters',
     );
+    expect(() => datasetManifestSchema.parse(manifest([file('CaseAlias.bin')]))).toThrow(
+      'unsupported characters',
+    );
     expect(() =>
       datasetManifestSchema.parse({
         ...manifest([file('safe.bin')]),

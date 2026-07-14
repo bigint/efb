@@ -25,7 +25,7 @@ export const datasetFileSchema = z
     mediaType: z.string().regex(/^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/u),
     path: z
       .string()
-      .regex(/^[A-Za-z0-9._/-]{1,512}$/u, 'Dataset path contains unsupported characters')
+      .regex(/^[a-z0-9._/-]{1,512}$/u, 'Dataset path contains unsupported characters')
       .refine(
         (value) =>
           !value.startsWith('/') &&
