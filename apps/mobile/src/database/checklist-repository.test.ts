@@ -4,6 +4,7 @@ import {
   decodeChecklistRun,
   decodeChecklistRuns,
   decodeChecklistTemplates,
+  replaceChecklistTemplate,
   type ChecklistItemRow,
   type ChecklistTemplateRow,
 } from './checklist-repository';
@@ -28,6 +29,27 @@ const itemRow: ChecklistItemRow = {
   sequence: 0,
   template_id: templateRow.id,
 };
+
+const revisedTemplate = () => ({
+  aircraftId: null,
+  aircraftLabel: templateRow.aircraft_label,
+  category: templateRow.category,
+  createdAt: templateRow.created_at,
+  id: templateRow.id,
+  items: [
+    {
+      challenge: itemRow.challenge,
+      isCritical: false,
+      response: itemRow.response,
+      sequence: 0,
+    },
+  ],
+  revision: 2,
+  source: templateRow.source,
+  title: 'Revised checklist',
+  updatedAt: '2026-07-14T10:01:00.000Z',
+  verificationStatus: templateRow.verification_status,
+});
 
 describe('checklist SQLite read boundary', () => {
   it('decodes templates with ordered relational items', () => {
@@ -104,5 +126,39 @@ describe('checklist SQLite read boundary', () => {
         [{ item_sequence: 0, run_id: '019f5f42-a146-7c00-861d-7ad2313bbbd5' }],
       ),
     ).toThrow('unavailable run');
+  });
+
+  it('replaces template fields and items in one compare-and-swap transaction', async () => {
+    const statements: string[] = [];
+    const database = {
+      runAsync: (sql: string) => {
+        statements.push(sql);
+        return Promise.resolve({ changes: 1 });
+      },
+      withExclusiveTransactionAsync: (operation: (transaction: unknown) => Promise<void>) =>
+        operation(database),
+    };
+    await replaceChecklistTemplate(database as never, 1, revisedTemplate());
+    expect(statements).toHaveLength(3);
+    expect(statements[0]).toContain('revision = ?');
+    expect(statements[0]).toContain('WHERE id = ? AND revision = ?');
+    expect(statements[1]).toContain('DELETE FROM checklist_items');
+    expect(statements[2]).toContain('INSERT INTO checklist_items');
+  });
+
+  it('does not replace items after a stale template revision', async () => {
+    const statements: string[] = [];
+    const database = {
+      runAsync: (sql: string) => {
+        statements.push(sql);
+        return Promise.resolve({ changes: 0 });
+      },
+      withExclusiveTransactionAsync: (operation: (transaction: unknown) => Promise<void>) =>
+        operation(database),
+    };
+    await expect(
+      replaceChecklistTemplate(database as never, 1, revisedTemplate()),
+    ).rejects.toThrow('another writer');
+    expect(statements).toHaveLength(1);
   });
 });

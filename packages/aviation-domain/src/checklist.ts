@@ -48,6 +48,38 @@ export const checklistTemplateSchema = z
 
 export type ChecklistTemplate = z.infer<typeof checklistTemplateSchema>;
 
+export interface ChecklistTemplateRevision {
+  readonly aircraftId?: ChecklistTemplate['aircraftId'];
+  readonly aircraftLabel?: ChecklistTemplate['aircraftLabel'];
+  readonly category?: ChecklistTemplate['category'];
+  readonly items?: ChecklistTemplate['items'];
+  readonly title?: ChecklistTemplate['title'];
+}
+
+export const reviseChecklistTemplate = (
+  source: ChecklistTemplate,
+  changes: ChecklistTemplateRevision,
+  updatedAt: string,
+): ChecklistTemplate => {
+  const template = checklistTemplateSchema.parse(source);
+  if (
+    !Number.isFinite(Date.parse(updatedAt)) ||
+    Date.parse(updatedAt) < Date.parse(template.updatedAt)
+  ) {
+    throw new Error('Checklist revision time cannot precede the current revision.');
+  }
+  return checklistTemplateSchema.parse({
+    ...template,
+    ...changes,
+    createdAt: template.createdAt,
+    id: template.id,
+    revision: template.revision + 1,
+    source: template.source,
+    updatedAt,
+    verificationStatus: template.verificationStatus,
+  });
+};
+
 export const checklistRunSchema = z
   .object({
     abandonedAt: z.iso.datetime().nullable(),

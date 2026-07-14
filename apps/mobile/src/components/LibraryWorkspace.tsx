@@ -1,6 +1,7 @@
 import {
   abandonChecklistRun,
   checklistTemplateSchema,
+  reviseChecklistTemplate,
   setChecklistItemCompleted,
   type ChecklistCategory,
   type ChecklistRun,
@@ -30,6 +31,7 @@ import {
   listRecentTerminalChecklistRuns,
   loadLatestOpenChecklistRun,
   persistChecklistRunTransition,
+  replaceChecklistTemplate,
 } from '@/database/checklist-repository';
 import { listAircraftProfiles } from '@/database/aircraft-profile-repository';
 import { useDriftlineTheme } from '@/theme';
@@ -64,6 +66,7 @@ export function LibraryWorkspace() {
   const [aircraft, setAircraft] = useState<readonly AircraftProfile[]>([]);
   const [aircraftError, setAircraftError] = useState<string | null>(null);
   const [category, setCategory] = useState<ChecklistCategory>('normal');
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<readonly ChecklistRun[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -75,6 +78,8 @@ export function LibraryWorkspace() {
     defaultValues: formDefaults(),
   });
   const { append, fields, remove } = useFieldArray({ control, name: 'items' });
+  const hasOpenRun =
+    activeRun !== null && activeRun.completedAt === null && activeRun.abandonedAt === null;
 
   const reload = useCallback(async () => {
     try {
@@ -132,30 +137,54 @@ export function LibraryWorkspace() {
     setSaving(true);
     try {
       const now = new Date().toISOString();
+      const editingTemplate =
+        editingTemplateId === null
+          ? null
+          : (templates.find(({ id }) => id === editingTemplateId) ?? null);
+      if (editingTemplateId !== null && editingTemplate === null) {
+        throw new Error('The checklist being edited is no longer available.');
+      }
       const selectedAircraft =
         selectedAircraftId === null
           ? null
           : (aircraft.find(({ id }) => id === selectedAircraftId) ?? null);
-      if (selectedAircraftId !== null && selectedAircraft === null) {
+      const preservingUnavailableAircraft =
+        selectedAircraftId !== null && editingTemplate?.aircraftId === selectedAircraftId;
+      if (
+        selectedAircraftId !== null &&
+        selectedAircraft === null &&
+        !preservingUnavailableAircraft
+      ) {
         throw new Error('Selected aircraft reference is no longer available.');
       }
-      const template = checklistTemplateSchema.parse({
-        aircraftId: selectedAircraft?.id ?? null,
-        aircraftLabel:
-          selectedAircraft === null ? form.aircraftLabel : selectedAircraft.registration,
+      const aircraftLabel =
+        selectedAircraft?.registration ??
+        (preservingUnavailableAircraft ? editingTemplate.aircraftLabel : form.aircraftLabel);
+      const changes = {
+        aircraftId: selectedAircraftId,
+        aircraftLabel,
         category,
-        createdAt: now,
-        id: randomUUID(),
         items: form.items.map((item, sequence) => ({ ...item, sequence })),
-        revision: 1,
-        source: 'user-authored',
         title: form.title,
-        updatedAt: now,
-        verificationStatus: 'unverified',
-      });
-      await insertChecklistTemplate(database, template);
+      } as const;
+      if (editingTemplate === null) {
+        const template = checklistTemplateSchema.parse({
+          ...changes,
+          createdAt: now,
+          id: randomUUID(),
+          revision: 1,
+          source: 'user-authored',
+          updatedAt: now,
+          verificationStatus: 'unverified',
+        });
+        await insertChecklistTemplate(database, template);
+      } else {
+        const revised = reviseChecklistTemplate(editingTemplate, changes, now);
+        await replaceChecklistTemplate(database, editingTemplate.revision, revised);
+      }
       reset(formDefaults());
       setCategory('normal');
+      setEditingTemplateId(null);
       setSelectedAircraftId(null);
       await reload();
     } catch (caught) {
@@ -314,20 +343,40 @@ export function LibraryWorkspace() {
               </Text>
               <Text style={[panelStyles.copy, { color: theme.secondary }]}>
                 {template.aircraftLabel} · {template.category} · {template.items.length} items ·
-                unverified
+                revision {template.revision} · unverified
               </Text>
             </View>
-            <Action
-              disabled={saving || readBlocked || activeRun?.completedAt === null}
-              label="Start"
-              onPress={() => void begin(template)}
-            />
+            <View style={styles.templateActions}>
+              <Action
+                disabled={saving || readBlocked || hasOpenRun}
+                label="Start"
+                onPress={() => void begin(template)}
+              />
+              <Action
+                disabled={saving || readBlocked}
+                label="Edit"
+                onPress={() => {
+                  setEditingTemplateId(template.id);
+                  setCategory(template.category);
+                  setSelectedAircraftId(template.aircraftId);
+                  reset({
+                    aircraftLabel: template.aircraftLabel,
+                    items: template.items.map(({ challenge, isCritical, response }) => ({
+                      challenge,
+                      isCritical,
+                      response,
+                    })),
+                    title: template.title,
+                  });
+                }}
+              />
+            </View>
           </View>
         ))
       )}
 
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
-        New user checklist
+        {editingTemplateId === null ? 'New user checklist' : 'Revise user checklist'}
       </Text>
       <Card>
         <FormField control={control} label="Title" name="title" />
@@ -434,10 +483,29 @@ export function LibraryWorkspace() {
           />
           <Action
             disabled={saving || readBlocked}
-            label={saving ? 'Saving…' : 'Save template'}
+            label={
+              saving
+                ? 'Saving…'
+                : editingTemplateId === null
+                  ? 'Save template'
+                  : 'Save next revision'
+            }
             onPress={() => void saveTemplate()}
             primary
           />
+          {editingTemplateId !== null && (
+            <Action
+              disabled={saving}
+              label="Cancel revision"
+              onPress={() => {
+                reset(formDefaults());
+                setCategory('normal');
+                setEditingTemplateId(null);
+                setSelectedAircraftId(null);
+                setError(null);
+              }}
+            />
+          )}
         </View>
       </Card>
     </ScrollView>
@@ -662,5 +730,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   templateCopy: { flex: 1 },
+  templateActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   templateTitle: { fontFamily: typography.display, fontSize: 17, fontWeight: '700' },
 });

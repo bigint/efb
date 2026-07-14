@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 223 passed across thirty-three test files.
+- Unit tests: 227 passed across thirty-three test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,163 modules, 5.5 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -68,9 +68,10 @@ performance data.
 - The Library now supports user-authored normal, abnormal, and emergency-labelled checklist
   templates without bundling aircraft procedures. Active runs retain immutable revision
   snapshots and use compare-and-swap state revisions for atomic completion updates. Templates
-  can link validated local aircraft profiles. Migration v6 adds immutable abandonment history
-  and a database-level one-open-run constraint. Every surface remains unverified; native
-  concurrency, recovery, and accessibility evidence are open.
+  can link validated local aircraft profiles and can be edited through an atomic
+  compare-and-swap next revision without changing existing run snapshots. Migration v6 adds
+  immutable abandonment history and a database-level one-open-run constraint. Every surface
+  remains unverified; native concurrency, recovery, and accessibility evidence are open.
 - PDF-only document import now validates UUID paths, MIME and bounded container markers; copies
   into app-private storage; verifies SHA-256 after the copy; and persists revalidated metadata
   and bookmark relations. The reader is explicitly disabled pending native malformed-file,

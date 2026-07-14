@@ -133,20 +133,48 @@ export const decodeChecklistRun = (
 export const listChecklistTemplates = async (
   database: SQLiteDatabase,
 ): Promise<readonly ChecklistTemplate[]> => {
+  const templateLimit = 100;
+  const itemLimit = templateLimit * 100;
   const [rows, items] = await Promise.all([
     database.getAllAsync<ChecklistTemplateRow>(
       `SELECT id, aircraft_id, aircraft_label, category, created_at, revision, source,
         title, updated_at, verification_status
        FROM checklist_templates
        WHERE deleted_at IS NULL
-       ORDER BY updated_at DESC`,
+       ORDER BY updated_at DESC
+       LIMIT ${templateLimit + 1}`,
     ),
     database.getAllAsync<ChecklistItemRow>(
-      `SELECT template_id, sequence, challenge, response, is_critical
-       FROM checklist_items ORDER BY template_id, sequence`,
+      `SELECT item.template_id, item.sequence, item.challenge, item.response, item.is_critical
+       FROM checklist_items AS item
+       JOIN checklist_templates AS template ON template.id = item.template_id
+       WHERE template.deleted_at IS NULL
+       ORDER BY item.template_id, item.sequence
+       LIMIT ${itemLimit + 1}`,
     ),
   ]);
+  if (rows.length > templateLimit || items.length > itemLimit) {
+    throw new Error('Checklist template collection exceeds supported limits');
+  }
   return decodeChecklistTemplates(rows, items);
+};
+
+const insertChecklistItems = async (
+  database: SQLiteDatabase,
+  template: ChecklistTemplate,
+): Promise<void> => {
+  for (const item of template.items) {
+    await database.runAsync(
+      `INSERT INTO checklist_items
+        (template_id, sequence, challenge, response, is_critical)
+       VALUES (?, ?, ?, ?, ?)`,
+      template.id,
+      item.sequence,
+      item.challenge,
+      item.response,
+      item.isCritical ? 1 : 0,
+    );
+  }
 };
 
 export const insertChecklistTemplate = async (
@@ -154,6 +182,7 @@ export const insertChecklistTemplate = async (
   source: ChecklistTemplate,
 ): Promise<void> => {
   const template = checklistTemplateSchema.parse(source);
+  if (template.revision !== 1) throw new Error('A new checklist must begin at revision one');
   await database.withExclusiveTransactionAsync(async (transaction) => {
     await transaction.runAsync(
       `INSERT INTO checklist_templates (
@@ -172,18 +201,41 @@ export const insertChecklistTemplate = async (
       template.verificationStatus,
       template.aircraftLabel,
     );
-    for (const item of template.items) {
-      await transaction.runAsync(
-        `INSERT INTO checklist_items
-          (template_id, sequence, challenge, response, is_critical)
-         VALUES (?, ?, ?, ?, ?)`,
-        template.id,
-        item.sequence,
-        item.challenge,
-        item.response,
-        item.isCritical ? 1 : 0,
-      );
-    }
+    await insertChecklistItems(transaction, template);
+  });
+};
+
+export const replaceChecklistTemplate = async (
+  database: SQLiteDatabase,
+  expectedRevision: number,
+  source: ChecklistTemplate,
+): Promise<void> => {
+  const template = checklistTemplateSchema.parse(source);
+  if (!Number.isInteger(expectedRevision) || template.revision !== expectedRevision + 1) {
+    throw new Error('Checklist revision transition is invalid');
+  }
+  await database.withExclusiveTransactionAsync(async (transaction) => {
+    const result = await transaction.runAsync(
+      `UPDATE checklist_templates SET
+        aircraft_id = ?, updated_at = ?, title = ?, phase = ?, revision = ?, category = ?,
+        aircraft_label = ?
+       WHERE id = ? AND revision = ? AND deleted_at IS NULL`,
+      template.aircraftId,
+      template.updatedAt,
+      template.title,
+      template.category,
+      template.revision,
+      template.category,
+      template.aircraftLabel,
+      template.id,
+      expectedRevision,
+    );
+    if (result.changes !== 1) throw new Error('Checklist template changed on another writer');
+    await transaction.runAsync(
+      `DELETE FROM checklist_items WHERE template_id = ?`,
+      template.id,
+    );
+    await insertChecklistItems(transaction, template);
   });
 };
 

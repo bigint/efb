@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   abandonChecklistRun,
   checklistTemplateSchema,
+  reviseChecklistTemplate,
   setChecklistItemCompleted,
   startChecklistRun,
   type ChecklistTemplate,
@@ -59,6 +60,46 @@ describe('checklist domain', () => {
       stateRevision: 1,
       templateRevision: 1,
     });
+  });
+
+  it('creates a next template revision without changing identity or provenance', () => {
+    const current = template();
+    const run = startChecklistRun(
+      current,
+      '019f5f42-a146-7c00-861d-7ad2313bbbd5',
+      '2026-07-14T10:00:30.000Z',
+    );
+    const revised = reviseChecklistTemplate(
+      current,
+      {
+        category: 'abnormal',
+        items: [
+          {
+            challenge: 'Revised challenge',
+            isCritical: true,
+            response: 'Checked',
+            sequence: 0,
+          },
+        ],
+        title: 'Revised title',
+      },
+      '2026-07-14T10:01:00.000Z',
+    );
+    expect(revised).toMatchObject({
+      createdAt: current.createdAt,
+      id: current.id,
+      revision: 2,
+      source: current.source,
+      title: 'Revised title',
+      verificationStatus: 'unverified',
+    });
+    expect(run.templateSnapshot).toMatchObject({ revision: 1, title: current.title });
+  });
+
+  it('rejects a template revision timestamp older than its current revision', () => {
+    expect(() =>
+      reviseChecklistTemplate(template(), { title: 'Older edit' }, '2026-07-14T09:59:59.000Z'),
+    ).toThrow('cannot precede');
   });
 
   it('completes only when every snapshot item is checked', () => {

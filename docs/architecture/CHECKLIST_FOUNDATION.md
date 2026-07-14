@@ -16,6 +16,11 @@ normal, abnormal, or emergency procedure content. Every template and active run 
   the domain or SQLite read boundary.
 - Starting a run embeds the complete validated template snapshot, template revision, and item
   count. Later template changes cannot alter the procedure a historical run displayed.
+- User-authored templates can be loaded back into the authoring form and saved only as the next
+  revision. Identity, creation time, source, and unverified status remain immutable. A
+  compare-and-swap update revises metadata and replaces all ordered items in one exclusive
+  transaction; a stale writer changes no items. Any open or terminal run continues to display
+  its original full snapshot and revision.
 - Completion sequences are unique and in range. A completion time exists only when all snapshot
   items are checked, cannot precede start, and locks the completed run.
 - An incomplete run may be explicitly abandoned after native destructive confirmation. Its
@@ -30,6 +35,9 @@ normal, abnormal, or emergency procedure content. Every template and active run 
   transaction, decoded through the same domain boundary as an active run, and a malformed
   historical row disables only the history view rather than hiding otherwise valid templates or
   the open run.
+- The active template collection is bounded to 100 templates and 10,000 item rows. Items are
+  joined only from non-deleted templates, so an obsolete soft-deleted template cannot poison the
+  active library read.
 
 ## Migration
 
@@ -42,7 +50,8 @@ preserved snapshot and the one-open-run constraint.
 
 ## Open release work
 
-Physical-device process-death and concurrent-view tests, template revision/edit UI, recovery
-during abandonment, handling a later-renamed aircraft profile, detailed history inspection,
-export/backup, VoiceOver sequencing, Dynamic Type, and comparison against approved aircraft
-material remain open. A saved checklist is not approved merely because every box is checked.
+Physical-device process-death and concurrent-view tests, recovery during abandonment, retaining
+the full template-revision lineage outside run snapshots, handling a later-renamed aircraft
+profile, detailed history inspection, export/backup, VoiceOver sequencing, Dynamic Type, and
+comparison against approved aircraft material remain open. A saved checklist is not approved
+merely because every box is checked.
