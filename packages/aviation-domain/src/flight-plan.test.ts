@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  duplicateSavedFlightPlan,
   resolveSavedFlightPlan,
   reviseSavedFlightPlan,
   savedFlightPlanSchema,
@@ -96,5 +97,35 @@ describe('saved flight plan', () => {
     expect(() =>
       reviseSavedFlightPlan(plan, { title: 'Renamed route' }, '2026-07-14T09:59:59.000Z'),
     ).toThrow('cannot precede');
+  });
+
+  it('duplicates a route as an independent draft without losing snapshots', () => {
+    const plan = savedFlightPlanSchema.parse({ ...fixture(), status: 'archived' });
+    expect(
+      duplicateSavedFlightPlan(
+        plan,
+        '019f5f42-a146-7c00-861d-7ad2313bbbd5',
+        '2026-07-14T10:02:00.000Z',
+      ),
+    ).toMatchObject({
+      createdAt: '2026-07-14T10:02:00.000Z',
+      id: '019f5f42-a146-7c00-861d-7ad2313bbbd5',
+      revision: 1,
+      status: 'draft',
+      title: 'Demo route copy',
+      waypoints: plan.waypoints,
+    });
+  });
+
+  it('rejects duplicated identity or a clock older than the source revision', () => {
+    const plan = savedFlightPlanSchema.parse(fixture());
+    expect(() => duplicateSavedFlightPlan(plan, plan.id, plan.updatedAt)).toThrow('identity');
+    expect(() =>
+      duplicateSavedFlightPlan(
+        plan,
+        '019f5f42-a146-7c00-861d-7ad2313bbbd5',
+        '2026-07-14T09:59:00.000Z',
+      ),
+    ).toThrow('precede');
   });
 });

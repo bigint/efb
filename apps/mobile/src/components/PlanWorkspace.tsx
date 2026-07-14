@@ -7,6 +7,7 @@ import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-nati
 
 import {
   demoAirports,
+  duplicateSavedFlightPlan,
   resolveSavedFlightPlan,
   reviseSavedFlightPlan,
   savedFlightPlanSchema,
@@ -56,6 +57,7 @@ export function PlanWorkspace() {
   const addWaypoint = useFlightStore((state) => state.addWaypoint);
   const activeLegIndex = useFlightStore((state) => state.activeLegIndex);
   const clearRoute = useFlightStore((state) => state.clearRoute);
+  const moveWaypoint = useFlightStore((state) => state.moveWaypoint);
   const removeWaypoint = useFlightStore((state) => state.removeWaypoint);
   const replaceRoute = useFlightStore((state) => state.replaceRoute);
   const reverseRoute = useFlightStore((state) => state.reverseRoute);
@@ -219,6 +221,20 @@ export function PlanWorkspace() {
         },
       ],
     );
+  };
+
+  const duplicatePlan = async (plan: SavedFlightPlan) => {
+    setSaving(true);
+    try {
+      const copy = duplicateSavedFlightPlan(plan, randomUUID(), new Date().toISOString());
+      await insertSavedFlightPlan(database, copy);
+      await reloadSavedPlans();
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Unable to duplicate flight.';
+      if (await reloadSavedPlans()) setPersistenceError(message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const confirmReplaceRoute = (plan: SavedFlightPlan) => {
@@ -420,6 +436,11 @@ export function PlanWorkspace() {
                     />
                     <Action
                       disabled={saving}
+                      label="Duplicate"
+                      onPress={() => void duplicatePlan(plan)}
+                    />
+                    <Action
+                      disabled={saving}
                       label="Edit details"
                       onPress={() => {
                         setEditingPlanId(plan.id);
@@ -599,11 +620,18 @@ export function PlanWorkspace() {
                   {plan.revision} · archived
                 </Text>
               </View>
-              <Action
-                disabled={saving}
-                label="Restore as draft"
-                onPress={() => void revisePlan(plan, { status: 'draft' })}
-              />
+              <View style={styles.savedActions}>
+                <Action
+                  disabled={saving}
+                  label="Duplicate as draft"
+                  onPress={() => void duplicatePlan(plan)}
+                />
+                <Action
+                  disabled={saving}
+                  label="Restore as draft"
+                  onPress={() => void revisePlan(plan, { status: 'draft' })}
+                />
+              </View>
             </View>
           ))
         )}
@@ -711,6 +739,16 @@ export function PlanWorkspace() {
                   </Text>
                 </View>
                 <Action label="Remove" onPress={() => removeWaypoint(identifier)} />
+                <Action
+                  disabled={index === 0}
+                  label="Move up"
+                  onPress={() => moveWaypoint(index, index - 1)}
+                />
+                <Action
+                  disabled={index === routeIdentifiers.length - 1}
+                  label="Move down"
+                  onPress={() => moveWaypoint(index, index + 1)}
+                />
                 {index > 0 && (
                   <Action
                     disabled={activeLegIndex === index - 1}

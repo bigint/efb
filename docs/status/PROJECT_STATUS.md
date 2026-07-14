@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 257 passed across forty test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,175 modules, 5.6 MB
+- Unit tests: 261 passed across forty-one test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,176 modules, 5.6 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -121,8 +121,10 @@ performance data.
   drifted. Drafts can link aircraft profiles, rename, replace route snapshots after
   confirmation, archive, and restore through compare-and-swap revisions. One detail editor can
   revise title, aircraft assignment, whole-foot cruise altitude, explicit UTC departure time,
-  and notes atomically. MMKV no longer claims route durability; a native date/time picker and
-  richer conflict UI remain open.
+  and notes atomically. Saved records can be duplicated as independent revision-one drafts, and
+  ephemeral waypoints can move up/down with every route edit clearing active-leg selection. MMKV
+  no longer claims route durability; drag editing, a native date/time picker, and richer
+  conflict UI remain open.
 - Plan now requires explicit transient active-leg selection; every route mutation clears it.
   With a fresh position, the map derives next distance, true bearing, signed cross-track,
   remaining distance, and groundspeed-based ETE through a pure spherical calculator. There is no

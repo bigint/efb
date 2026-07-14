@@ -30,6 +30,12 @@ the error. Archive requires native destructive confirmation, hides the record fr
 list, and retains its row and waypoint snapshot locally. A separately bounded archived list can
 restore that record as a draft through another next-revision compare-and-swap update.
 
+Active or archived records can also be duplicated into a new independent draft. Duplication
+requires a new UUID and a creation clock no older than the source revision, resets revision to
+one and status to draft, preserves route/detail snapshots, and creates a bounded `copy` title.
+The source row is never revised by this operation; insertion still uses the all-or-nothing
+creation transaction.
+
 New drafts may optionally reference one of at most 100 validated local aircraft profiles. The
 profile UUID is protected by SQLite's foreign key and the saved-flight list resolves the current
 normalized registration for display. Profile retrieval failures do not hide route records or
@@ -69,8 +75,10 @@ geometry under the same identifier.
 
 ## Current limitations
 
-The editor can create, load, revise details, replace routes, archive, and restore drafts. Plan
-selection across the whole shell, a native date/time picker, assumption snapshots, outbox sync,
-richer conflict UI, and native process-death/visual/accessibility evidence remain open. The
-included waypoints are fictional and unverified, so saved routes are not suitable for
-navigation.
+The editor can create, load, duplicate, revise details, replace routes, archive, and restore
+drafts. The ephemeral route sequence can move a waypoint up or down through a pure bounded
+reorder; every successful reorder clears active-leg selection. Drag editing, arbitrary external
+waypoint search, Plan selection across the whole shell, a native date/time picker, assumption
+snapshots, outbox sync, richer conflict UI, and native process-death/visual/accessibility
+evidence remain open. The included waypoints are fictional and unverified, so saved routes are
+not suitable for navigation.

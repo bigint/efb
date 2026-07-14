@@ -103,6 +103,32 @@ export const reviseSavedFlightPlan = (
   });
 };
 
+export const duplicateSavedFlightPlan = (
+  source: SavedFlightPlan,
+  id: string,
+  createdAt: string,
+): SavedFlightPlan => {
+  const plan = savedFlightPlanSchema.parse(source);
+  if (id === plan.id) throw new Error('Duplicated saved flight requires a new identity.');
+  if (
+    !Number.isFinite(Date.parse(createdAt)) ||
+    Date.parse(createdAt) < Date.parse(plan.updatedAt)
+  ) {
+    throw new Error('Saved flight duplication time cannot precede the source revision.');
+  }
+  const titleCharacters = [...plan.title];
+  while (`${titleCharacters.join('')} copy`.length > 120) titleCharacters.pop();
+  return savedFlightPlanSchema.parse({
+    ...plan,
+    createdAt,
+    id,
+    revision: 1,
+    status: 'draft',
+    title: `${titleCharacters.join('').trimEnd()} copy`,
+    updatedAt: createdAt,
+  });
+};
+
 export interface AvailableFlightWaypoint {
   readonly identifier: string;
   readonly latitude: number;

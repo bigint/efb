@@ -22,6 +22,7 @@ import {
   simulationProfileSchema,
   type SimulationProfile,
 } from '@/domain/simulation-profile';
+import { moveRouteWaypoint } from '@/domain/route-editing';
 
 export type { Workspace } from '@/domain/persisted-flight';
 
@@ -36,6 +37,7 @@ interface FlightState {
   addWaypoint: (identifier: string) => void;
   clearRoute: () => void;
   ingestDeviceLocation: (location: DeviceLocationInput) => void;
+  moveWaypoint: (fromIndex: number, toIndex: number) => void;
   removeWaypoint: (identifier: string) => void;
   replaceRoute: (identifiers: readonly string[]) => void;
   reverseRoute: () => void;
@@ -93,6 +95,11 @@ export const useFlightStore = create<FlightState>()(
             };
           }
         }),
+      moveWaypoint: (fromIndex, toIndex) =>
+        set((state) => ({
+          activeLegIndex: null,
+          routeIdentifiers: [...moveRouteWaypoint(state.routeIdentifiers, fromIndex, toIndex)],
+        })),
       positionSample: null,
       positionScenario: { gpsAvailable: true, kind: 'simulated' },
       removeWaypoint: (identifier) =>
