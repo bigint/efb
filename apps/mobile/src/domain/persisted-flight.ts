@@ -2,7 +2,14 @@ import { z } from 'zod';
 
 import type { PositionScenario } from './position-source';
 
-export const workspaceSchema = z.enum(['map', 'plan', 'places', 'aircraft', 'system']);
+export const workspaceSchema = z.enum([
+  'map',
+  'plan',
+  'places',
+  'weather',
+  'aircraft',
+  'system',
+]);
 export type Workspace = z.infer<typeof workspaceSchema>;
 
 export interface PersistedFlightState {

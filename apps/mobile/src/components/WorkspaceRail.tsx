@@ -8,6 +8,7 @@ const items: readonly { label: string; mark: string; value: Workspace }[] = [
   { label: 'Map', mark: '⌁', value: 'map' },
   { label: 'Plan', mark: '↗', value: 'plan' },
   { label: 'Places', mark: '⌖', value: 'places' },
+  { label: 'Weather', mark: '≋', value: 'weather' },
   { label: 'Aircraft', mark: '△', value: 'aircraft' },
   { label: 'System', mark: '◫', value: 'system' },
 ];

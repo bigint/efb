@@ -61,6 +61,9 @@ importers:
       '@driftline/geospatial':
         specifier: workspace:*
         version: link:../../packages/geospatial
+      '@driftline/weather':
+        specifier: workspace:*
+        version: link:../../packages/weather
       '@maplibre/maplibre-react-native':
         specifier: 11.3.6
         version: 11.3.6(@types/geojson@7946.0.16)(@types/react@19.2.17)(expo@57.0.4)(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)

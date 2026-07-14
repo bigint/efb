@@ -9,6 +9,7 @@ import { PlacesWorkspace } from '@/components/PlacesWorkspace';
 import { PlanWorkspace } from '@/components/PlanWorkspace';
 import { StatusPlane } from '@/components/StatusPlane';
 import { SystemWorkspace } from '@/components/SystemWorkspace';
+import { WeatherWorkspace } from '@/components/WeatherWorkspace';
 import { WorkspaceRail } from '@/components/WorkspaceRail';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
@@ -33,6 +34,8 @@ export default function HomeScreen() {
         return <PlanWorkspace />;
       case 'system':
         return <SystemWorkspace />;
+      case 'weather':
+        return <WeatherWorkspace />;
     }
   })();
 

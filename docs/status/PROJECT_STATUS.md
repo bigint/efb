@@ -38,8 +38,8 @@ performance data.
   defects; all three now have fail-closed boundaries, permanent regression tests, and an
   independent targeted closure review.
 - A conservative METAR/SPECI adapter now preserves raw/provenance data, explicit visibility
-  bounds, observation time, and unsupported body groups. Weather UI, live retrieval, TAF, and
-  briefing remain open.
+  bounds, observation time, and unsupported body groups. An offline manual decoder labels all
+  input unverified and currency-unknown; live retrieval, TAF, and briefing remain open.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated
