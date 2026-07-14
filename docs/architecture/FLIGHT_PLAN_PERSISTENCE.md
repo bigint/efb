@@ -41,6 +41,13 @@ waypoints. Native destructive confirmation names the replacement sequence and wa
 prior waypoint snapshot is not retained. The replacement is re-snapshotted with coordinates and
 source references and committed through the same next-revision compare-and-swap transaction.
 
+The same detail editor revises title, optional aircraft assignment, optional cruise altitude,
+optional departure time, and notes in one next-revision write. Altitude text accepts only whole
+feet from 0 through 60,000. Departure text is deliberately restricted to an explicit UTC ISO
+timestamp such as `2026-07-14T12:30:00Z`; locale-dependent or offset-bearing text is rejected
+rather than guessed. Clearing an optional field persists `NULL`, and an unavailable linked
+aircraft is preserved unless the user explicitly unassigns or replaces it.
+
 ## Repository semantics
 
 Creation inserts the flight and all ordered waypoints in one exclusive SQLite transaction with
@@ -62,8 +69,8 @@ geometry under the same identifier.
 
 ## Current limitations
 
-The editor can create, load, rename, replace routes, archive, and restore drafts. Plan selection
-across the whole shell, revising an existing aircraft assignment, altitude/departure editing,
-assumption snapshots, outbox sync, richer conflict UI, and native
-process-death/visual/accessibility evidence remain open. The included waypoints are fictional
-and unverified, so saved routes are not suitable for navigation.
+The editor can create, load, revise details, replace routes, archive, and restore drafts. Plan
+selection across the whole shell, a native date/time picker, assumption snapshots, outbox sync,
+richer conflict UI, and native process-death/visual/accessibility evidence remain open. The
+included waypoints are fictional and unverified, so saved routes are not suitable for
+navigation.

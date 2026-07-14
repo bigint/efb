@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 208 passed across thirty-two test files.
+- Unit tests: 220 passed across thirty-three test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,163 modules, 5.5 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -100,8 +100,10 @@ performance data.
   and waypoint records. Reads reconstruct and revalidate ordered snapshots, future updates use a
   compare-and-swap revision, and loading blocks if coordinates or dataset source references have
   drifted. Drafts can link aircraft profiles, rename, replace route snapshots after
-  confirmation, archive, and restore through compare-and-swap revisions. MMKV no longer claims
-  route durability; richer editing and conflict UI remain open.
+  confirmation, archive, and restore through compare-and-swap revisions. One detail editor can
+  revise title, aircraft assignment, whole-foot cruise altitude, explicit UTC departure time,
+  and notes atomically. MMKV no longer claims route durability; a native date/time picker and
+  richer conflict UI remain open.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated

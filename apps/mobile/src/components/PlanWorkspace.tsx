@@ -26,6 +26,7 @@ import {
   replaceSavedFlightPlan,
 } from '@/database/flight-plan-repository';
 import { listAircraftProfiles } from '@/database/aircraft-profile-repository';
+import { parseSavedPlanEditor } from '@/domain/saved-plan-editor';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
 
@@ -37,6 +38,10 @@ export function PlanWorkspace() {
   const [aircraft, setAircraft] = useState<readonly AircraftProfile[]>([]);
   const [aircraftError, setAircraftError] = useState<string | null>(null);
   const [archivedPlans, setArchivedPlans] = useState<readonly SavedFlightPlan[]>([]);
+  const [editingAircraftId, setEditingAircraftId] = useState<string | null>(null);
+  const [editingAltitudeFeet, setEditingAltitudeFeet] = useState('');
+  const [editingDepartureTime, setEditingDepartureTime] = useState('');
+  const [editingNotes, setEditingNotes] = useState('');
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [savedPlans, setSavedPlans] = useState<readonly SavedFlightPlan[]>([]);
@@ -186,6 +191,10 @@ export function PlanWorkspace() {
       await replaceSavedFlightPlan(database, plan.revision, next);
       setEditingPlanId(null);
       setEditingTitle('');
+      setEditingAltitudeFeet('');
+      setEditingDepartureTime('');
+      setEditingNotes('');
+      setEditingAircraftId(null);
       await reloadSavedPlans();
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'Unable to revise flight.';
@@ -378,6 +387,20 @@ export function PlanWorkspace() {
                         : (aircraft.find(({ id }) => id === plan.aircraftId)?.registration ??
                           'linked profile unavailable')}
                     </Text>
+                    <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+                      Departure: {plan.departureTime ?? 'not set'} · cruise altitude:{' '}
+                      {plan.altitudeFeet === null
+                        ? 'not set'
+                        : `${plan.altitudeFeet.toLocaleString('en-US')} FT`}
+                    </Text>
+                    {plan.notes.length > 0 && (
+                      <Text
+                        numberOfLines={3}
+                        style={[panelStyles.copy, { color: theme.secondary }]}
+                      >
+                        Notes: {plan.notes}
+                      </Text>
+                    )}
                     {resolution.status === 'dataset-mismatch' && (
                       <Text style={[panelStyles.copy, { color: theme.danger }]}>
                         Load blocked: active data differs for{' '}
@@ -395,10 +418,16 @@ export function PlanWorkspace() {
                     />
                     <Action
                       disabled={saving}
-                      label="Rename"
+                      label="Edit details"
                       onPress={() => {
                         setEditingPlanId(plan.id);
                         setEditingTitle(plan.title);
+                        setEditingAltitudeFeet(
+                          plan.altitudeFeet === null ? '' : String(plan.altitudeFeet),
+                        );
+                        setEditingDepartureTime(plan.departureTime ?? '');
+                        setEditingNotes(plan.notes);
+                        setEditingAircraftId(plan.aircraftId);
                       }}
                     />
                     <Action
@@ -418,6 +447,7 @@ export function PlanWorkspace() {
                   </View>
                   {editingPlanId === plan.id && (
                     <View style={styles.renameEditor}>
+                      <Text style={[panelStyles.label, { color: theme.secondary }]}>Title</Text>
                       <TextInput
                         accessibilityLabel={`New title for ${plan.title}`}
                         autoFocus
@@ -434,11 +464,100 @@ export function PlanWorkspace() {
                         ]}
                         value={editingTitle}
                       />
+                      <View style={styles.inputs}>
+                        <PlanningInput
+                          label="Cruise altitude · FT · optional"
+                          onChange={setEditingAltitudeFeet}
+                          value={editingAltitudeFeet}
+                        />
+                        <View style={styles.inputGroup}>
+                          <Text style={[panelStyles.label, { color: theme.secondary }]}>
+                            Departure · UTC ISO · optional
+                          </Text>
+                          <TextInput
+                            accessibilityLabel="Departure time in UTC ISO format"
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            onChangeText={setEditingDepartureTime}
+                            placeholder="2026-07-14T12:30:00Z"
+                            placeholderTextColor={theme.secondary}
+                            style={[
+                              styles.input,
+                              {
+                                backgroundColor: theme.background,
+                                borderColor: theme.separator,
+                                color: theme.primary,
+                              },
+                            ]}
+                            value={editingDepartureTime}
+                          />
+                        </View>
+                      </View>
+                      <Text style={[panelStyles.label, { color: theme.secondary }]}>
+                        Aircraft assignment
+                      </Text>
+                      <View style={styles.aircraftChoices}>
+                        <Action
+                          label="Unassigned"
+                          onPress={() => setEditingAircraftId(null)}
+                          primary={editingAircraftId === null}
+                        />
+                        {aircraft.map((profile) => (
+                          <Action
+                            key={profile.id}
+                            label={`${profile.registration} · ${profile.displayName}`}
+                            onPress={() => setEditingAircraftId(profile.id)}
+                            primary={editingAircraftId === profile.id}
+                          />
+                        ))}
+                      </View>
+                      {editingAircraftId !== null &&
+                        !aircraft.some(({ id }) => id === editingAircraftId) && (
+                          <Text style={[styles.inputError, { color: theme.attention }]}>
+                            Linked profile is unavailable. Preserve it by saving, or choose
+                            Unassigned.
+                          </Text>
+                        )}
+                      <Text style={[panelStyles.label, { color: theme.secondary }]}>Notes</Text>
+                      <TextInput
+                        accessibilityLabel="Saved flight notes"
+                        maxLength={10_000}
+                        multiline
+                        onChangeText={setEditingNotes}
+                        style={[
+                          styles.input,
+                          styles.notesInput,
+                          {
+                            backgroundColor: theme.background,
+                            borderColor: theme.separator,
+                            color: theme.primary,
+                          },
+                        ]}
+                        textAlignVertical="top"
+                        value={editingNotes}
+                      />
                       <View style={styles.savedActions}>
                         <Action
                           disabled={saving || editingTitle.trim().length === 0}
-                          label="Save title"
-                          onPress={() => void revisePlan(plan, { title: editingTitle })}
+                          label="Save details"
+                          onPress={() => {
+                            try {
+                              const changes = parseSavedPlanEditor({
+                                aircraftId: editingAircraftId,
+                                altitudeFeet: editingAltitudeFeet,
+                                departureTime: editingDepartureTime,
+                                notes: editingNotes,
+                                title: editingTitle,
+                              });
+                              void revisePlan(plan, changes);
+                            } catch (caught) {
+                              setPersistenceError(
+                                caught instanceof Error
+                                  ? caught.message
+                                  : 'Saved flight details are invalid.',
+                              );
+                            }
+                          }}
                           primary
                         />
                         <Action
@@ -447,6 +566,10 @@ export function PlanWorkspace() {
                           onPress={() => {
                             setEditingPlanId(null);
                             setEditingTitle('');
+                            setEditingAltitudeFeet('');
+                            setEditingDepartureTime('');
+                            setEditingNotes('');
+                            setEditingAircraftId(null);
                           }}
                         />
                       </View>
@@ -706,6 +829,7 @@ const styles = StyleSheet.create({
   inputs: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.md },
   legSolutions: { gap: spacing.sm, marginTop: spacing.md },
   legTitle: { fontFamily: typography.mono, fontSize: 14, fontWeight: '800' },
+  notesInput: { minHeight: 96, paddingTop: spacing.md },
   routeCopy: { flex: 1 },
   routeList: { gap: spacing.sm },
   retry: { alignItems: 'flex-start', marginTop: spacing.sm },
