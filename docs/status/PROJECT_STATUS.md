@@ -29,6 +29,7 @@ performance data.
   override moves Expo/Xcode build tooling from vulnerable `uuid@7.0.3` to `uuid@11.1.1`; CI
   enforces the production audit at Moderate or higher severity.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
+- Expo Doctor is pinned at 1.20.0 and runs in CI before both platform exports.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
 - Unit tests: 372 passed across sixty-four test files.
