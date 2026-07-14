@@ -80,6 +80,9 @@ performance data.
   when branded numeric types are forged at a runtime boundary.
 - Active-leg navigation withholds ETE when groundspeed is absent, non-finite, non-positive, or
   beyond the supported 1,000 KT planning domain.
+- Simulation advance/hold, native location mapping, and availability evaluation share complete
+  coordinate, telemetry, clock, and track-reference validation; malformed prior samples cannot
+  survive a lifecycle hold or restart an advance.
 - Separate versioned user and control SQLite schemas now migrate before app render. Executable
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,

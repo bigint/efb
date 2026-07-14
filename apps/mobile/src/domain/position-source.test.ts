@@ -105,6 +105,9 @@ describe('position source evaluation', () => {
     expect(holdSimulationSample(sample, sample.sampledAt)).toBe(sample);
     expect(() => holdSimulationSample(sample, 9_999)).toThrow('clock moved backwards');
     expect(() => holdSimulationSample(sample, Number.NaN)).toThrow('clock moved backwards');
+    expect(() =>
+      holdSimulationSample({ ...sample, trackReference: 'unsafe' as never }, 11_000),
+    ).toThrow('clock moved backwards');
   });
 
   it('rejects a climb that would leave the supported altitude envelope', () => {
@@ -200,6 +203,8 @@ describe('position source evaluation', () => {
     [{ ...sample, groundspeedKnots: 2_001 }, 10_500],
     [{ ...sample, altitudeFeet: 100_001 }, 10_500],
     [{ ...sample, trackDegrees: 360 }, 10_500],
+    [{ ...sample, trackReference: 'magnetic' as never }, 10_500],
+    [{ ...sample, sampledAt: -1 }, 10_500],
   ] as const)('rejects a non-finite or out-of-domain sample %#', (value, now) => {
     expect(evaluatePosition({ gpsAvailable: true, kind: 'simulated' }, value, now)).toEqual({
       kind: 'unavailable',
@@ -211,6 +216,10 @@ describe('position source evaluation', () => {
     expect(
       evaluatePosition({ gpsAvailable: true, kind: 'simulated' }, sample, Number.NaN),
     ).toEqual({ kind: 'unavailable', reason: 'clock-invalid' });
+    expect(evaluatePosition({ gpsAvailable: true, kind: 'simulated' }, sample, -1)).toEqual({
+      kind: 'unavailable',
+      reason: 'clock-invalid',
+    });
   });
 
   it('rejects implausibly unbounded device telemetry before storage', () => {
@@ -225,5 +234,16 @@ describe('position source evaluation', () => {
         timestamp: 10_000,
       }),
     ).toThrow('altitude');
+    expect(() =>
+      mapDeviceLocation({
+        accuracyMetres: 8,
+        altitudeMetres: 1_000,
+        headingDegrees: 90,
+        latitude: 12,
+        longitude: 77,
+        speedMetresPerSecond: 10,
+        timestamp: -1,
+      }),
+    ).toThrow('timestamp');
   });
 });

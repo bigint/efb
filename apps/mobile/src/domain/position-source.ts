@@ -55,6 +55,37 @@ const MIN_ALTITUDE_FEET = -4_000;
 const MAX_GROUNDSPEED_KNOTS = 2_000;
 const MAX_HORIZONTAL_ACCURACY_METRES = 1_000_000;
 
+const isValidPositionSample = (sample: PositionSample): boolean => {
+  const trackReference: unknown = sample.trackReference;
+  return (
+    Number.isFinite(sample.sampledAt) &&
+    sample.sampledAt >= 0 &&
+    Number.isFinite(sample.latitude) &&
+    sample.latitude >= -90 &&
+    sample.latitude <= 90 &&
+    Number.isFinite(sample.longitude) &&
+    sample.longitude >= -180 &&
+    sample.longitude <= 180 &&
+    (sample.altitudeFeet === null ||
+      (Number.isFinite(sample.altitudeFeet) &&
+        sample.altitudeFeet >= MIN_ALTITUDE_FEET &&
+        sample.altitudeFeet <= MAX_ALTITUDE_FEET)) &&
+    (sample.groundspeedKnots === null ||
+      (Number.isFinite(sample.groundspeedKnots) &&
+        sample.groundspeedKnots >= 0 &&
+        sample.groundspeedKnots <= MAX_GROUNDSPEED_KNOTS)) &&
+    (sample.horizontalAccuracyMetres === null ||
+      (Number.isFinite(sample.horizontalAccuracyMetres) &&
+        sample.horizontalAccuracyMetres >= 0 &&
+        sample.horizontalAccuracyMetres <= MAX_HORIZONTAL_ACCURACY_METRES)) &&
+    (sample.trackDegrees === null ||
+      (Number.isFinite(sample.trackDegrees) &&
+        sample.trackDegrees >= 0 &&
+        sample.trackDegrees < 360)) &&
+    (trackReference === 'platform' || trackReference === 'true')
+  );
+};
+
 interface AdvanceSimulationInput {
   readonly altitudeFeet: number;
   readonly groundspeedKnots: number;
@@ -78,6 +109,7 @@ export const advanceSimulationSample = ({
 }: AdvanceSimulationInput): PositionSample => {
   if (
     !Number.isFinite(sampledAt) ||
+    sampledAt < 0 ||
     !Number.isFinite(altitudeFeet) ||
     altitudeFeet < MIN_ALTITUDE_FEET ||
     altitudeFeet > MAX_ALTITUDE_FEET ||
@@ -93,6 +125,7 @@ export const advanceSimulationSample = ({
   ) {
     throw new RangeError('Simulation inputs are outside supported bounds');
   }
+  position(origin.latitude, origin.longitude);
   const track = trueDegrees(trackTrueDegrees);
   if (previous === null) {
     return {
@@ -105,6 +138,9 @@ export const advanceSimulationSample = ({
       trackDegrees: track,
       trackReference: 'true',
     };
+  }
+  if (!isValidPositionSample(previous)) {
+    throw new RangeError('Previous simulation sample is outside supported bounds');
   }
   const deltaMilliseconds = sampledAt - previous.sampledAt;
   if (!Number.isFinite(deltaMilliseconds) || deltaMilliseconds < 0) {
@@ -144,11 +180,15 @@ export const holdSimulationSample = (
   previous: PositionSample,
   sampledAt: number,
 ): PositionSample => {
-  if (!Number.isFinite(sampledAt) || sampledAt < previous.sampledAt) {
+  if (
+    !isValidPositionSample(previous) ||
+    !Number.isFinite(sampledAt) ||
+    sampledAt < 0 ||
+    sampledAt < previous.sampledAt
+  ) {
     throw new RangeError('Simulation hold clock moved backwards');
   }
   if (sampledAt === previous.sampledAt) return previous;
-  position(previous.latitude, previous.longitude);
   return { ...previous, sampledAt };
 };
 
@@ -178,8 +218,8 @@ export const mapDeviceLocation = (input: DeviceLocationInput): PositionSample =>
     return value;
   };
   const coordinate = position(input.latitude, input.longitude);
-  if (!Number.isFinite(input.timestamp))
-    throw new RangeError('Location timestamp must be finite');
+  if (!Number.isFinite(input.timestamp) || input.timestamp < 0)
+    throw new RangeError('Location timestamp must be finite and non-negative');
   const accuracy = optionalNonNegative(
     input.accuracyMetres,
     'Location accuracy',
@@ -235,32 +275,10 @@ export const evaluatePosition = (
     return { kind: 'unavailable', reason: reasons[scenario.status] };
   }
   if (sample === null) return { kind: 'unavailable', reason: 'no-sample' };
-  if (!Number.isFinite(now)) return { kind: 'unavailable', reason: 'clock-invalid' };
-  if (
-    !Number.isFinite(sample.sampledAt) ||
-    !Number.isFinite(sample.latitude) ||
-    sample.latitude < -90 ||
-    sample.latitude > 90 ||
-    !Number.isFinite(sample.longitude) ||
-    sample.longitude < -180 ||
-    sample.longitude > 180 ||
-    (sample.altitudeFeet !== null &&
-      (!Number.isFinite(sample.altitudeFeet) ||
-        sample.altitudeFeet < MIN_ALTITUDE_FEET ||
-        sample.altitudeFeet > MAX_ALTITUDE_FEET)) ||
-    (sample.groundspeedKnots !== null &&
-      (!Number.isFinite(sample.groundspeedKnots) ||
-        sample.groundspeedKnots < 0 ||
-        sample.groundspeedKnots > MAX_GROUNDSPEED_KNOTS)) ||
-    (sample.horizontalAccuracyMetres !== null &&
-      (!Number.isFinite(sample.horizontalAccuracyMetres) ||
-        sample.horizontalAccuracyMetres < 0 ||
-        sample.horizontalAccuracyMetres > MAX_HORIZONTAL_ACCURACY_METRES)) ||
-    (sample.trackDegrees !== null &&
-      (!Number.isFinite(sample.trackDegrees) ||
-        sample.trackDegrees < 0 ||
-        sample.trackDegrees >= 360))
-  ) {
+  if (!Number.isFinite(now) || now < 0) {
+    return { kind: 'unavailable', reason: 'clock-invalid' };
+  }
+  if (!isValidPositionSample(sample)) {
     return { kind: 'unavailable', reason: 'sample-invalid' };
   }
   const ageMilliseconds = now - sample.sampledAt;
