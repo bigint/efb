@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { degrees, nauticalMiles } from '@driftline/data-contracts';
+import { nauticalMiles, trueDegrees } from '@driftline/data-contracts';
 
 import {
   destinationPoint,
@@ -23,7 +23,7 @@ describe('spherical great-circle calculations', () => {
 
   it('round trips a destination point', () => {
     const start = position(12.9716, 77.5946);
-    const destination = destinationPoint(start, degrees(42), nauticalMiles(125));
+    const destination = destinationPoint(start, trueDegrees(42), nauticalMiles(125));
     expect(greatCircleDistance(start, destination)).toBeCloseTo(125, 9);
     expect(initialTrueBearing(start, destination)).toBeCloseTo(42, 9);
   });

@@ -1,8 +1,8 @@
 import {
   nauticalMiles,
-  type Degrees,
   type Knots,
   type NauticalMiles,
+  type TrueDegrees,
 } from '@driftline/data-contracts';
 import { greatCircleDistance, initialTrueBearing, type Position } from '@driftline/geospatial';
 
@@ -14,7 +14,7 @@ export interface RouteWaypoint {
 export interface RouteLeg {
   readonly distance: NauticalMiles;
   readonly from: RouteWaypoint;
-  readonly initialTrueCourse: Degrees;
+  readonly initialTrueCourse: TrueDegrees;
   readonly to: RouteWaypoint;
 }
 

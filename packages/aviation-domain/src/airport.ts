@@ -3,8 +3,10 @@ import { z } from 'zod';
 import {
   dataProvenanceSchema,
   feet,
+  trueDegrees,
   type DataProvenance,
   type Feet,
+  type TrueDegrees,
 } from '@driftline/data-contracts';
 import { position, type Position } from '@driftline/geospatial';
 
@@ -69,7 +71,7 @@ export const airportSourceSchema = z
 
 export interface Runway {
   readonly designator: string;
-  readonly headingTrueDegrees: number | null;
+  readonly headingTrueDegrees: TrueDegrees | null;
   readonly lengthMetres: number;
   readonly surface: string;
   readonly widthMetres: number;
@@ -95,7 +97,11 @@ export const parseAirport = (source: unknown): Airport => {
     name: value.name,
     position: position(value.position.latitude, value.position.longitude),
     provenance: value.provenance,
-    runways: value.runways,
+    runways: value.runways.map((runway) => ({
+      ...runway,
+      headingTrueDegrees:
+        runway.headingTrueDegrees === null ? null : trueDegrees(runway.headingTrueDegrees),
+    })),
     timezone: value.timezone,
   };
 };

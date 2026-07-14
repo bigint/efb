@@ -6,10 +6,11 @@ import {
   radians,
   toDegrees,
   toRadians,
-  type Degrees,
+  trueDegrees,
   type Metres,
   type NauticalMiles,
   type Radians,
+  type TrueDegrees,
 } from '@driftline/data-contracts';
 
 import { position, type Position } from './position';
@@ -38,7 +39,7 @@ export const greatCircleDistanceMetres = (from: Position, to: Position): Metres 
 export const greatCircleDistance = (from: Position, to: Position): NauticalMiles =>
   metresToNauticalMiles(greatCircleDistanceMetres(from, to));
 
-export const initialTrueBearing = (from: Position, to: Position): Degrees => {
+export const initialTrueBearing = (from: Position, to: Position): TrueDegrees => {
   if (from.latitude === to.latitude && from.longitude === to.longitude) {
     throw new RangeError('Bearing is undefined for identical positions');
   }
@@ -49,12 +50,12 @@ export const initialTrueBearing = (from: Position, to: Position): Degrees => {
   const x =
     Math.cos(fromLatitude) * Math.sin(toLatitude) -
     Math.sin(fromLatitude) * Math.cos(toLatitude) * Math.cos(deltaLongitude);
-  return normaliseDegrees(toDegrees(radians(Math.atan2(y, x))));
+  return trueDegrees(normaliseDegrees(toDegrees(radians(Math.atan2(y, x)))));
 };
 
 export const destinationPoint = (
   from: Position,
-  bearing: Degrees,
+  bearing: TrueDegrees,
   distance: NauticalMiles,
 ): Position => {
   const angular = (distance * 1852) / EARTH_MEAN_RADIUS_METRES;

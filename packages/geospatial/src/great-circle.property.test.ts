@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { degrees, nauticalMiles } from '@driftline/data-contracts';
+import { nauticalMiles, trueDegrees } from '@driftline/data-contracts';
 
 import { destinationPoint, greatCircleDistance, initialTrueBearing } from './great-circle';
 import { position } from './position';
@@ -39,7 +39,7 @@ describe('great-circle properties', () => {
         fc.double({ min: 0.01, max: 5_000, noNaN: true }),
         ([latitude, longitude], bearing, distance) => {
           const start = position(latitude, longitude);
-          const end = destinationPoint(start, degrees(bearing), nauticalMiles(distance));
+          const end = destinationPoint(start, trueDegrees(bearing), nauticalMiles(distance));
           expect(Math.abs(greatCircleDistance(start, end) - distance)).toBeLessThan(1e-6);
           const calculatedBearing = initialTrueBearing(start, end);
           const bearingError = Math.abs(((calculatedBearing - bearing + 540) % 360) - 180);

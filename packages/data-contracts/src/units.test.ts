@@ -1,12 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import {
   degrees,
   metres,
   metresToNauticalMiles,
+  magneticDegrees,
   normaliseDegrees,
   toDegrees,
   toRadians,
+  trueDegrees,
 } from './units';
 
 describe('typed unit conversions', () => {
@@ -28,5 +30,15 @@ describe('typed unit conversions', () => {
 
   it('rejects non-finite values at the boundary', () => {
     expect(() => metres(Number.NaN)).toThrow(RangeError);
+  });
+
+  it('enforces bounded true and magnetic references independently', () => {
+    const trueBearing = trueDegrees(359.9);
+    const magneticBearing = magneticDegrees(12);
+    expect(trueBearing).toBe(359.9);
+    expect(magneticBearing).toBe(12);
+    expectTypeOf(trueBearing).not.toMatchTypeOf(magneticBearing);
+    expect(() => trueDegrees(360)).toThrow(RangeError);
+    expect(() => magneticDegrees(-1)).toThrow(RangeError);
   });
 });
