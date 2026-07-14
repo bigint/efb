@@ -71,13 +71,24 @@ export function WeatherWorkspace() {
   useEffect(() => {
     if (observation === null && taf === null) return undefined;
     const refreshClock = () => setWeatherClock(new Date());
-    refreshClock();
-    const interval = setInterval(refreshClock, 30_000);
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const stop = () => {
+      if (interval === null) return;
+      clearInterval(interval);
+      interval = null;
+    };
+    const start = () => {
+      if (interval !== null) return;
+      refreshClock();
+      interval = setInterval(refreshClock, 30_000);
+    };
+    if (AppState.currentState === 'active') start();
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') refreshClock();
+      if (state === 'active') start();
+      else stop();
     });
     return () => {
-      clearInterval(interval);
+      stop();
       subscription.remove();
     };
   }, [observation, taf]);
