@@ -5,17 +5,12 @@ import {
   MAX_IMPORTED_PDF_BYTES,
   type DocumentRecord,
 } from '@driftline/aviation-domain';
-import { CryptoDigestAlgorithm, digest } from 'expo-crypto';
 import * as DocumentPicker from 'expo-document-picker';
 import { Directory, File, Paths } from 'expo-file-system';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { insertDocument } from './document-repository';
-
-const digestHex = async (bytes: Uint8Array<ArrayBuffer>): Promise<string> => {
-  const result = new Uint8Array(await digest(CryptoDigestAlgorithm.SHA256, bytes));
-  return [...result].map((value) => value.toString(16).padStart(2, '0')).join('');
-};
+import { sha256Bytes } from './document-crypto';
 
 const removeFileBestEffort = (file: File): void => {
   try {
@@ -57,7 +52,7 @@ export const pickAndImportPdf = async (
   if (bytes.length !== source.size) throw new Error('PDF changed while it was being imported');
   if (!hasPdfContainerMarkers(bytes))
     throw new Error('Selected file is not a complete PDF container');
-  const sourceDigest = await digestHex(bytes);
+  const sourceDigest = await sha256Bytes(bytes);
 
   const directory = new Directory(Paths.document, 'driftline-documents');
   directory.create({ idempotent: true, intermediates: true });
@@ -68,7 +63,7 @@ export const pickAndImportPdf = async (
     const storedBytes = await destination.bytes();
     if (
       storedBytes.length !== bytes.length ||
-      (await digestHex(storedBytes)) !== sourceDigest
+      (await sha256Bytes(storedBytes)) !== sourceDigest
     ) {
       throw new Error('Stored PDF failed post-copy integrity verification');
     }

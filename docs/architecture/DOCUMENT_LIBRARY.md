@@ -47,9 +47,18 @@ That keeps recovery observable without risking deletion during an in-flight impo
 partially restored backup. A future cleanup action needs explicit confirmation, a grace period,
 and native interruption evidence before it can remove bytes.
 
+## Verified sharing
+
+An explicit action can open the native share sheet for one private PDF without enabling the
+reader. Immediately before sharing, it revalidates the metadata record, reconstructs the UUID
+path without using the display name, requires the registered URI and byte length, rereads the
+complete bounded file, checks the PDF container markers, and recomputes SHA-256 against the
+imported digest. Any mismatch blocks the share sheet. Closing the sheet is reported separately
+from destination delivery, which the app cannot confirm.
+
 ## Deliberately unavailable
 
-Native PDF rendering, text extraction/search, page-count discovery, annotations, sharing/export,
+Native PDF rendering, text extraction/search, page-count discovery, annotations,
 deletion/repair, malicious-PDF sandboxing, and backup/restore are not enabled. The mobile
 surface says `READER NOT VERIFIED` and does not open imported bytes. A container marker and
 digest make a file identifiable and complete; they do not make its content trusted.

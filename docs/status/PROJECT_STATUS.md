@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 323 passed across sixty-one test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,202 modules, 5.7 MB
+- Unit tests: 328 passed across sixty-two test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,205 modules, 5.7 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -110,7 +110,9 @@ performance data.
   accessibility, memory, and offline QA. A non-destructive private-storage audit reports
   missing, changed-size, misplaced, and unregistered entries without deleting bytes or rehashing
   on every load. Favourite, folder, and manual bookmark metadata can be edited with validated
-  labels and conflict-aware writes without enabling the reader.
+  labels and conflict-aware writes without enabling the reader. An explicit share action
+  reconstructs the UUID path, rereads the bounded PDF, rechecks container markers, length, and
+  SHA-256, and opens the native sheet only for an exact imported copy without claiming delivery.
 - The development simulator now accepts a bounded starting airport, altitude, groundspeed, true
   track, vertical speed, and horizontal-accuracy profile. Position and climb updates are bounded
   to five-second ticks, longer lifecycle gaps pause in place, and invalid time, origin, track,

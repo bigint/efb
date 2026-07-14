@@ -13,6 +13,7 @@ import {
   setDocumentFolder,
 } from '@/database/document-repository';
 import { auditDocumentStorage } from '@/database/document-storage';
+import { shareVerifiedDocumentPdf } from '@/database/document-share';
 import type { DocumentStorageAudit } from '@/domain/document-storage-audit';
 import { useDriftlineTheme } from '@/theme';
 
@@ -28,6 +29,11 @@ export function DocumentsPanel() {
   const [storageAuditError, setStorageAuditError] = useState<string | null>(null);
   const [readBlocked, setReadBlocked] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [shareStatus, setShareStatus] = useState<{
+    readonly documentId: string;
+    readonly isError: boolean;
+    readonly text: string;
+  } | null>(null);
   const [folder, setFolder] = useState('');
   const [bookmarkLabel, setBookmarkLabel] = useState('');
   const [bookmarkPage, setBookmarkPage] = useState('');
@@ -128,6 +134,33 @@ export function DocumentsPanel() {
     setBookmarkPage('');
   };
 
+  const shareDocument = async (document: DocumentRecord) => {
+    setBusy(true);
+    setShareStatus(null);
+    try {
+      const result = await shareVerifiedDocumentPdf(document);
+      setShareStatus({
+        documentId: document.id,
+        isError: result.kind === 'sharing-unavailable',
+        text:
+          result.kind === 'share-sheet-closed'
+            ? 'Share sheet closed after full file verification. Confirm the destination separately.'
+            : 'Native sharing is unavailable on this device.',
+      });
+    } catch (caught) {
+      setShareStatus({
+        documentId: document.id,
+        isError: true,
+        text:
+          caught instanceof Error
+            ? caught.message
+            : 'The stored PDF could not be verified for sharing.',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <View>
       <Text style={[panelStyles.sectionTitle, { color: theme.primary }]}>Documents</Text>
@@ -142,7 +175,7 @@ export function DocumentsPanel() {
         <View style={styles.action}>
           <Action
             disabled={busy || readBlocked}
-            label={busy ? 'Importing…' : 'Import PDF'}
+            label={busy ? 'Working…' : 'Import PDF'}
             onPress={() => void importPdf()}
             primary
           />
@@ -201,7 +234,23 @@ export function DocumentsPanel() {
               label={selectedDocumentId === document.id ? 'Close organizer' : 'Organize'}
               onPress={() => toggleOrganizer(document)}
             />
+            <Action
+              disabled={busy || readBlocked}
+              label="Share verified copy"
+              onPress={() => void shareDocument(document)}
+            />
           </View>
+          {shareStatus?.documentId === document.id && (
+            <Text
+              accessibilityRole="alert"
+              style={[
+                styles.error,
+                { color: shareStatus.isError ? theme.danger : theme.secondary },
+              ]}
+            >
+              {shareStatus.text}
+            </Text>
+          )}
           {selectedDocumentId === document.id && (
             <View style={[styles.organizer, { backgroundColor: theme.panelRaised }]}>
               <Text style={[styles.status, { color: theme.attention }]}>
