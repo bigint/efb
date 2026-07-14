@@ -67,6 +67,10 @@ mistaken for successful replacement.
   receipt/source times, and is never called a briefing. METAR currency is recomputed against the
   current clock; TAF header validity is recomputed against the current UTC clock while forecast
   groups remain undecoded.
+- Each station/product can be removed through a destructive native confirmation. A separate
+  confirmed clear-all operation remains available when a corrupt row makes the bounded list
+  unreadable. Successful deletion also removes any matching cached product from the rendered
+  view; a failed database write retains it and reports failure.
 - A cache-write failure does not hide a successfully retrieved live report. It is reported as a
   separate continuity failure.
 

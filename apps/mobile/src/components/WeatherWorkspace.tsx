@@ -2,7 +2,7 @@ import { radii, spacing, typography } from '@driftline/design-system';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   awcMetarClient,
@@ -19,6 +19,8 @@ import { useDriftlineTheme } from '@/theme';
 import {
   cacheMetar,
   cacheTaf,
+  clearCachedWeather,
+  deleteCachedWeather,
   listCachedWeather,
   type CachedWeather,
 } from '@/database/weather-cache-repository';
@@ -34,6 +36,8 @@ export function WeatherWorkspace() {
   const theme = useDriftlineTheme();
   const [cached, setCached] = useState<readonly CachedWeather[]>([]);
   const [cacheError, setCacheError] = useState<string | null>(null);
+  const [cacheActionStatus, setCacheActionStatus] = useState<string | null>(null);
+  const [deletingCache, setDeletingCache] = useState(false);
   const [metarCached, setMetarCached] = useState(false);
   const [observation, setObservation] = useState<MetarObservation | null>(null);
   const [taf, setTaf] = useState<AwcTafReport | null>(null);
@@ -142,6 +146,88 @@ export function WeatherWorkspace() {
     }
   };
 
+  const clearLoadedCachedProduct = (product: 'METAR' | 'TAF', stationCode: string) => {
+    if (product === 'METAR' && metarCached && observation?.station === stationCode) {
+      setObservation(null);
+      setMetarCached(false);
+    }
+    if (product === 'TAF' && tafCached && taf?.station === stationCode) {
+      setTaf(null);
+      setTafCached(false);
+    }
+  };
+
+  const removeCachedProduct = async (product: 'METAR' | 'TAF', stationCode: string) => {
+    setDeletingCache(true);
+    try {
+      const removed = await deleteCachedWeather(database, product, stationCode);
+      clearLoadedCachedProduct(product, stationCode);
+      await reloadCache();
+      setCacheActionStatus(
+        removed
+          ? `${stationCode} ${product} was removed from local cache.`
+          : `${stationCode} ${product} was already absent; the cache list was refreshed.`,
+      );
+    } catch {
+      setCacheActionStatus(`${stationCode} ${product} could not be removed from local cache.`);
+    } finally {
+      setDeletingCache(false);
+    }
+  };
+
+  const confirmRemoveCachedProduct = (product: 'METAR' | 'TAF', stationCode: string) => {
+    Alert.alert(
+      'Remove cached weather?',
+      `${stationCode} ${product} raw text and retrieval metadata will be deleted from this device.`,
+      [
+        { style: 'cancel', text: 'Cancel' },
+        {
+          onPress: () => void removeCachedProduct(product, stationCode),
+          style: 'destructive',
+          text: 'Remove',
+        },
+      ],
+    );
+  };
+
+  const clearAllCachedProducts = async () => {
+    setDeletingCache(true);
+    try {
+      const removed = await clearCachedWeather(database);
+      if (metarCached) {
+        setObservation(null);
+        setMetarCached(false);
+      }
+      if (tafCached) {
+        setTaf(null);
+        setTafCached(false);
+      }
+      await reloadCache();
+      setCacheActionStatus(
+        `${removed} cached weather ${removed === 1 ? 'product was' : 'products were'} removed from this device.`,
+      );
+    } catch {
+      setCacheActionStatus('The local weather cache could not be cleared.');
+    } finally {
+      setDeletingCache(false);
+    }
+  };
+
+  const confirmClearAllCachedProducts = () => {
+    Alert.alert(
+      'Clear all cached weather?',
+      'Every cached METAR and TAF raw product will be deleted from this device. Live and manual tools remain available.',
+      [
+        { style: 'cancel', text: 'Cancel' },
+        {
+          onPress: () => void clearAllCachedProducts(),
+          style: 'destructive',
+          text: 'Clear all',
+        },
+      ],
+    );
+  };
+
   return (
     <ScrollView
       contentContainerStyle={styles.scroll}
@@ -231,6 +317,7 @@ export function WeatherWorkspace() {
                     </Text>
                   </View>
                   <Action
+                    disabled={deletingCache}
                     label="Load cached"
                     onPress={() => {
                       setStation(value.station);
@@ -243,14 +330,35 @@ export function WeatherWorkspace() {
                       }
                     }}
                   />
+                  <Action
+                    destructive
+                    disabled={deletingCache}
+                    label="Remove"
+                    onPress={() => confirmRemoveCachedProduct(record.product, value.station)}
+                  />
                 </View>
               );
             })}
           </View>
         )}
         <View style={styles.cacheRefresh}>
-          <Action label="Refresh cache" onPress={() => void reloadCache()} />
+          <Action
+            disabled={deletingCache}
+            label="Refresh cache"
+            onPress={() => void reloadCache()}
+          />
+          <Action
+            destructive
+            disabled={deletingCache || (cached.length === 0 && cacheError === null)}
+            label={deletingCache ? 'Updating cache…' : 'Clear all cached weather'}
+            onPress={confirmClearAllCachedProducts}
+          />
         </View>
+        {cacheActionStatus !== null && (
+          <Text accessibilityRole="alert" style={[styles.error, { color: theme.secondary }]}>
+            {cacheActionStatus}
+          </Text>
+        )}
       </Card>
       {taf !== null && <RawTaf cached={tafCached} report={taf} />}
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
@@ -509,7 +617,13 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
   cacheCopy: { flex: 1 },
   cacheList: { marginTop: spacing.md },
-  cacheRefresh: { alignItems: 'flex-start', marginTop: spacing.md },
+  cacheRefresh: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
   cacheRow: {
     alignItems: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { decodeCachedWeather } from './weather-cache-repository';
+import {
+  clearCachedWeather,
+  decodeCachedWeather,
+  deleteCachedWeather,
+} from './weather-cache-repository';
 
 describe('weather cache SQLite boundary', () => {
   it('reparses cached METAR and preserves explicit cache provenance', () => {
@@ -63,5 +67,31 @@ describe('weather cache SQLite boundary', () => {
     expect(record.report.validFrom).toBe('2026-07-14T12:00:00.000Z');
     expect(record.report.validTo).toBe('2026-07-15T12:00:00.000Z');
     expect(record.report.provenance.source).toContain('local cache');
+  });
+
+  it('deletes one validated cache key with bound parameters', async () => {
+    const calls: readonly unknown[][] = [];
+    const mutableCalls = calls as unknown[][];
+    const database = {
+      runAsync: (...parameters: readonly unknown[]) => {
+        mutableCalls.push([...parameters]);
+        return Promise.resolve({ changes: 1 });
+      },
+    };
+    await expect(deleteCachedWeather(database as never, 'METAR', 'KMCI')).resolves.toBe(true);
+    expect(calls).toEqual([
+      ['DELETE FROM weather_cache WHERE product = ? AND station = ?', 'METAR', 'KMCI'],
+    ]);
+    await expect(deleteCachedWeather(database as never, 'METAR', 'bad')).rejects.toThrow();
+    expect(calls).toHaveLength(1);
+  });
+
+  it('reports stale single deletes and explicit full-cache deletion counts', async () => {
+    const responses = [{ changes: 0 }, { changes: 12 }];
+    const database = {
+      runAsync: () => Promise.resolve(responses.shift() ?? { changes: 0 }),
+    };
+    await expect(deleteCachedWeather(database as never, 'TAF', 'KMCI')).resolves.toBe(false);
+    await expect(clearCachedWeather(database as never)).resolves.toBe(12);
   });
 });

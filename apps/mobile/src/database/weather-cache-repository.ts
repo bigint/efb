@@ -26,6 +26,13 @@ const cachedWeatherSchema = z
     }
   });
 
+const weatherCacheKeySchema = z
+  .object({
+    product: z.enum(['METAR', 'TAF']),
+    station: z.string().regex(/^[A-Z0-9]{4}$/u),
+  })
+  .strict();
+
 export interface WeatherCacheRow {
   readonly observed_at: string | null;
   readonly product: string;
@@ -160,6 +167,26 @@ export const cacheTaf = async (
     station: report.station,
   });
   await upsert(database, record);
+};
+
+export const deleteCachedWeather = async (
+  database: SQLiteDatabase,
+  product: 'METAR' | 'TAF',
+  station: string,
+): Promise<boolean> => {
+  const key = weatherCacheKeySchema.parse({ product, station });
+  const result = await database.runAsync(
+    'DELETE FROM weather_cache WHERE product = ? AND station = ?',
+    key.product,
+    key.station,
+  );
+  if (result.changes > 1) throw new Error('Weather cache deletion changed multiple rows');
+  return result.changes === 1;
+};
+
+export const clearCachedWeather = async (database: SQLiteDatabase): Promise<number> => {
+  const result = await database.runAsync('DELETE FROM weather_cache');
+  return result.changes;
 };
 
 const upsert = async (
