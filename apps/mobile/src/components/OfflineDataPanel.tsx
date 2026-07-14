@@ -1,4 +1,5 @@
 import { spacing, typography } from '@driftline/design-system';
+import { Paths } from 'expo-file-system';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -6,6 +7,7 @@ import {
   readOfflineRegistry,
   type OfflineRegistrySnapshot,
 } from '@/database/offline-registry-repository';
+import { decodeStorageCapacity, type StorageCapacity } from '@/domain/storage-capacity';
 import { useDriftlineTheme } from '@/theme';
 
 import { Action, Card, panelStyles } from './PanelPrimitives';
@@ -14,7 +16,8 @@ const formatBytes = (bytes: number): string => {
   if (!Number.isSafeInteger(bytes) || bytes < 0) return 'INVALID';
   if (bytes < 1_024) return `${bytes} B`;
   if (bytes < 1_024 * 1_024) return `${(bytes / 1_024).toFixed(1)} KB`;
-  return `${(bytes / (1_024 * 1_024)).toFixed(1)} MB`;
+  if (bytes < 1_024 * 1_024 * 1_024) return `${(bytes / (1_024 * 1_024)).toFixed(1)} MB`;
+  return `${(bytes / (1_024 * 1_024 * 1_024)).toFixed(1)} GB`;
 };
 
 export function OfflineDataPanel() {
@@ -22,9 +25,18 @@ export function OfflineDataPanel() {
   const [snapshot, setSnapshot] = useState<OfflineRegistrySnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [storage, setStorage] = useState<StorageCapacity | null>(null);
+  const [storageError, setStorageError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
+    try {
+      setStorage(decodeStorageCapacity(Paths.totalDiskSpace, Paths.availableDiskSpace));
+      setStorageError(null);
+    } catch {
+      setStorage(null);
+      setStorageError('Device storage capacity unavailable.');
+    }
     try {
       setSnapshot(await readOfflineRegistry());
       setError(null);
@@ -53,6 +65,25 @@ export function OfflineDataPanel() {
           Signed-package download and atomic filesystem activation are not connected. This view
           reports only generations that already passed the local registry boundary.
         </Text>
+        <View style={[styles.capacity, { borderColor: theme.separator }]}>
+          <Text style={[panelStyles.label, { color: theme.secondary }]}>DEVICE STORAGE</Text>
+          {storage === null ? (
+            <Text style={[panelStyles.copy, { color: theme.attention }]}>
+              {storageError ?? 'Capacity unavailable.'}
+            </Text>
+          ) : (
+            <>
+              <Text style={[styles.capacityValue, { color: theme.primary }]}>
+                {formatBytes(storage.availableBytes)} AVAILABLE /{' '}
+                {formatBytes(storage.totalBytes)}
+              </Text>
+              <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+                {storage.usedPercent.toFixed(1)}% device storage used · not reserved for
+                Driftline
+              </Text>
+            </>
+          )}
+        </View>
         {loading ? (
           <Text style={[panelStyles.copy, styles.state, { color: theme.secondary }]}>
             Reading local control database…
@@ -140,6 +171,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   copy: { marginTop: spacing.sm },
+  capacity: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacing.xs,
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  capacityValue: { fontFamily: typography.mono, fontSize: 13, fontWeight: '800' },
   count: { fontFamily: typography.mono, fontSize: 12, fontWeight: '800' },
   notice: { fontFamily: typography.mono, fontSize: 10, fontWeight: '800', letterSpacing: 0.7 },
   registry: { gap: spacing.sm },

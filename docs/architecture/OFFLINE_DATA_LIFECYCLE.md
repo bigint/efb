@@ -46,6 +46,12 @@ Registry queries and manifests are bounded to 100 active packages, 10,000 active
 filesystem has not been rehashed: registry metadata is not equivalent to a current filesystem
 integrity check.
 
+The manager independently reads native total and available device-storage bytes. Values must be
+positive/non-negative safe integers with available no greater than total before the UI derives
+used bytes and percentage. The display explicitly says this is device capacity, not space
+reserved for Driftline or proof that a particular package fits. A capacity read failure does not
+hide valid registry metadata.
+
 Until download, signature verification, app-private staging, digest streaming, filesystem
 reconciliation, and atomic activation adapters exist, the manager is intentionally read-only.
 The empty state says that no verified region is active and does not misclassify bundled

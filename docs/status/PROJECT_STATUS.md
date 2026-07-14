@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 243 passed across thirty-seven test files.
+- Unit tests: 248 passed across thirty-eight test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,163 modules, 5.5 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -54,7 +54,9 @@ performance data.
   wrong-region, invalid-time, and unauthorized-rollback transitions. Filesystem, signature, and
   atomic activation adapters remain open. A read-only System manager now cross-checks active
   pointers, manifests, file metadata, and recent attempts before reporting registry state, while
-  explicitly stating that filesystem contents have not been rehashed.
+  explicitly stating that filesystem contents have not been rehashed. The manager separately
+  reports validated native available/total device capacity without treating it as reserved
+  application space or package-fit evidence.
 - User database migration v7 stores normalized airport favourites independently from replaceable
   aviation datasets. Places can add/remove and visibly mark favourites; a corrupt favourite
   collection disables only preference decoration while airport browsing remains available.
