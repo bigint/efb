@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 290 passed across fifty-two test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,187 modules, 5.6 MB
+- Unit tests: 293 passed across fifty-three test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,188 modules, 5.6 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -108,8 +108,11 @@ performance data.
   sandbox remains separate. A selected profile can calculate mass, moment, CG arm, and entered
   maximum-mass status. Profiles may now carry an optional bounded user-entered CG polygon;
   duplicate, degenerate, and self-intersecting geometry fails closed before the UI reports an
-  inside/outside decision. Approved source linking, revision history, arbitrary stations,
-  scenarios, graph rendering, and native recovery remain open.
+  inside/outside decision. Approved source linking, revision history, durable
+  stations/scenarios, graph rendering, and native recovery remain open. A session-only loading
+  scenario can add up to eight bounded labelled mass/arm stations to the same total mass,
+  moment, CG, and entered-envelope calculation; selecting another profile clears them, and they
+  are not persisted.
 - An explicit user action can now select a foreground-only device-location source. Permission,
   service, provider-error, null-telemetry, and stale-sample states fail closed; metric provider
   values convert to cockpit units at a pure boundary, and source changes clear prior samples.

@@ -44,9 +44,13 @@ point-in-polygon decision; malformed geometry cannot become a convincing inside 
 ## Current limitations
 
 The Aircraft workspace can select a saved profile and calculate total mass, moment, and CG arm
-from its entered empty mass and station arms plus user-entered occupant and fuel mass. It
-compares total mass with the entered maximum. Fuel stays in kilograms: the profile's litre
-capacity is not converted because no fuel type or density source exists.
+from its entered empty mass and station arms plus user-entered occupant and fuel mass. A
+transient scenario may add up to eight labelled mass/arm rows; these rows are parsed with
+explicit kilogram and metre bounds, participate in the same moment and CG calculation, and are
+cleared when another profile is selected. They are never written to the profile or restored
+after process death. The summary compares total mass with the entered maximum. Fuel stays in
+kilograms: the profile's litre capacity is not converted because no fuel type or density source
+exists.
 
 When the selected profile has no envelope, the summary says `NOT PROVIDED`. When a validated
 polygon exists, the same loading calculation reports inside/outside the entered envelope and
@@ -54,9 +58,9 @@ continues to label both the data and limits `USER-ENTERED` and `UNVERIFIED`. Thi
 decision against user input, not a statement that the polygon came from an approved source. The
 separate built-in polygon sandbox remains fictional.
 
-Profile deletion, revision history/rollback, arbitrary loading-station authoring, scenario
-saving, envelope graph rendering, fuel-density conversion, take-off and landing models,
-source-document links, and editing profile notes remain open. Native persistence recovery and
+Profile deletion, revision history/rollback, durable loading-station authoring, scenario saving,
+envelope graph rendering, fuel-density conversion, take-off and landing models, source-document
+links, and editing profile notes remain open. Native persistence recovery and
 visual/accessibility validation are release blockers.
 
 Checklist authoring can link a validated local profile UUID and derives the template label from

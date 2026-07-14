@@ -18,6 +18,7 @@ import {
   listAircraftProfiles,
   replaceAircraftProfile,
 } from '@/database/aircraft-profile-repository';
+import { parseTransientLoadingStations } from '@/domain/transient-loading-stations';
 import { useDriftlineTheme } from '@/theme';
 
 import { Action, Card, PanelHeader, panelStyles } from './PanelPrimitives';
@@ -129,6 +130,7 @@ export function AircraftWorkspace() {
   const [emptyMass, setEmptyMass] = useState('700');
   const [occupantMass, setOccupantMass] = useState('160');
   const [fuelMass, setFuelMass] = useState('100');
+  const [extraStations, setExtraStations] = useState('');
   const result = useMemo(() => {
     const inputs = [emptyMass, occupantMass, fuelMass];
     if (inputs.some((value) => value.trim().length === 0)) return null;
@@ -154,8 +156,23 @@ export function AircraftWorkspace() {
     }
   }, [emptyMass, fuelMass, occupantMass]);
   const selectedProfile = profiles.find(({ id }) => id === selectedProfileId) ?? null;
+  const extraStationScenario = useMemo(() => {
+    try {
+      return {
+        kind: 'valid' as const,
+        stations: parseTransientLoadingStations(extraStations),
+      };
+    } catch (caught) {
+      return {
+        kind: 'invalid' as const,
+        message:
+          caught instanceof Error ? caught.message : 'Extra loading stations are invalid.',
+      };
+    }
+  }, [extraStations]);
   const profileLoading = useMemo(() => {
     if (selectedProfile === null) return null;
+    if (extraStationScenario.kind === 'invalid') return null;
     const inputs = [occupantMass, fuelMass];
     if (inputs.some((value) => value.trim().length === 0)) return null;
     const values = inputs.map(Number);
@@ -179,6 +196,11 @@ export function AircraftWorkspace() {
             id: 'fuel',
             mass: kilograms(values[1] ?? Number.NaN),
           },
+          ...extraStationScenario.stations.map((station) => ({
+            arm: metres(station.armMetres),
+            id: station.id,
+            mass: kilograms(station.massKilograms),
+          })),
         ],
       };
       return selectedProfile.planning.cgEnvelope === null
@@ -193,7 +215,7 @@ export function AircraftWorkspace() {
     } catch {
       return null;
     }
-  }, [fuelMass, occupantMass, selectedProfile]);
+  }, [extraStationScenario, fuelMass, occupantMass, selectedProfile]);
 
   const reload = useCallback(async () => {
     try {
@@ -298,7 +320,10 @@ export function AircraftWorkspace() {
               setEditingProfileId(profile.id);
               setProfileForm(profileFormFromRecord(profile));
             }}
-            onUse={() => setSelectedProfileId(profile.id)}
+            onUse={() => {
+              setSelectedProfileId(profile.id);
+              setExtraStations('');
+            }}
             profile={profile}
             selected={profile.id === selectedProfileId}
           />
@@ -321,6 +346,42 @@ export function AircraftWorkspace() {
               <MassInput label="Occupants" onChange={setOccupantMass} value={occupantMass} />
               <MassInput label="Fuel" onChange={setFuelMass} value={fuelMass} />
             </View>
+            <View style={[styles.inputGroup, styles.extraStations]}>
+              <Text style={[panelStyles.label, { color: theme.secondary }]}>
+                Extra transient stations · one LABEL,MASS KG,ARM M per line · optional
+              </Text>
+              <TextInput
+                accessibilityLabel="Extra transient loading stations"
+                autoCapitalize="words"
+                autoCorrect={false}
+                multiline
+                onChangeText={setExtraStations}
+                style={[
+                  styles.input,
+                  styles.multilineInput,
+                  {
+                    backgroundColor: theme.panelRaised,
+                    borderColor:
+                      extraStationScenario.kind === 'invalid' ? theme.danger : theme.separator,
+                    color: theme.primary,
+                  },
+                ]}
+                value={extraStations}
+              />
+              <Text
+                style={[
+                  panelStyles.copy,
+                  {
+                    color:
+                      extraStationScenario.kind === 'invalid' ? theme.danger : theme.secondary,
+                  },
+                ]}
+              >
+                {extraStationScenario.kind === 'invalid'
+                  ? extraStationScenario.message
+                  : `${extraStationScenario.stations.length} EXTRA · SESSION ONLY · NOT SAVED`}
+              </Text>
+            </View>
             <View style={styles.outputs}>
               <Output
                 label="Total mass"
@@ -332,6 +393,14 @@ export function AircraftWorkspace() {
                   profileLoading === null
                     ? '—'
                     : `${profileLoading.centreOfGravityArm.toFixed(3)} M`
+                }
+              />
+              <Output
+                label="Total moment"
+                value={
+                  profileLoading === null
+                    ? '—'
+                    : `${profileLoading.totalMoment.toFixed(2)} KG·M`
                 }
               />
               <Output
@@ -660,6 +729,7 @@ function Output({ label, value }: { readonly label: string; readonly value: stri
 const styles = StyleSheet.create({
   envelopeHelp: { marginTop: spacing.md },
   error: { fontSize: 13, marginTop: spacing.md },
+  extraStations: { marginTop: spacing.lg },
   fact: { gap: spacing.xs, minWidth: 210 },
   facts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xl, marginTop: spacing.xl },
   input: {
