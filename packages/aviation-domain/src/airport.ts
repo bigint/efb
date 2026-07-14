@@ -115,7 +115,30 @@ export const parseAirport = (source: unknown): Airport => {
   };
 };
 
+const MAXIMUM_AIRPORT_COLLECTION = 10_000;
+const assertValidAirportIndexEntry = (airport: Airport): void => {
+  if (
+    !/^[A-Z0-9]{3,4}$/u.test(airport.icao) ||
+    (airport.iata !== null && !/^[A-Z]{3}$/u.test(airport.iata)) ||
+    airport.name.length < 1 ||
+    airport.name.length > 160 ||
+    !hasNoControlCharacters(airport.name) ||
+    !Number.isFinite(airport.position.latitude) ||
+    airport.position.latitude < -90 ||
+    airport.position.latitude > 90 ||
+    !Number.isFinite(airport.position.longitude) ||
+    airport.position.longitude < -180 ||
+    airport.position.longitude > 180
+  ) {
+    throw new RangeError('Airport index entry is invalid');
+  }
+};
+
 export const searchAirports = (airports: readonly Airport[], query: string): Airport[] => {
+  if (airports.length > MAXIMUM_AIRPORT_COLLECTION) {
+    throw new RangeError('Airport collection exceeds the supported limit');
+  }
+  for (const airport of airports) assertValidAirportIndexEntry(airport);
   if (query.length > 80) return [];
   const needle = query.trim().toLocaleUpperCase('en-US');
   if (needle.length < 2) return [];
@@ -146,8 +169,13 @@ export const findNearbyAirports = (
   if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
     throw new RangeError('Nearby airport limit must be between 1 and 50');
   }
+  if (airports.length > MAXIMUM_AIRPORT_COLLECTION) {
+    throw new RangeError('Airport collection exceeds the supported limit');
+  }
+  assertValidAirportIndexEntry(origin);
   const identifiers = new Set<string>();
   for (const airport of airports) {
+    assertValidAirportIndexEntry(airport);
     if (identifiers.has(airport.icao))
       throw new Error('Nearby airport candidates must be unique');
     identifiers.add(airport.icao);

@@ -109,5 +109,12 @@ describe('airport adapter boundary', () => {
     expect(nearby[0]?.distanceNauticalMiles).toBeGreaterThan(0);
     expect(() => findNearbyAirports([origin, origin], origin)).toThrow('unique');
     expect(() => findNearbyAirports([origin], origin, 0)).toThrow(RangeError);
+    expect(() => findNearbyAirports([{ ...origin, icao: 'bad' }], origin)).toThrow('invalid');
+    expect(() =>
+      searchAirports(
+        Array.from({ length: 10_001 }, () => origin),
+        'DVL1',
+      ),
+    ).toThrow('limit');
   });
 });
