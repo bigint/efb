@@ -11,12 +11,12 @@ import {
   type Workspace,
 } from '@/domain/persisted-flight';
 import {
-  advanceSimulationSample,
   mapDeviceLocation,
   type DeviceLocationInput,
   type PositionSample,
   type PositionScenario,
 } from '@/domain/position-source';
+import { reduceSimulationTick } from '@/domain/simulation-runtime';
 import {
   defaultSimulationProfile,
   simulationProfileSchema,
@@ -35,6 +35,7 @@ interface FlightState {
   readonly routeIdentifiers: string[];
   readonly selectedAirport: string | null;
   readonly simulationProfile: SimulationProfile;
+  readonly simulationPaused: boolean;
   readonly workspace: Workspace;
   addWaypoint: (identifier: string) => void;
   clearRoute: () => void;
@@ -52,6 +53,7 @@ interface FlightState {
   ) => void;
   setGpsOutage: (outage: boolean) => void;
   setSimulationEnabled: (enabled: boolean) => void;
+  setSimulationPaused: (paused: boolean) => void;
   setSimulationProfile: (profile: SimulationProfile) => void;
   setWorkspace: (workspace: Workspace) => void;
   tickSimulation: (sampledAt: number) => void;
@@ -139,6 +141,7 @@ export const useFlightStore = create<FlightState>()(
           positionScenario: enabled
             ? { kind: 'device', status: 'checking' }
             : { kind: 'disabled' },
+          simulationPaused: false,
         }),
       setDevicePositionStatus: (status) =>
         set((state) =>
@@ -168,7 +171,12 @@ export const useFlightStore = create<FlightState>()(
           positionScenario: enabled
             ? { gpsAvailable: true, kind: 'simulated' }
             : { kind: 'disabled' },
+          simulationPaused: false,
         }),
+      setSimulationPaused: (paused) =>
+        set((state) =>
+          state.positionScenario.kind === 'simulated' ? { simulationPaused: paused } : state,
+        ),
       setSimulationProfile: (source) =>
         set((state) => {
           const profile = simulationProfileSchema.parse(source);
@@ -185,44 +193,18 @@ export const useFlightStore = create<FlightState>()(
           };
         }),
       setWorkspace: (workspace) => set({ workspace }),
+      simulationPaused: false,
       tickSimulation: (sampledAt) =>
-        set((state) => {
-          if (
-            !Number.isFinite(sampledAt) ||
-            state.positionScenario.kind !== 'simulated' ||
-            !state.positionScenario.gpsAvailable
-          ) {
-            return state.positionSample === null ? state : { positionSample: null };
-          }
-          const origin = demoAirports.find(
-            ({ icao }) => icao === state.simulationProfile.startingAirportIdentifier,
-          )?.position;
-          if (origin === undefined) {
-            return {
-              positionSample: null,
-              positionScenario: { gpsAvailable: false, kind: 'simulated' },
-            };
-          }
-          try {
-            return {
-              positionSample: advanceSimulationSample({
-                altitudeFeet: state.simulationProfile.altitudeFeet,
-                groundspeedKnots: state.simulationProfile.groundspeedKnots,
-                horizontalAccuracyMetres: state.simulationProfile.horizontalAccuracyMetres,
-                origin,
-                previous: state.positionSample,
-                sampledAt,
-                trackTrueDegrees: state.simulationProfile.trackTrueDegrees,
-                verticalSpeedFeetPerMinute: state.simulationProfile.verticalSpeedFeetPerMinute,
-              }),
-            };
-          } catch {
-            return {
-              positionSample: null,
-              positionScenario: { gpsAvailable: false, kind: 'simulated' },
-            };
-          }
-        }),
+        set((state) =>
+          reduceSimulationTick({
+            origins: demoAirports.map(({ icao, position }) => ({ identifier: icao, position })),
+            paused: state.simulationPaused,
+            positionSample: state.positionSample,
+            positionScenario: state.positionScenario,
+            profile: state.simulationProfile,
+            sampledAt,
+          }),
+        ),
       workspace: 'map',
     }),
     {

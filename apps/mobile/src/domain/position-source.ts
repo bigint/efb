@@ -140,6 +140,18 @@ export const advanceSimulationSample = ({
   };
 };
 
+export const holdSimulationSample = (
+  previous: PositionSample,
+  sampledAt: number,
+): PositionSample => {
+  if (!Number.isFinite(sampledAt) || sampledAt < previous.sampledAt) {
+    throw new RangeError('Simulation hold clock moved backwards');
+  }
+  if (sampledAt === previous.sampledAt) return previous;
+  position(previous.latitude, previous.longitude);
+  return { ...previous, sampledAt };
+};
+
 export interface DeviceLocationInput {
   readonly accuracyMetres: number | null;
   readonly altitudeMetres: number | null;

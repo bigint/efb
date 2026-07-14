@@ -18,6 +18,7 @@ export function SystemWorkspace() {
   const scenario = useFlightStore((state) => state.positionScenario);
   const sample = useFlightStore((state) => state.positionSample);
   const simulationProfile = useFlightStore((state) => state.simulationProfile);
+  const simulationPaused = useFlightStore((state) => state.simulationPaused);
   const setSimulationProfile = useFlightStore((state) => state.setSimulationProfile);
   const [altitudeFeet, setAltitudeFeet] = useState(String(simulationProfile.altitudeFeet));
   const [groundspeedKnots, setGroundspeedKnots] = useState(
@@ -40,6 +41,7 @@ export function SystemWorkspace() {
   const setDevicePositionEnabled = useFlightStore((state) => state.setDevicePositionEnabled);
   const setDevicePositionStatus = useFlightStore((state) => state.setDevicePositionStatus);
   const setSimulationEnabled = useFlightStore((state) => state.setSimulationEnabled);
+  const setSimulationPaused = useFlightStore((state) => state.setSimulationPaused);
   const simulation = scenario.kind === 'simulated';
   const device = scenario.kind === 'device';
   const gpsOutage = scenario.kind === 'simulated' && !scenario.gpsAvailable;
@@ -111,6 +113,14 @@ export function SystemWorkspace() {
           label="GPS outage injection"
           onValueChange={setGpsOutage}
           value={gpsOutage}
+        />
+        <View style={[styles.separator, { backgroundColor: theme.separator }]} />
+        <Setting
+          disabled={!simulation || gpsOutage}
+          detail="Hold the current simulated coordinate and altitude while keeping a fresh, visibly simulated sample. Session only."
+          label="Pause simulated motion"
+          onValueChange={setSimulationPaused}
+          value={simulationPaused}
         />
       </Card>
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
@@ -185,9 +195,12 @@ export function SystemWorkspace() {
         <Status label="Map base" value="offline graticule · no chart data" />
         <Status
           label="Simulation profile"
-          value={`${simulationProfile.startingAirportIdentifier} · ${simulationProfile.groundspeedKnots} KT · ${simulationProfile.trackTrueDegrees.toFixed(0).padStart(3, '0')}°T · ${simulationProfile.altitudeFeet.toLocaleString('en-US')} FT · ${simulationProfile.verticalSpeedFeetPerMinute >= 0 ? '+' : ''}${simulationProfile.verticalSpeedFeetPerMinute} FT/MIN`}
+          value={`${simulationProfile.startingAirportIdentifier} · ${simulationProfile.groundspeedKnots} KT · ${simulationProfile.trackTrueDegrees.toFixed(0).padStart(3, '0')}°T · ${simulationProfile.altitudeFeet.toLocaleString('en-US')} FT · ${simulationProfile.verticalSpeedFeetPerMinute >= 0 ? '+' : ''}${simulationProfile.verticalSpeedFeetPerMinute} FT/MIN · ${simulationPaused ? 'MOTION PAUSED' : 'ADVANCING'}`}
         />
-        <Status label="Weather" value="AWC on-demand METAR/TAF · no cache · not a briefing" />
+        <Status
+          label="Weather"
+          value="AWC on-demand METAR/TAF · bounded local raw cache · not a briefing"
+        />
         <Status
           label="System contrast"
           value={highContrast ? 'high-contrast palette active' : 'standard palette'}

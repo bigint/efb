@@ -5,6 +5,7 @@ import { greatCircleDistance, position } from '@driftline/geospatial';
 import {
   advanceSimulationSample,
   evaluatePosition,
+  holdSimulationSample,
   mapDeviceLocation,
   type PositionSample,
 } from './position-source';
@@ -97,6 +98,13 @@ describe('position source evaluation', () => {
         verticalSpeedFeetPerMinute: 0,
       }),
     ).toThrow('backwards');
+  });
+
+  it('holds an established simulation sample without aging or moving it', () => {
+    expect(holdSimulationSample(sample, 11_000)).toEqual({ ...sample, sampledAt: 11_000 });
+    expect(holdSimulationSample(sample, sample.sampledAt)).toBe(sample);
+    expect(() => holdSimulationSample(sample, 9_999)).toThrow('clock moved backwards');
+    expect(() => holdSimulationSample(sample, Number.NaN)).toThrow('clock moved backwards');
   });
 
   it('rejects a climb that would leave the supported altitude envelope', () => {

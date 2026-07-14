@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 330 passed across sixty-two test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,205 modules, 5.7 MB
+- Unit tests: 335 passed across sixty-three test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,206 modules, 5.7 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -117,7 +117,10 @@ performance data.
   track, vertical speed, and horizontal-accuracy profile. Position and climb updates are bounded
   to five-second ticks, longer lifecycle gaps pause in place, and invalid time, origin, track,
   or altitude transitions fail into an explicit simulated GPS outage. Configuration persists but
-  live samples do not. Native timer, lifecycle, and physical-device behavior remain unverified.
+  live samples do not. A session pause keeps a fresh stationary simulated sample and resumes
+  without accumulating paused time. The source-aware timer reducer now leaves device telemetry
+  untouched and fails invalid simulator clocks/origins into outage. Native timer, lifecycle, and
+  physical-device behavior remain unverified.
 - User-entered aircraft profiles now persist locally with explicit kilogram, metre, litre, and
   knot units, immutable unverified provenance, schema revision, parameterized writes, and a
   fail-closed JSON read boundary. User fields can advance through compare-and-swap revisions

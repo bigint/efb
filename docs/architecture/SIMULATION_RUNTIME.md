@@ -26,17 +26,27 @@ is a displayed simulated quality value, not a randomized position-error model.
 - Advancement is allowed only for finite elapsed intervals from zero through five seconds.
 - A lifecycle gap longer than five seconds refreshes the sample timestamp at the same position;
   accumulated background time is never converted into a large jump.
+- A session-only explicit pause holds coordinate and altitude while refreshing sample time. If
+  paused before the first tick, the simulator establishes the configured origin and then holds
+  it. Resume advances only from the most recent held timestamp, so paused time never becomes a
+  jump. Pause intent is not persisted across process restart.
 - A clock reversal, non-finite time, invalid coordinate, invalid true track, missing configured
   origin, or altitude-envelope exit fails closed into a simulated GPS outage. Applying a valid
   profile or explicitly clearing the outage is required before samples resume.
 - Longitude output is normalized by the shared geodesy implementation.
+
+The global one-second development timer delegates to a pure source-aware reducer. A tick is a
+strict no-op for device and disabled sources, preventing simulator housekeeping from clearing
+fresh native telemetry. Non-finite clocks and unavailable simulator origins instead fail the
+simulated source into an explicit GPS outage.
 
 These rules bound each foreground update and make process suspension conservative. They do not
 model turns, acceleration, randomized GNSS error, sensor latency, or real aircraft dynamics.
 
 ## Verification boundary
 
-Pure tests cover exact one-second displacement and climb, long-gap pause behavior, clock
-reversal, altitude-envelope exit, profile parsing, and invalid track input. The
-JavaScript/Hermes production export passes. Native simulator, physical-device lifecycle, timer
-throttling, and visual/accessibility validation remain open and are release blockers.
+Pure tests cover exact one-second displacement and climb, explicit hold behavior, preservation
+of device samples, long-gap pause behavior, clock reversal, altitude-envelope exit, profile
+parsing, and invalid track input. The JavaScript/Hermes production export passes. Native
+simulator, physical-device lifecycle, timer throttling, and visual/accessibility validation
+remain open and are release blockers.
