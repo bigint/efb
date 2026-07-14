@@ -13,6 +13,8 @@ import {
 
 import { calculateRoute, type RouteWaypoint } from './route';
 
+const MAXIMUM_GROUNDSPEED_KNOTS = 1_000;
+
 export type ActiveLegNavigation =
   | {
       readonly reason: 'invalid-active-leg' | 'no-active-leg' | 'route-incomplete';
@@ -62,7 +64,10 @@ export const calculateActiveLegNavigation = ({
     .reduce((total, laterLeg) => total + laterLeg.distance, 0);
   const routeRemaining = nauticalMiles(distanceToNext + laterDistance);
   const validGroundspeed =
-    groundspeedKnots !== null && Number.isFinite(groundspeedKnots) && groundspeedKnots > 0
+    groundspeedKnots !== null &&
+    Number.isFinite(groundspeedKnots) &&
+    groundspeedKnots > 0 &&
+    groundspeedKnots <= MAXIMUM_GROUNDSPEED_KNOTS
       ? knots(groundspeedKnots)
       : null;
   return {

@@ -78,6 +78,8 @@ performance data.
   finite bounded speeds at runtime.
 - Generic loading and density-altitude entrypoints enforce finite physical-domain bounds even
   when branded numeric types are forged at a runtime boundary.
+- Active-leg navigation withholds ETE when groundspeed is absent, non-finite, non-positive, or
+  beyond the supported 1,000 KT planning domain.
 - Separate versioned user and control SQLite schemas now migrate before app render. Executable
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,

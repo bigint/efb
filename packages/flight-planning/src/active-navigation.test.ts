@@ -52,5 +52,13 @@ describe('explicit active-leg navigation', () => {
         waypoints,
       }),
     ).toMatchObject({ estimatedMinutesRemaining: null, status: 'ready' });
+    expect(
+      calculateActiveLegNavigation({
+        activeLegIndex: 0,
+        current: position(0, 0.5),
+        groundspeedKnots: 1_001,
+        waypoints,
+      }),
+    ).toMatchObject({ estimatedMinutesRemaining: null, status: 'ready' });
   });
 });
