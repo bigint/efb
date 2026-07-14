@@ -32,6 +32,7 @@ const persistedFlightSchema = z
   .object({
     positionScenario: z.discriminatedUnion('kind', [
       z.object({ kind: z.literal('disabled') }).strict(),
+      z.object({ kind: z.literal('device'), status: z.literal('checking') }).strict(),
       z.object({ gpsAvailable: z.boolean(), kind: z.literal('simulated') }).strict(),
     ]),
     routeIdentifiers: z

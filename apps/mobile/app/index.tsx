@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AircraftWorkspace } from '@/components/AircraftWorkspace';
 import { LibraryWorkspace } from '@/components/LibraryWorkspace';
 import { MapWorkspace } from '@/components/MapWorkspace';
+import { NativePositionController } from '@/components/NativePositionController';
 import { PlacesWorkspace } from '@/components/PlacesWorkspace';
 import { PlanWorkspace } from '@/components/PlanWorkspace';
 import { RecordsWorkspace } from '@/components/RecordsWorkspace';
@@ -56,6 +57,7 @@ export default function HomeScreen() {
         },
       ]}
     >
+      <NativePositionController />
       <StatusBar style={colourScheme === 'light' ? 'dark' : 'light'} />
       <View style={styles.header}>
         <StatusPlane />

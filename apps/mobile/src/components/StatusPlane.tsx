@@ -13,13 +13,20 @@ export function StatusPlane() {
   const position = evaluatePosition(scenario, sample, Date.now());
   const available = position.kind === 'available';
   const title = available
-    ? 'SIMULATION'
+    ? position.origin === 'simulated'
+      ? 'SIMULATION'
+      : 'DEVICE POSITION'
     : position.reason === 'gps-outage'
       ? 'GPS OUTAGE'
       : 'POSITION UNAVAILABLE';
   const detail = available
-    ? `SIM fixture · ±${position.sample.horizontalAccuracyMetres} m · ${Math.floor(position.ageMilliseconds / 1000)} s old`
+    ? `${position.origin === 'simulated' ? 'SIM fixture' : 'foreground location'} · ${position.sample.horizontalAccuracyMetres === null ? 'accuracy unknown' : `±${position.sample.horizontalAccuracyMetres.toFixed(0)} m`} · ${Math.floor(position.ageMilliseconds / 1000)} s old`
     : `${position.reason.replaceAll('-', ' ')} · no live values`;
+  const statusColour = available
+    ? position.origin === 'simulated'
+      ? theme.simulation
+      : theme.accent
+    : theme.danger;
 
   return (
     <Pressable
@@ -30,17 +37,12 @@ export function StatusPlane() {
         styles.container,
         {
           backgroundColor: theme.panelRaised,
-          borderColor: available ? theme.simulation : theme.danger,
+          borderColor: statusColour,
         },
         pressed && styles.pressed,
       ]}
     >
-      <View
-        style={[
-          styles.statusMark,
-          { backgroundColor: available ? theme.simulation : theme.danger },
-        ]}
-      />
+      <View style={[styles.statusMark, { backgroundColor: statusColour }]} />
       <View style={styles.copy}>
         <Text style={[styles.primary, { color: theme.primary }]}>{title}</Text>
         <Text numberOfLines={1} style={[styles.secondary, { color: theme.secondary }]}>

@@ -15,7 +15,7 @@ performance data.
 
 ## Active workstreams
 
-- Native iOS/Android development-build and physical-device validation
+- Native iOS/Android device-position and physical-device validation
 - SQLite user/control database and immutable dataset-generation registry
 - Simulator accuracy degradation and native lifecycle recovery
 - Property/golden coverage for antimeridian, polar, zero-length, and malformed calculations
@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 150 passed across twenty-four test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,147 modules, 5.4 MB
+- Unit tests: 160 passed across twenty-four test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,155 modules, 5.4 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -71,6 +71,10 @@ performance data.
   knot units, immutable unverified provenance, schema revision, parameterized writes, and a
   fail-closed JSON read boundary. The fictional loading sandbox remains separate; approved
   source linking, profile editing, envelope authoring, and native recovery are open.
+- An explicit user action can now select a foreground-only device-location source. Permission,
+  service, provider-error, null-telemetry, and stale-sample states fail closed; metric provider
+  values convert to cockpit units at a pure boundary, and source changes clear prior samples.
+  Native permission, lifecycle, accuracy, energy, and physical-device evidence remain open.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated

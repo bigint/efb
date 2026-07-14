@@ -33,6 +33,21 @@ describe('persisted flight recovery', () => {
     );
   });
 
+  it('restores device intent only in the checking state', () => {
+    expect(
+      parsePersistedFlightState({
+        ...validState,
+        positionScenario: { kind: 'device', status: 'checking' },
+      }).positionScenario,
+    ).toEqual({ kind: 'device', status: 'checking' });
+    expect(
+      parsePersistedFlightState({
+        ...validState,
+        positionScenario: { kind: 'device', status: 'watching' },
+      }),
+    ).toEqual(safePersistedFlightState);
+  });
+
   it.each([
     { ...validState, routeIdentifiers: ['DVL1', 'DVL1'] },
     { ...validState, routeIdentifiers: [''] },

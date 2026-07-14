@@ -99,6 +99,13 @@ export function MapWorkspace() {
     type: 'FeatureCollection' as const,
   };
   const ownship = position.kind === 'available' ? position.sample : null;
+  const ownshipOrigin = position.kind === 'available' ? position.origin : null;
+  const positionUnit =
+    position.kind === 'available'
+      ? position.origin === 'device'
+        ? 'DEVICE'
+        : 'SIM'
+      : 'NO SOURCE';
 
   return (
     <View style={styles.container}>
@@ -159,9 +166,9 @@ export function MapWorkspace() {
             </View>
           </Marker>
         ))}
-        {ownship !== null && (
+        {ownship !== null && ownshipOrigin !== null && (
           <Marker anchor="center" id="ownship" lngLat={[ownship.longitude, ownship.latitude]}>
-            <OwnshipGlyph />
+            <OwnshipGlyph origin={ownshipOrigin} />
           </Marker>
         )}
       </Map>
@@ -181,18 +188,20 @@ export function MapWorkspace() {
           <NavValue
             label="GS"
             value={
-              position.kind === 'available' ? position.sample.groundspeedKnots.toFixed(0) : '—'
+              position.kind === 'available' && position.sample.groundspeedKnots !== null
+                ? position.sample.groundspeedKnots.toFixed(0)
+                : '—'
             }
-            unit="KT SIM"
+            unit={`KT ${positionUnit}`}
           />
           <NavValue
             label="ALT"
             value={
-              position.kind === 'available'
+              position.kind === 'available' && position.sample.altitudeFeet !== null
                 ? position.sample.altitudeFeet.toLocaleString('en-US')
                 : '—'
             }
-            unit="FT SIM"
+            unit={`FT ${positionUnit}`}
           />
           <NavValue
             label="DIST"

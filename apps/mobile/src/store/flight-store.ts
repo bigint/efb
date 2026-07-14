@@ -6,28 +6,36 @@ import { demoAirports } from '@driftline/aviation-domain';
 
 import {
   parsePersistedFlightState,
+  safePersistedFlightState,
   sanitisePersistedJson,
   type Workspace,
 } from '@/domain/persisted-flight';
 import {
   advanceSimulationSample,
+  mapDeviceLocation,
+  type DeviceLocationInput,
+  type PositionSample,
   type PositionScenario,
-  type SimulationSample,
 } from '@/domain/position-source';
 
 export type { Workspace } from '@/domain/persisted-flight';
 
 interface FlightState {
-  readonly positionSample: SimulationSample | null;
+  readonly positionSample: PositionSample | null;
   readonly positionScenario: PositionScenario;
   readonly routeIdentifiers: string[];
   readonly selectedAirport: string | null;
   readonly workspace: Workspace;
   addWaypoint: (identifier: string) => void;
   clearRoute: () => void;
+  ingestDeviceLocation: (location: DeviceLocationInput) => void;
   removeWaypoint: (identifier: string) => void;
   reverseRoute: () => void;
   selectAirport: (identifier: string | null) => void;
+  setDevicePositionEnabled: (enabled: boolean) => void;
+  setDevicePositionStatus: (
+    status: Extract<PositionScenario, { kind: 'device' }>['status'],
+  ) => void;
   setGpsOutage: (outage: boolean) => void;
   setSimulationEnabled: (enabled: boolean) => void;
   setWorkspace: (workspace: Workspace) => void;
@@ -35,7 +43,7 @@ interface FlightState {
 }
 
 const storage = createMMKV({ id: 'driftline-preferences' });
-const PERSISTENCE_VERSION = 2;
+const PERSISTENCE_VERSION = 3;
 
 const zustandStorage: StateStorage = {
   getItem: (name) =>
@@ -56,6 +64,23 @@ export const useFlightStore = create<FlightState>()(
             : { routeIdentifiers: [...state.routeIdentifiers, identifier] },
         ),
       clearRoute: () => set({ routeIdentifiers: [] }),
+      ingestDeviceLocation: (location) =>
+        set((state) => {
+          if (
+            state.positionScenario.kind !== 'device' ||
+            state.positionScenario.status !== 'watching'
+          ) {
+            return state;
+          }
+          try {
+            return { positionSample: mapDeviceLocation(location) };
+          } catch {
+            return {
+              positionSample: null,
+              positionScenario: { kind: 'device', status: 'error' },
+            };
+          }
+        }),
       positionSample: null,
       positionScenario: { gpsAvailable: true, kind: 'simulated' },
       removeWaypoint: (identifier) =>
@@ -67,6 +92,19 @@ export const useFlightStore = create<FlightState>()(
       routeIdentifiers: demoAirports.slice(0, 2).map(({ icao }) => icao),
       selectAirport: (selectedAirport) => set({ selectedAirport }),
       selectedAirport: demoAirports[0]?.icao ?? null,
+      setDevicePositionEnabled: (enabled) =>
+        set({
+          positionSample: null,
+          positionScenario: enabled
+            ? { kind: 'device', status: 'checking' }
+            : { kind: 'disabled' },
+        }),
+      setDevicePositionStatus: (status) =>
+        set((state) =>
+          state.positionScenario.kind === 'device'
+            ? { positionSample: null, positionScenario: { kind: 'device', status } }
+            : state,
+        ),
       setGpsOutage: (outage) =>
         set((state) =>
           state.positionScenario.kind === 'simulated'
@@ -121,9 +159,14 @@ export const useFlightStore = create<FlightState>()(
           positionSample: null,
         };
       },
+      migrate: (persistedState, storedVersion) =>
+        storedVersion <= 2 ? persistedState : safePersistedFlightState,
       name: 'flight-workspace-v2',
       partialize: ({ positionScenario, routeIdentifiers, selectedAirport, workspace }) => ({
-        positionScenario,
+        positionScenario:
+          positionScenario.kind === 'device'
+            ? { kind: 'device' as const, status: 'checking' as const }
+            : positionScenario,
         routeIdentifiers,
         selectedAirport,
         workspace,

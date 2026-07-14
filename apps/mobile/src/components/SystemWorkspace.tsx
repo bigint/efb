@@ -1,4 +1,5 @@
 import { spacing } from '@driftline/design-system';
+import * as Location from 'expo-location';
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { useFlightStore } from '@/store/flight-store';
@@ -12,10 +13,32 @@ export function SystemWorkspace() {
   const scenario = useFlightStore((state) => state.positionScenario);
   const sample = useFlightStore((state) => state.positionSample);
   const setGpsOutage = useFlightStore((state) => state.setGpsOutage);
+  const setDevicePositionEnabled = useFlightStore((state) => state.setDevicePositionEnabled);
+  const setDevicePositionStatus = useFlightStore((state) => state.setDevicePositionStatus);
   const setSimulationEnabled = useFlightStore((state) => state.setSimulationEnabled);
   const simulation = scenario.kind === 'simulated';
+  const device = scenario.kind === 'device';
   const gpsOutage = scenario.kind === 'simulated' && !scenario.gpsAvailable;
   const position = evaluatePosition(scenario, sample, Date.now());
+
+  const setDeviceEnabled = async (enabled: boolean) => {
+    if (!enabled) {
+      setDevicePositionEnabled(false);
+      return;
+    }
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      setDevicePositionEnabled(true);
+      if (!permission.granted) {
+        setDevicePositionStatus(
+          permission.canAskAgain ? 'permission-required' : 'permission-denied',
+        );
+      }
+    } catch {
+      setDevicePositionEnabled(true);
+      setDevicePositionStatus('error');
+    }
+  };
 
   return (
     <ScrollView
@@ -24,6 +47,13 @@ export function SystemWorkspace() {
     >
       <PanelHeader eyebrow="EVIDENCE & RECOVERY" title="System" />
       <Card>
+        <Setting
+          detail="Requests foreground permission and uses platform location only while the app is active."
+          label="Device position"
+          onValueChange={(enabled) => void setDeviceEnabled(enabled)}
+          value={device}
+        />
+        <View style={[styles.separator, { backgroundColor: theme.separator }]} />
         <Setting
           detail="Persistent visual framing identifies every simulated position."
           label="Simulation source"
@@ -51,7 +81,7 @@ export function SystemWorkspace() {
           label="Position"
           value={
             position.kind === 'available'
-              ? `simulated · ±${position.sample.horizontalAccuracyMetres} m · ${Math.floor(position.ageMilliseconds / 1000)} s old`
+              ? `${position.origin} · ${position.sample.horizontalAccuracyMetres === null ? 'accuracy unknown' : `±${position.sample.horizontalAccuracyMetres.toFixed(0)} m`} · ${Math.floor(position.ageMilliseconds / 1000)} s old`
               : `unavailable · ${position.reason.replaceAll('-', ' ')}`
           }
         />
