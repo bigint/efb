@@ -57,6 +57,21 @@ describe('route calculation', () => {
       'ambiguous',
     );
     expect(() => resolveRouteIdentifiers(['bad input'], route)).toThrow('identifier');
+    expect(() =>
+      calculateRoute(
+        [route[0], { ...route[1], position: { latitude: 91, longitude: 0 } as never }],
+        knots(100),
+      ),
+    ).toThrow('position');
+    expect(() =>
+      resolveRouteIdentifiers(
+        ['A'],
+        Array.from({ length: 10_001 }, (_, index) => ({
+          identifier: `W${index}`,
+          position: position(0, 0),
+        })),
+      ),
+    ).toThrow('collection');
   });
 
   it('preserves unresolved route intent instead of silently shortening it', () => {

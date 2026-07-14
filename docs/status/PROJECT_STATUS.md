@@ -70,6 +70,8 @@ performance data.
   explicit no-solution state. Route legs can now produce wind-adjusted ETE or identify the
   blocking leg, and Plan exposes a clearly labelled constant-wind sandbox. Winds-aloft sourcing
   and a durable plan-assumptions model remain open.
+- Pure route resolution bounds both requested and available waypoint collections and revalidates
+  identifier and coordinate ranges before geospatial calculations consume typed runtime values.
 - Separate versioned user and control SQLite schemas now migrate before app render. Executable
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,

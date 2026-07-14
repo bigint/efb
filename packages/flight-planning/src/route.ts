@@ -30,11 +30,25 @@ export type RouteResolution =
   | { readonly status: 'unresolved'; readonly unresolvedIdentifiers: readonly string[] };
 
 const MAXIMUM_ROUTE_WAYPOINTS = 100;
+const MAXIMUM_AVAILABLE_WAYPOINTS = 10_000;
 const waypointIdentifierPattern = /^[A-Z0-9-]{1,16}$/u;
 
 const requireWaypointIdentifier = (identifier: string): void => {
   if (!waypointIdentifierPattern.test(identifier)) {
     throw new RangeError('Waypoint identifier is invalid');
+  }
+};
+
+const requireWaypointPosition = ({ latitude, longitude }: Position): void => {
+  if (
+    !Number.isFinite(latitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    !Number.isFinite(longitude) ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    throw new RangeError('Waypoint position is invalid');
   }
 };
 
@@ -44,6 +58,9 @@ export const resolveRouteIdentifiers = (
 ): RouteResolution => {
   if (identifiers.length > MAXIMUM_ROUTE_WAYPOINTS) {
     throw new RangeError('Route exceeds the supported waypoint limit');
+  }
+  if (available.length > MAXIMUM_AVAILABLE_WAYPOINTS) {
+    throw new RangeError('Available waypoint collection exceeds the supported limit');
   }
   const requested = new Set<string>();
   for (const identifier of identifiers) {
@@ -55,6 +72,7 @@ export const resolveRouteIdentifiers = (
   const byIdentifier = new Map<string, RouteWaypoint>();
   for (const waypoint of available) {
     requireWaypointIdentifier(waypoint.identifier);
+    requireWaypointPosition(waypoint.position);
     if (byIdentifier.has(waypoint.identifier)) {
       throw new RangeError('Available waypoint identifiers are ambiguous');
     }
@@ -84,6 +102,7 @@ export const calculateRoute = (
   const identifiers = new Set<string>();
   for (const waypoint of waypoints) {
     requireWaypointIdentifier(waypoint.identifier);
+    requireWaypointPosition(waypoint.position);
     if (identifiers.has(waypoint.identifier))
       throw new RangeError('Duplicate waypoint identifiers are ambiguous');
     identifiers.add(waypoint.identifier);
