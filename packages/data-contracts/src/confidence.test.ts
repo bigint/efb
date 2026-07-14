@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   classifyDataCurrency,
+  dataProvenanceSchema,
   isStale,
   isTrustedRealProvenance,
   type DataProvenance,
@@ -30,6 +31,18 @@ describe('data currency classification', () => {
     expect(isTrustedRealProvenance({ ...provenance, verificationStatus: 'unverified' })).toBe(
       false,
     );
+  });
+
+  it('bounds provenance text before it reaches operational displays', () => {
+    expect(() =>
+      dataProvenanceSchema.parse({ ...provenance, source: 'Unsafe\nsource' }),
+    ).toThrow('control characters');
+    expect(() =>
+      dataProvenanceSchema.parse({ ...provenance, datasetVersion: 'x'.repeat(129) }),
+    ).toThrow();
+    expect(() =>
+      dataProvenanceSchema.parse({ ...provenance, jurisdiction: 'x'.repeat(65) }),
+    ).toThrow();
   });
 
   it('classifies a bounded effective interval', () => {

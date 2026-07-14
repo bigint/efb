@@ -10,16 +10,31 @@ export const verificationStatusSchema = z.enum([
 export const confidenceSchema = z.enum(['unknown', 'low', 'medium', 'high']);
 export const dataOriginSchema = z.enum(['real', 'simulated', 'derived']);
 
+const boundedDisplayText = (maximum: number) =>
+  z
+    .string()
+    .trim()
+    .min(1)
+    .max(maximum)
+    .refine(
+      (value) =>
+        [...value].every((character) => {
+          const code = character.codePointAt(0) ?? 0;
+          return code >= 32 && code !== 127;
+        }),
+      'Provenance display text has control characters',
+    );
+
 export const dataProvenanceSchema = z
   .object({
     confidence: confidenceSchema,
-    datasetVersion: z.string().min(1),
+    datasetVersion: boundedDisplayText(128),
     effectiveAt: z.iso.datetime().nullable(),
     expiresAt: z.iso.datetime().nullable(),
-    jurisdiction: z.string().min(1),
+    jurisdiction: boundedDisplayText(64),
     origin: dataOriginSchema,
     retrievedAt: z.iso.datetime(),
-    source: z.string().min(1),
+    source: boundedDisplayText(240),
     sourceTimestamp: z.iso.datetime().nullable(),
     verificationStatus: verificationStatusSchema,
   })

@@ -57,6 +57,11 @@ Required authority classes are `state-authoritative`, `delegated-authoritative`,
 `licensed-provider`, `airport-operator`, `community`, `derived`, and `user-entered`. UI and
 calculations must be able to reject unsuitable classes for a given function.
 
+The current compact `DataProvenance` contract bounds dataset version to 128 characters,
+jurisdiction to 64, and source label to 240. These single-line display fields are trimmed and
+reject control characters before any operational card renders them; richer source records and
+URIs belong in referenced manifests rather than unbounded labels.
+
 ## 3. Spatial and measurement primitives
 
 - `GeoPoint`: latitude, longitude, source precision, horizontal datum, optional ellipsoidal and
