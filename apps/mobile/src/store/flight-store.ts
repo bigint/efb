@@ -22,12 +22,14 @@ import {
   simulationProfileSchema,
   type SimulationProfile,
 } from '@/domain/simulation-profile';
+import { selectActiveLegIntent, selectDirectToIntent } from '@/domain/guidance-intent';
 import { moveRouteWaypoint } from '@/domain/route-editing';
 
 export type { Workspace } from '@/domain/persisted-flight';
 
 interface FlightState {
   readonly activeLegIndex: number | null;
+  readonly directToIdentifier: string | null;
   readonly positionSample: PositionSample | null;
   readonly positionScenario: PositionScenario;
   readonly routeIdentifiers: string[];
@@ -44,6 +46,7 @@ interface FlightState {
   selectAirport: (identifier: string | null) => void;
   setActiveLegIndex: (index: number | null) => void;
   setDevicePositionEnabled: (enabled: boolean) => void;
+  setDirectTo: (identifier: string | null) => void;
   setDevicePositionStatus: (
     status: Extract<PositionScenario, { kind: 'device' }>['status'],
   ) => void;
@@ -74,10 +77,13 @@ export const useFlightStore = create<FlightState>()(
             ? state
             : {
                 activeLegIndex: null,
+                directToIdentifier: null,
                 routeIdentifiers: [...state.routeIdentifiers, identifier],
               },
         ),
-      clearRoute: () => set({ activeLegIndex: null, routeIdentifiers: [] }),
+      clearRoute: () =>
+        set({ activeLegIndex: null, directToIdentifier: null, routeIdentifiers: [] }),
+      directToIdentifier: null,
       ingestDeviceLocation: (location) =>
         set((state) => {
           if (
@@ -98,6 +104,7 @@ export const useFlightStore = create<FlightState>()(
       moveWaypoint: (fromIndex, toIndex) =>
         set((state) => ({
           activeLegIndex: null,
+          directToIdentifier: null,
           routeIdentifiers: [...moveRouteWaypoint(state.routeIdentifiers, fromIndex, toIndex)],
         })),
       positionSample: null,
@@ -105,30 +112,26 @@ export const useFlightStore = create<FlightState>()(
       removeWaypoint: (identifier) =>
         set((state) => ({
           activeLegIndex: null,
+          directToIdentifier: null,
           routeIdentifiers: state.routeIdentifiers.filter((value) => value !== identifier),
         })),
       replaceRoute: (identifiers) =>
-        set({ activeLegIndex: null, routeIdentifiers: [...identifiers] }),
+        set({
+          activeLegIndex: null,
+          directToIdentifier: null,
+          routeIdentifiers: [...identifiers],
+        }),
       reverseRoute: () =>
         set((state) => ({
           activeLegIndex: null,
+          directToIdentifier: null,
           routeIdentifiers: [...state.routeIdentifiers].reverse(),
         })),
       routeIdentifiers: demoAirports.slice(0, 2).map(({ icao }) => icao),
       selectAirport: (selectedAirport) => set({ selectedAirport }),
       selectedAirport: demoAirports[0]?.icao ?? null,
       setActiveLegIndex: (index) =>
-        set((state) => {
-          if (index === null) return { activeLegIndex: null };
-          if (
-            !Number.isInteger(index) ||
-            index < 0 ||
-            index >= state.routeIdentifiers.length - 1
-          ) {
-            throw new RangeError('Active leg index is outside the current route');
-          }
-          return { activeLegIndex: index };
-        }),
+        set((state) => selectActiveLegIntent(index, state.routeIdentifiers.length)),
       simulationProfile: defaultSimulationProfile,
       setDevicePositionEnabled: (enabled) =>
         set({
@@ -142,6 +145,13 @@ export const useFlightStore = create<FlightState>()(
           state.positionScenario.kind === 'device'
             ? { positionSample: null, positionScenario: { kind: 'device', status } }
             : state,
+        ),
+      setDirectTo: (identifier) =>
+        set(() =>
+          selectDirectToIntent(
+            identifier,
+            demoAirports.map(({ icao }) => icao),
+          ),
         ),
       setGpsOutage: (outage) =>
         set((state) =>

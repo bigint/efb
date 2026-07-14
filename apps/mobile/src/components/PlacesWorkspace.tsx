@@ -29,6 +29,7 @@ export function PlacesWorkspace() {
   const positionScenario = useFlightStore((state) => state.positionScenario);
   const selectedIdentifier = useFlightStore((state) => state.selectedAirport);
   const selectAirport = useFlightStore((state) => state.selectAirport);
+  const setDirectTo = useFlightStore((state) => state.setDirectTo);
   const setWorkspace = useFlightStore((state) => state.setWorkspace);
   const results = useMemo(
     () => (query.trim().length < 2 ? [...demoAirports] : searchAirports(demoAirports, query)),
@@ -294,7 +295,15 @@ export function PlacesWorkspace() {
                 onPress={() => void toggleFavourite()}
               />
               <Action label="Add to route" onPress={() => addWaypoint(selected.icao)} />
-              <Action primary label="Show map" onPress={() => setWorkspace('map')} />
+              <Action
+                label={`Direct to ${selected.icao}`}
+                onPress={() => {
+                  setDirectTo(selected.icao);
+                  setWorkspace('map');
+                }}
+                primary
+              />
+              <Action label="Show map" onPress={() => setWorkspace('map')} />
             </View>
             {favouriteError !== null && (
               <Text

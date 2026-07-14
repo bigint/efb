@@ -13,6 +13,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { demoAirports } from '@driftline/aviation-domain';
 import {
   calculateActiveLegNavigation,
+  calculateDirectToNavigation,
   resolveRouteIdentifiers,
 } from '@driftline/flight-planning';
 import { position as geospatialPosition } from '@driftline/geospatial';
@@ -62,6 +63,7 @@ export function MapWorkspace() {
   const [measurementPoints, setMeasurementPoints] = useState<MapMeasurementPoints>([]);
   const [orientationMode, setOrientationMode] = useState<MapOrientationMode>('north-up');
   const activeLegIndex = useFlightStore((state) => state.activeLegIndex);
+  const directToIdentifier = useFlightStore((state) => state.directToIdentifier);
   const mapStyle = useMemo<StyleSpecification>(
     () => ({
       layers: [
@@ -81,6 +83,7 @@ export function MapWorkspace() {
   const routeIdentifiers = useFlightStore((state) => state.routeIdentifiers);
   const selectAirport = useFlightStore((state) => state.selectAirport);
   const setWorkspace = useFlightStore((state) => state.setWorkspace);
+  const setDirectTo = useFlightStore((state) => state.setDirectTo);
 
   const nowMilliseconds = Date.now();
   const position = evaluatePosition(positionScenario, positionSample, nowMilliseconds);
@@ -97,6 +100,10 @@ export function MapWorkspace() {
           return airport;
         })
       : [];
+  const directToAirport =
+    directToIdentifier === null
+      ? null
+      : (demoAirports.find(({ icao }) => icao === directToIdentifier) ?? null);
   const routeGeoJson = {
     features: [
       {
@@ -142,7 +149,9 @@ export function MapWorkspace() {
         : 'SIM'
       : 'NO SOURCE';
   const activeNavigation =
-    position.kind === 'available' && routeResolution.status === 'resolved'
+    directToIdentifier === null &&
+    position.kind === 'available' &&
+    routeResolution.status === 'resolved'
       ? calculateActiveLegNavigation({
           activeLegIndex,
           current: geospatialPosition(position.sample.latitude, position.sample.longitude),
@@ -150,10 +159,40 @@ export function MapWorkspace() {
           waypoints: routeResolution.waypoints,
         })
       : null;
+  const directToNavigation =
+    position.kind === 'available' && directToAirport !== null
+      ? calculateDirectToNavigation({
+          current: geospatialPosition(position.sample.latitude, position.sample.longitude),
+          groundspeedKnots: position.sample.groundspeedKnots,
+          target: { identifier: directToAirport.icao, position: directToAirport.position },
+        })
+      : null;
   const destinationArrival = estimateArrivalUtc(
     nowMilliseconds,
-    activeNavigation?.status === 'ready' ? activeNavigation.estimatedMinutesRemaining : null,
+    directToNavigation?.estimatedMinutes ??
+      (activeNavigation?.status === 'ready'
+        ? activeNavigation.estimatedMinutesRemaining
+        : null),
   );
+  const directToGeoJson = {
+    features: [
+      {
+        geometry: {
+          coordinates:
+            position.kind === 'available' && directToAirport !== null
+              ? [
+                  [position.sample.longitude, position.sample.latitude],
+                  [directToAirport.position.longitude, directToAirport.position.latitude],
+                ]
+              : [],
+          type: 'LineString' as const,
+        },
+        properties: {},
+        type: 'Feature' as const,
+      },
+    ],
+    type: 'FeatureCollection' as const,
+  };
   const measurement = calculateMapMeasurement(measurementPoints);
   const measurementGeoJson = {
     features: [
@@ -227,6 +266,24 @@ export function MapWorkspace() {
             <Layer
               id="active-leg-line"
               paint={{ 'line-color': theme.accent, 'line-width': 6 }}
+              type="line"
+            />
+          </GeoJSONSource>
+        )}
+        {directToNavigation !== null && (
+          <GeoJSONSource data={directToGeoJson} id="direct-to">
+            <Layer
+              id="direct-to-shadow"
+              paint={{ 'line-color': theme.background, 'line-width': 10 }}
+              type="line"
+            />
+            <Layer
+              id="direct-to-line"
+              paint={{
+                'line-color': theme.attention,
+                'line-dasharray': [2, 1],
+                'line-width': 5,
+              }}
               type="line"
             />
           </GeoJSONSource>
@@ -363,6 +420,22 @@ export function MapWorkspace() {
               {measureEnabled ? 'MEASURE ON · CLEAR' : 'MEASURE'}
             </Text>
           </Pressable>
+          {directToIdentifier !== null && (
+            <Pressable
+              accessibilityLabel={`Cancel direct to ${directToIdentifier}`}
+              accessibilityRole="button"
+              onPress={() => setDirectTo(null)}
+              style={({ pressed }) => [
+                styles.orientationControl,
+                { backgroundColor: theme.panelRaised, borderColor: theme.attention },
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[styles.orientationText, { color: theme.attention }]}>
+                CANCEL DIRECT TO {directToIdentifier}
+              </Text>
+            </Pressable>
+          )}
         </View>
         {measureEnabled && (
           <View style={[styles.measureChip, { backgroundColor: theme.panelRaised }]}>
@@ -380,18 +453,24 @@ export function MapWorkspace() {
         )}
         <View style={[styles.mapChip, { backgroundColor: theme.panelRaised }]}>
           <Text style={[styles.mapChipPrimary, { color: theme.primary }]}>
-            {routeResolution.status === 'unresolved'
-              ? 'ROUTE BLOCKED'
-              : activeLegAirports.length === 2
-                ? `ACTIVE LEG · ${activeLegAirports.map(({ icao }) => icao).join(' → ')}`
-                : 'OFFLINE DEMO GRID'}
+            {directToIdentifier !== null
+              ? `DIRECT TO · ${directToIdentifier}`
+              : routeResolution.status === 'unresolved'
+                ? 'ROUTE BLOCKED'
+                : activeLegAirports.length === 2
+                  ? `ACTIVE LEG · ${activeLegAirports.map(({ icao }) => icao).join(' → ')}`
+                  : 'OFFLINE DEMO GRID'}
           </Text>
           <Text style={[styles.mapChipSecondary, { color: theme.secondary }]}>
-            {routeResolution.status === 'unresolved'
-              ? `Unresolved: ${routeResolution.unresolvedIdentifiers.join(', ')}`
-              : activeLegAirports.length === 2
-                ? 'Explicit selection · no automatic sequencing'
-                : 'No chart data loaded'}
+            {directToIdentifier !== null
+              ? directToNavigation === null
+                ? 'Guidance unavailable · position required'
+                : 'Explicit session guidance · route unchanged'
+              : routeResolution.status === 'unresolved'
+                ? `Unresolved: ${routeResolution.unresolvedIdentifiers.join(', ')}`
+                : activeLegAirports.length === 2
+                  ? 'Explicit selection · no automatic sequencing'
+                  : 'No chart data loaded'}
           </Text>
         </View>
         <View style={styles.navStrip}>
@@ -430,41 +509,73 @@ export function MapWorkspace() {
           />
           <NavValue
             label="NEXT"
-            value={activeNavigation?.status === 'ready' ? activeNavigation.nextIdentifier : '—'}
+            value={
+              directToNavigation?.targetIdentifier ??
+              (activeNavigation?.status === 'ready' ? activeNavigation.nextIdentifier : '—')
+            }
             unit={
-              activeNavigation?.status === 'ready'
-                ? `${activeNavigation.distanceToNext.toFixed(1)} NM · ${activeNavigation.estimatedMinutesToNext === null ? 'ETE —' : `${activeNavigation.estimatedMinutesToNext.toFixed(0)} MIN`}`
-                : activeLegIndex === null
-                  ? 'SELECT LEG'
-                  : 'POSITION/ROUTE'
+              directToNavigation !== null
+                ? `${directToNavigation.distance.toFixed(1)} NM · ${directToNavigation.estimatedMinutes === null ? 'ETE —' : `${directToNavigation.estimatedMinutes.toFixed(0)} MIN`}`
+                : activeNavigation?.status === 'ready'
+                  ? `${activeNavigation.distanceToNext.toFixed(1)} NM · ${activeNavigation.estimatedMinutesToNext === null ? 'ETE —' : `${activeNavigation.estimatedMinutesToNext.toFixed(0)} MIN`}`
+                  : directToIdentifier !== null
+                    ? 'POSITION REQUIRED'
+                    : activeLegIndex === null
+                      ? 'SELECT LEG'
+                      : 'POSITION/ROUTE'
             }
           />
           <NavValue
             label="XTK"
             value={
-              activeNavigation?.status === 'ready'
-                ? Math.abs(activeNavigation.crossTrack).toFixed(1)
-                : '—'
+              directToIdentifier !== null
+                ? '—'
+                : activeNavigation?.status === 'ready'
+                  ? Math.abs(activeNavigation.crossTrack).toFixed(1)
+                  : '—'
             }
             unit={
-              activeNavigation?.status === 'ready'
-                ? `NM ${activeNavigation.crossTrack < 0 ? 'LEFT' : activeNavigation.crossTrack > 0 ? 'RIGHT' : 'ON COURSE'}`
-                : 'NO ACTIVE LEG'
+              directToIdentifier !== null
+                ? 'N/A · DIRECT TO'
+                : activeNavigation?.status === 'ready'
+                  ? `NM ${activeNavigation.crossTrack < 0 ? 'LEFT' : activeNavigation.crossTrack > 0 ? 'RIGHT' : 'ON COURSE'}`
+                  : 'NO ACTIVE LEG'
             }
+          />
+          <NavValue
+            label="BRG"
+            value={
+              directToNavigation?.trueBearing !== null &&
+              directToNavigation?.trueBearing !== undefined
+                ? directToNavigation.trueBearing.toFixed(0).padStart(3, '0')
+                : activeNavigation?.status === 'ready' &&
+                    activeNavigation.trueBearingToNext !== null
+                  ? activeNavigation.trueBearingToNext.toFixed(0).padStart(3, '0')
+                  : '—'
+            }
+            unit="°T TO NEXT"
           />
           <NavValue
             label="REM"
             value={
-              activeNavigation?.status === 'ready'
-                ? activeNavigation.routeRemaining.toFixed(1)
-                : '—'
+              directToNavigation !== null
+                ? directToNavigation.distance.toFixed(1)
+                : activeNavigation?.status === 'ready'
+                  ? activeNavigation.routeRemaining.toFixed(1)
+                  : '—'
             }
             unit={
-              activeNavigation?.status === 'ready'
-                ? activeNavigation.estimatedMinutesRemaining === null
+              directToNavigation !== null
+                ? directToNavigation.estimatedMinutes === null
                   ? 'NM · ETE —'
-                  : `NM · ${activeNavigation.estimatedMinutesRemaining.toFixed(0)} MIN`
-                : 'NO ACTIVE LEG'
+                  : `NM · ${directToNavigation.estimatedMinutes.toFixed(0)} MIN`
+                : activeNavigation?.status === 'ready'
+                  ? activeNavigation.estimatedMinutesRemaining === null
+                    ? 'NM · ETE —'
+                    : `NM · ${activeNavigation.estimatedMinutesRemaining.toFixed(0)} MIN`
+                  : directToIdentifier !== null
+                    ? 'POSITION REQUIRED'
+                    : 'NO ACTIVE LEG'
             }
           />
           <NavValue

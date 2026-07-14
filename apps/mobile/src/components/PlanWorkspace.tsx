@@ -57,6 +57,7 @@ export function PlanWorkspace() {
   const addWaypoint = useFlightStore((state) => state.addWaypoint);
   const activeLegIndex = useFlightStore((state) => state.activeLegIndex);
   const clearRoute = useFlightStore((state) => state.clearRoute);
+  const directToIdentifier = useFlightStore((state) => state.directToIdentifier);
   const moveWaypoint = useFlightStore((state) => state.moveWaypoint);
   const removeWaypoint = useFlightStore((state) => state.removeWaypoint);
   const replaceRoute = useFlightStore((state) => state.replaceRoute);
@@ -64,6 +65,7 @@ export function PlanWorkspace() {
   const routeIdentifiers = useFlightStore((state) => state.routeIdentifiers);
   const setWorkspace = useFlightStore((state) => state.setWorkspace);
   const setActiveLegIndex = useFlightStore((state) => state.setActiveLegIndex);
+  const setDirectTo = useFlightStore((state) => state.setDirectTo);
   const routeResolution = resolveRouteIdentifiers(
     routeIdentifiers,
     demoAirports.map((airport) => ({ identifier: airport.icao, position: airport.position })),
@@ -711,6 +713,16 @@ export function PlanWorkspace() {
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
         Route sequence
       </Text>
+      {directToIdentifier !== null && (
+        <Card>
+          <Text style={[styles.assumptionWarning, { color: theme.attention }]}>
+            DIRECT TO {directToIdentifier} · SESSION ONLY · ROUTE INDEPENDENT
+          </Text>
+          <View style={styles.retry}>
+            <Action label="Cancel direct-to" onPress={() => setDirectTo(null)} />
+          </View>
+        </Card>
+      )}
       <View style={styles.routeList}>
         {routeIdentifiers.length === 0 && (
           <Card>

@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 270 passed across forty-four test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,179 modules, 5.6 MB
+- Unit tests: 274 passed across forty-six test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,181 modules, 5.6 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -143,6 +143,10 @@ performance data.
 - An opt-in transient map measure tool accepts two long presses, renders labelled endpoints and
   a line, and reports great-circle nautical miles plus initial true bearing. It clears on exit,
   never mutates route intent, and still needs native gesture/accessibility evidence.
+- Places can explicitly start session-only direct-to guidance to a demonstration airport without
+  mutating the saved route. Direct-to and active-leg intent are mutually exclusive, all route
+  edits cancel direct-to, and position loss removes its line/calculations while preserving a
+  visible target/failure state. Automatic sequencing and native cockpit validation remain open.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated

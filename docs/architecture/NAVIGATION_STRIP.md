@@ -8,6 +8,11 @@ is not written to MMKV or a saved-flight record. Adding, removing, reversing, cl
 loading/replacing a route clears activation so derived values cannot silently transfer to new
 route intent. A separate action clears activation without mutating the route.
 
+Places can explicitly select one demonstration airport as a transient direct-to target. This
+does not replace, reorder, or save the current route. Direct-to and active-leg intent are
+mutually exclusive: selecting either clears the other, and every route mutation cancels
+direct-to. Direct-to is not restored after process death.
+
 ## Derived values
 
 Only a fresh validated position sample and an in-range active leg produce navigation values. The
@@ -62,6 +67,15 @@ display and reports distance in nautical miles plus initial true bearing. Coinci
 zero distance with bearing unavailable, and invalid coordinates are rejected. A third long press
 starts a new measurement; disabling the tool clears all points. Measurements are session state
 only and never become route intent or persisted flight data.
+
+## Direct-to display
+
+With a fresh position, direct-to derives one current-to-target great-circle distance, initial
+true bearing, groundspeed ETE, and bounded UTC ETA. A dashed attention-colour line distinguishes
+it from the stored route and active leg. Cross-track is explicitly not applicable because there
+is no selected inbound leg origin. Position loss removes the line and calculated values while
+keeping the selected target and a visible `position required` state. Map and Plan both expose a
+cancel action.
 
 ## Limitations
 
