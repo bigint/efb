@@ -3,6 +3,8 @@ import type { VerifiedDatasetGeneration } from './dataset-manifest';
 export type ActivationBlock =
   | 'candidate-expired'
   | 'candidate-not-effective'
+  | 'candidate-timestamp-invalid'
+  | 'candidate-validity-window-invalid'
   | 'clock-invalid'
   | 'dataset-mismatch'
   | 'manifest-digest-invalid'
@@ -46,10 +48,18 @@ export const decideDatasetActivation = ({
   if (signatureVerifiedAt > integrityCheckedAt) {
     return { allowed: false, block: 'verification-after-integrity' };
   }
-  if (Date.parse(candidate.manifest.effectiveAt) > nowMs) {
+  const effectiveAt = Date.parse(candidate.manifest.effectiveAt);
+  const expiresAt = Date.parse(candidate.manifest.expiresAt);
+  if (!Number.isFinite(effectiveAt) || !Number.isFinite(expiresAt)) {
+    return { allowed: false, block: 'candidate-timestamp-invalid' };
+  }
+  if (expiresAt <= effectiveAt) {
+    return { allowed: false, block: 'candidate-validity-window-invalid' };
+  }
+  if (effectiveAt > nowMs) {
     return { allowed: false, block: 'candidate-not-effective' };
   }
-  if (Date.parse(candidate.manifest.expiresAt) <= nowMs) {
+  if (expiresAt <= nowMs) {
     return { allowed: false, block: 'candidate-expired' };
   }
   if (current === null) return { allowed: true, replacesSequence: null };

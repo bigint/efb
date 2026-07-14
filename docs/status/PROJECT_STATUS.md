@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 78 passed across thirteen test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,059 modules, 4.9 MB
+- Unit tests: 104 passed across sixteen test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,106 modules, 5.2 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -44,6 +44,11 @@ performance data.
   explicit no-solution state. Route legs can now produce wind-adjusted ETE or identify the
   blocking leg, and Plan exposes a clearly labelled constant-wind sandbox. Winds-aloft sourcing
   and a durable plan-assumptions model remain open.
+- Separate versioned user and control SQLite schemas now migrate before app render. Executable
+  schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
+  active data independent from update failure while rejecting cross-attempt, incomplete,
+  wrong-region, invalid-time, and unauthorized-rollback transitions. Filesystem, signature, and
+  atomic activation adapters remain open.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated

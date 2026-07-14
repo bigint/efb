@@ -5,7 +5,7 @@ import { Stack } from 'expo-router';
 import { SQLiteProvider } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 
-import { initialiseUserDatabase, USER_DATABASE_NAME } from '@/database/user-database';
+import { initialiseLocalDatabases, USER_DATABASE_NAME } from '@/database/user-database';
 import { useFlightStore } from '@/store/flight-store';
 
 export default function RootLayout() {
@@ -26,7 +26,7 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <SQLiteProvider databaseName={USER_DATABASE_NAME} onInit={initialiseUserDatabase}>
+    <SQLiteProvider databaseName={USER_DATABASE_NAME} onInit={initialiseLocalDatabases}>
       <QueryClientProvider client={queryClient}>
         <Stack screenOptions={{ headerShown: false }} />
       </QueryClientProvider>

@@ -122,14 +122,6 @@ export const userDatabaseMigrations: readonly UserDatabaseMigration[] = [
       ) STRICT`,
       `CREATE INDEX logbook_entries_flight_date_idx
         ON logbook_entries (flight_date DESC)`,
-      `CREATE TABLE offline_regions (
-        region_id TEXT PRIMARY KEY NOT NULL,
-        jurisdiction TEXT NOT NULL,
-        active_dataset_id TEXT,
-        state TEXT NOT NULL CHECK (state IN ('absent', 'downloading', 'ready', 'failed', 'expired')),
-        byte_length INTEGER NOT NULL DEFAULT 0 CHECK (byte_length >= 0),
-        last_checked_at TEXT
-      ) STRICT`,
     ],
   },
 ] as const;

@@ -49,12 +49,12 @@ describe('user database migration plan', () => {
       'documents',
       'document_bookmarks',
       'logbook_entries',
-      'offline_regions',
     ]) {
       expect(schema).toContain(`CREATE TABLE ${table}`);
     }
     expect(schema).toContain('ON DELETE CASCADE');
     expect(schema).toContain("CHECK (status IN ('draft', 'active', 'archived'))");
+    expect(schema).not.toContain('dataset_generations');
   });
 
   it('applies cleanly to SQLite and enforces route ownership', () => {

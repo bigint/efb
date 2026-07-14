@@ -78,6 +78,24 @@ describe('dataset activation policy', () => {
       generation(2, { signatureVerifiedAt: 'not-a-timestamp' }),
       'verification-timestamp-invalid',
     ],
+    [
+      'invalid candidate timestamp',
+      generation(2, {
+        manifest: { ...manifest(2), effectiveAt: 'not-a-timestamp' },
+      }),
+      'candidate-timestamp-invalid',
+    ],
+    [
+      'reversed validity window',
+      generation(2, {
+        manifest: {
+          ...manifest(2),
+          effectiveAt: '2026-08-02T00:00:00.000Z',
+          expiresAt: '2026-08-01T00:00:00.000Z',
+        },
+      }),
+      'candidate-validity-window-invalid',
+    ],
   ] as const)('blocks %s', (_label, candidate, block) => {
     expect(
       decideDatasetActivation({

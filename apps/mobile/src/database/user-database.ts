@@ -1,6 +1,8 @@
 import { buildUserDatabaseMigrationPlan, USER_DATABASE_VERSION } from '@driftline/database';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { initialiseControlDatabaseFile } from './control-database';
+
 export const USER_DATABASE_NAME = 'driftline-user-v1.db';
 
 interface UserVersionRow {
@@ -32,4 +34,9 @@ export const initialiseUserDatabase = async (database: SQLiteDatabase): Promise<
   if (migrated?.user_version !== USER_DATABASE_VERSION) {
     throw new Error('User database migration did not reach the expected version.');
   }
+};
+
+export const initialiseLocalDatabases = async (userDatabase: SQLiteDatabase): Promise<void> => {
+  await initialiseUserDatabase(userDatabase);
+  await initialiseControlDatabaseFile();
 };
