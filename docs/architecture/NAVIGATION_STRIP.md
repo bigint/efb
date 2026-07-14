@@ -21,9 +21,19 @@ framework-independent calculator returns:
 - ETE to next and route end only when finite groundspeed is greater than zero.
 
 The map strip currently displays groundspeed, altitude, reported course, next/distance, signed
-cross-track side, and remaining distance/ETE. Platform course keeps the literal `PLATFORM`
-reference; simulator course is true-referenced. Stale position, unresolved route data, no active
-leg, and missing groundspeed render unavailable values rather than retained numbers.
+cross-track side, remaining distance/ETE, explicit position-source health, and device battery
+state. Source health includes simulated/device identity, sample age, and horizontal accuracy; an
+unavailable source shows its failure reason instead of retained telemetry. Platform course keeps
+the literal `PLATFORM` reference; simulator course is true-referenced. Stale position,
+unresolved route data, no active leg, and missing groundspeed render unavailable values rather
+than retained numbers.
+
+Battery level, charging state, and system low-power state come from the foreground Expo Battery
+adapter. The boundary accepts only a finite level from 0 through 100 percent and a known native
+state. Unsupported devices, simulators, provider sentinels, invalid telemetry, and adapter
+errors render `UNAVAILABLE`; they never become a zero-percent warning. Native change listeners
+are removed when the map unmounts. Battery telemetry is advisory and does not estimate
+endurance.
 
 The selected leg is also drawn as a thicker accent line above a subdued full-route line and is
 named in the map evidence chip. This visual intent remains available when position is missing;
@@ -35,5 +45,5 @@ This is a navigation-dashboard subset, not a flight director or certified instru
 automatic waypoint sequencing, turn anticipation, magnetic course, heading source, pressure
 altitude, vertical navigation, destination clock ETA, arrival detection, or route-deviation
 alerting. Calculations use the documented spherical Earth model and fictional demonstration
-waypoints. Native lifecycle, accessibility, visual, and independent-flight-fixture evidence are
-open release blockers.
+waypoints. Native battery/event behavior, lifecycle, accessibility, visual, energy, and
+independent-flight-fixture evidence are open release blockers.

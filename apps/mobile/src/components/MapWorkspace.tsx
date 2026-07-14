@@ -18,6 +18,7 @@ import {
 import { position as geospatialPosition } from '@driftline/geospatial';
 
 import { evaluatePosition } from '@/domain/position-source';
+import { useDevicePower } from '@/hooks/use-device-power';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
 
@@ -48,6 +49,7 @@ const graticule = {
 };
 
 export function MapWorkspace() {
+  const devicePower = useDevicePower();
   const theme = useDriftlineTheme();
   const activeLegIndex = useFlightStore((state) => state.activeLegIndex);
   const mapStyle = useMemo<StyleSpecification>(
@@ -310,6 +312,32 @@ export function MapWorkspace() {
                   ? 'NM · ETE —'
                   : `NM · ${activeNavigation.estimatedMinutesRemaining.toFixed(0)} MIN`
                 : 'NO ACTIVE LEG'
+            }
+          />
+          <NavValue
+            label="DATA"
+            value={position.kind === 'available' ? position.origin.toUpperCase() : 'OFFLINE'}
+            unit={
+              position.kind === 'available'
+                ? `${position.sample.horizontalAccuracyMetres === null ? 'ACC —' : `±${position.sample.horizontalAccuracyMetres.toFixed(0)} M`} · ${Math.floor(position.ageMilliseconds / 1_000)} S`
+                : position.reason.replaceAll('-', ' ').toUpperCase()
+            }
+          />
+          <NavValue
+            label="BAT"
+            value={
+              devicePower.kind === 'loading'
+                ? '…'
+                : devicePower.kind === 'available'
+                  ? `${devicePower.levelPercent}%`
+                  : '—'
+            }
+            unit={
+              devicePower.kind === 'loading'
+                ? 'CHECKING'
+                : devicePower.kind === 'available'
+                  ? `${devicePower.lowPowerMode ? 'LOW POWER · ' : ''}${devicePower.batteryState.replaceAll('-', ' ').toUpperCase()}`
+                  : 'UNAVAILABLE'
             }
           />
         </View>
