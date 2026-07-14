@@ -64,6 +64,9 @@ export const destinationPoint = (
   bearing: TrueDegrees,
   distance: NauticalMiles,
 ): Position => {
+  if (!Number.isFinite(distance) || distance < 0) {
+    throw new RangeError('Destination distance must be finite and non-negative');
+  }
   const angular = (distance * 1852) / EARTH_MEAN_RADIUS_METRES;
   const bearingRadians = toRadians(bearing);
   const latitude = toRadians(from.latitude);

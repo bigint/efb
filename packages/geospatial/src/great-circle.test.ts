@@ -28,6 +28,12 @@ describe('spherical great-circle calculations', () => {
     expect(initialTrueBearing(start, destination)).toBeCloseTo(42, 9);
   });
 
+  it('rejects a negative destination distance instead of reversing direction', () => {
+    expect(() => destinationPoint(position(0, 0), trueDegrees(90), nauticalMiles(-1))).toThrow(
+      'non-negative',
+    );
+  });
+
   it('reports signed cross-track and along-track distance', () => {
     const offset = trackOffset(position(0, 0), position(0, 10), position(-1, 5));
     expect(offset.crossTrack).toBeGreaterThan(60);
