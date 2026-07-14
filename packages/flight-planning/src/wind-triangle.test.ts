@@ -73,6 +73,22 @@ describe('true-reference wind triangle', () => {
         windSpeed: knots(-1),
       }),
     ).toThrow(RangeError);
+    expect(() =>
+      solveWindTriangle({
+        desiredCourseTrue: trueDegrees(0),
+        trueAirspeed: knots(1_001),
+        windFromTrue: trueDegrees(0),
+        windSpeed: knots(0),
+      }),
+    ).toThrow('1,000');
+    expect(() =>
+      solveWindTriangle({
+        desiredCourseTrue: trueDegrees(0),
+        trueAirspeed: knots(100),
+        windFromTrue: trueDegrees(0),
+        windSpeed: knots(501),
+      }),
+    ).toThrow('500');
   });
 
   it('reconstructs the requested ground track from solved vectors', () => {

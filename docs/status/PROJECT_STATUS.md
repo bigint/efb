@@ -31,7 +31,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 360 passed across sixty-four test files.
+- Unit tests: 361 passed across sixty-four test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,206 modules, 5.7 MB
   uncompressed bundle artifact). Android production JavaScript/Hermes export passed (2,298
   modules, 5.9 MB uncompressed bundle artifact). Pinned CI now compiles both exports after the

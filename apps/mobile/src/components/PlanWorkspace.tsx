@@ -99,9 +99,11 @@ export function PlanWorkspace() {
   const assumptionsValid =
     assumptionValues.every(Number.isFinite) &&
     (assumptionValues[0] ?? 0) > 0 &&
+    (assumptionValues[0] ?? 1_001) <= 1_000 &&
     (assumptionValues[1] ?? -1) >= 0 &&
     (assumptionValues[1] ?? 360) < 360 &&
-    (assumptionValues[2] ?? -1) >= 0;
+    (assumptionValues[2] ?? -1) >= 0 &&
+    (assumptionValues[2] ?? 501) <= 500;
   const windAdjusted = assumptionsValid
     ? calculateWindAdjustedRoute({
         trueAirspeed: knots(assumptionValues[0] ?? Number.NaN),
@@ -800,7 +802,8 @@ export function PlanWorkspace() {
         </Text>
         {!assumptionsValid && (
           <Text accessibilityRole="alert" style={[styles.inputError, { color: theme.danger }]}>
-            Enter TAS above 0 KT, wind direction from 0–359°T, and wind speed at or above 0 KT.
+            Enter TAS above 0 through 1,000 KT, wind direction from 0–359°T, and wind speed from
+            0 through 500 KT.
           </Text>
         )}
         <Text style={[panelStyles.label, styles.aircraftLabel, { color: theme.secondary }]}>

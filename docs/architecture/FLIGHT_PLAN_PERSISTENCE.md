@@ -35,6 +35,10 @@ the result with entered usable litres. This transient estimate is bounded to sev
 never adds or implies taxi, climb, descent, contingency, alternate, or reserve fuel. Invalid
 assumptions and missing aircraft remain unavailable rather than becoming zero consumption.
 
+Transient wind-triangle inputs are finite and bounded to true airspeed above 0 through 1,000 KT
+and wind from 0 through 500 KT. The pure solver repeats those limits, so a bypassed form cannot
+overflow into plausible route time or crash rendering.
+
 Plan can also select one fictional demonstration airport as a transient alternate. The
 destination-to-alternate leg gets its own distance, constant-wind ETE, wind no-solution state,
 and cruise-only fuel when an aircraft is available. It is explicitly excluded from the headline
