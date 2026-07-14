@@ -15,6 +15,7 @@
     "@driftline/aircraft-performance": "workspace:*",
     "@driftline/aviation-domain": "workspace:*",
     "@driftline/data-contracts": "workspace:*",
+    "@driftline/database": "workspace:*",
     "@driftline/design-system": "workspace:*",
     "@driftline/flight-planning": "workspace:*",
     "@driftline/geospatial": "workspace:*",
