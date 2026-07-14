@@ -31,7 +31,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 343 passed across sixty-three test files.
+- Unit tests: 349 passed across sixty-four test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,206 modules, 5.7 MB
   uncompressed bundle artifact). Android production JavaScript/Hermes export passed (2,298
   modules, 5.9 MB uncompressed bundle artifact). Pinned CI now compiles both exports after the
@@ -58,8 +58,11 @@ performance data.
   non-destructive display clear controls. Decoded observations derive a separately labelled U.S.
   NWS display category from the worse parsed ceiling/visibility input, preserve threshold
   evidence, and fail closed on incomplete or ambiguous inputs. The category is not presented as
-  worldwide or regulatory. Native network/cache recovery QA and briefing completeness remain
-  open.
+  worldwide or regulatory. A progressively disclosed FAA rule-of-thumb density-altitude estimate
+  accepts user-entered field elevation only alongside a current source-verified decoded
+  temperature and altimeter setting, exposes its intermediate approximations, and remains
+  explicitly separate from aircraft performance or runway suitability. Native network/cache
+  recovery QA and briefing completeness remain open.
 - A typed true-reference wind triangle returns heading, signed correction, and groundspeed or an
   explicit no-solution state. Route legs can now produce wind-adjusted ETE or identify the
   blocking leg, and Plan exposes a clearly labelled constant-wind sandbox. Winds-aloft sourcing

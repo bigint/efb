@@ -37,12 +37,14 @@ export function Card({ children }: PropsWithChildren) {
 export function Action({
   destructive = false,
   disabled = false,
+  expanded,
   label,
   onPress,
   primary = false,
 }: {
   readonly destructive?: boolean;
   readonly disabled?: boolean;
+  readonly expanded?: boolean;
   readonly label: string;
   readonly onPress: () => void;
   readonly primary?: boolean;
@@ -57,7 +59,7 @@ export function Action({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
+      accessibilityState={{ disabled, expanded }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [

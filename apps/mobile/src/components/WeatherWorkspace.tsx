@@ -1,8 +1,11 @@
 import { radii, spacing, typography } from '@driftline/design-system';
+import { estimateDensityAltitude } from '@driftline/aircraft-performance';
+import { feet } from '@driftline/data-contracts';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, AppState, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 
 import {
   awcMetarClient,
@@ -632,6 +635,7 @@ function DecodedObservation({
           />
         </View>
       </Card>
+      <DensityAltitudeTool current={currency.kind === 'current'} observation={observation} />
       <Card>
         <Fact label="Source" value={observation.provenance.source} />
         <Fact label="Retrieved UTC" value={observation.receivedAt} />
@@ -645,6 +649,117 @@ function DecodedObservation({
         />
         <Fact label="Raw remarks" value={observation.remarks ?? 'None'} />
       </Card>
+    </View>
+  );
+}
+
+function DensityAltitudeTool({
+  current,
+  observation,
+}: {
+  readonly current: boolean;
+  readonly observation: MetarObservation;
+}) {
+  const theme = useDriftlineTheme();
+  const [expanded, setExpanded] = useState(false);
+  const [fieldElevation, setFieldElevation] = useState('');
+  const trimmedElevation = fieldElevation.trim();
+  const elevationValid = /^-?\d{1,5}$/u.test(trimmedElevation);
+  const elevation = elevationValid ? Number(trimmedElevation) : null;
+  const estimate =
+    current &&
+    elevation !== null &&
+    observation.altimeter !== null &&
+    observation.temperature !== null
+      ? estimateDensityAltitude({
+          altimeterHectopascals: observation.altimeter,
+          fieldElevationFeet: feet(elevation),
+          outsideAirTemperatureCelsius: observation.temperature,
+        })
+      : null;
+  const inputAvailable =
+    current && observation.altimeter !== null && observation.temperature !== null;
+
+  return (
+    <View style={styles.densityTool}>
+      <Action
+        expanded={expanded}
+        label={expanded ? 'Close density-altitude estimate' : 'Estimate density altitude'}
+        onPress={() => setExpanded((value) => !value)}
+      />
+      {expanded && (
+        <Animated.View
+          entering={FadeInDown.duration(320)}
+          exiting={FadeOutUp.duration(220)}
+          style={styles.densityPanel}
+        >
+          <Card>
+            <Text style={[styles.warning, { color: theme.attention }]}>RULE-OF-THUMB ONLY</Text>
+            <Text style={[panelStyles.copy, styles.intro, { color: theme.secondary }]}>
+              FAA approximation using this report's temperature and altimeter setting. It is not
+              aircraft performance data and cannot determine runway suitability.
+            </Text>
+            {!inputAvailable ? (
+              <Text accessibilityRole="alert" style={[styles.error, { color: theme.danger }]}>
+                Unavailable: a current source-verified report with parsed temperature and
+                altimeter setting is required.
+              </Text>
+            ) : (
+              <>
+                <TextInput
+                  accessibilityLabel="Field elevation in feet"
+                  keyboardType="numbers-and-punctuation"
+                  maxLength={6}
+                  onChangeText={setFieldElevation}
+                  placeholder="Field elevation · FT"
+                  placeholderTextColor={theme.secondary}
+                  style={[
+                    styles.input,
+                    styles.densityInput,
+                    {
+                      backgroundColor: theme.background,
+                      borderColor:
+                        trimmedElevation.length === 0 ||
+                        (elevationValid && estimate?.kind !== 'unavailable')
+                          ? theme.separator
+                          : theme.danger,
+                      color: theme.primary,
+                    },
+                  ]}
+                  value={fieldElevation}
+                />
+                {trimmedElevation.length === 0 ? (
+                  <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+                    Enter the published field elevation from a current, appropriate source.
+                  </Text>
+                ) : !elevationValid || estimate?.kind === 'unavailable' ? (
+                  <Text
+                    accessibilityRole="alert"
+                    style={[styles.error, { color: theme.danger }]}
+                  >
+                    Unavailable outside the documented educational approximation boundary.
+                  </Text>
+                ) : estimate?.kind === 'ready' ? (
+                  <View style={styles.facts}>
+                    <Fact
+                      label="Estimated density altitude"
+                      value={`${Math.round(estimate.densityAltitudeFeet).toLocaleString('en-US')} FT`}
+                    />
+                    <Fact
+                      label="Approx. pressure altitude"
+                      value={`${Math.round(estimate.pressureAltitudeFeet).toLocaleString('en-US')} FT`}
+                    />
+                    <Fact
+                      label="Approx. ISA temperature"
+                      value={`${estimate.isaTemperatureCelsius.toFixed(1)} °C`}
+                    />
+                  </View>
+                ) : null}
+              </>
+            )}
+          </Card>
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -681,6 +796,9 @@ const styles = StyleSheet.create({
   },
   cacheTitle: { fontFamily: typography.mono, fontSize: 13, fontWeight: '800' },
   decoded: { gap: spacing.md, marginTop: spacing.xl },
+  densityInput: { minHeight: 48, textAlignVertical: 'center', width: 280 },
+  densityPanel: { width: '100%' },
+  densityTool: { alignItems: 'flex-start', gap: spacing.md },
   error: {
     fontFamily: typography.body,
     fontSize: 12,

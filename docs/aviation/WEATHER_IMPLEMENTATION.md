@@ -32,6 +32,12 @@ and returns unavailable when either required input is missing or ambiguous acros
 boundaries. This is explicitly a U.S. threshold aid, not a worldwide regulatory classification
 or a substitute for a complete observation or briefing.
 
+A progressively disclosed density-altitude tool can combine a current source-verified decoded
+temperature and altimeter setting with a user-entered published field elevation. It uses the
+separately documented FAA rule-of-thumb approximation, displays its intermediate pressure
+altitude and ISA temperature, and fails closed outside bounded educational inputs. It is not an
+aircraft-specific performance calculation or runway decision.
+
 Background retrieval, briefing completeness, full TAF condition decoding, runway visual range,
 international metre visibility, weather-code semantics, and operational weather availability are
 not yet credited as implemented.
