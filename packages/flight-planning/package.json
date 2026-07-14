@@ -1,0 +1,19 @@
+{
+  "name": "@driftline/flight-planning",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@driftline/data-contracts": "workspace:*",
+    "@driftline/geospatial": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}

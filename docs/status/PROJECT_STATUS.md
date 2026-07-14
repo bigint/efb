@@ -2,26 +2,37 @@
 
 ## Current phase
 
-Phase 0 — discovery and foundations.
+Phase 0 foundations are materially established. A Phase 1 development vertical slice exists, but
+Phase 1 remains open pending native-device, accessibility, persistence-recovery, and independent
+safety evidence.
 
 ## Safety status
 
-No release is approved for operational navigation. No authoritative aviation
-datasets or certified aircraft performance data are bundled.
+No release is approved for operational navigation. The mobile app bundles three fictional,
+explicitly unverified demonstration airports and a generic educational aircraft profile. It
+contains no authoritative charts, weather, NOTAM, terrain, obstacle, or certified aircraft
+performance data.
 
 ## Active workstreams
 
-- Repository discovery and dependency selection
-- Product, workflow, and information-architecture research
-- Aviation data-source and jurisdiction review
-- Safety, security, and verification foundations
-- Monorepo and Phase 1 vertical-slice planning
+- Native iOS/Android development-build and physical-device validation
+- SQLite user/control database and immutable dataset-generation registry
+- Simulator clock, movement, accuracy degradation, and lifecycle recovery
+- Property/golden coverage for antimeridian, polar, zero-length, and malformed calculations
+- Accessibility, split-view, performance, battery, and process-death evidence
+- U.S. source-ingestion proof without redistribution while written data rights are clarified
 
 ## Verification
 
-No application build exists yet. Phase gates remain open.
+- pnpm workspace and frozen lockfile are present.
+- Expo Doctor: 20/20 checks passed on 2026-07-14.
+- Strict TypeScript: passed across six implementation packages/apps.
+- ESLint and Prettier: passed.
+- Unit tests: 17 passed across four test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,058 modules, 4.9 MB
+  uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
+- Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated
 
-2026-07-13
-
+2026-07-14

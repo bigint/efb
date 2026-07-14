@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Driftline",
+    "slug": "driftline",
+    "scheme": "driftline",
+    "version": "0.1.0",
+    "orientation": "default",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "computer.rag.driftline",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Driftline uses location to show supplemental position awareness. It is not a primary navigation instrument.",
+        "UISupportsDocumentBrowser": true
+      }
+    },
+    "android": {
+      "package": "computer.rag.driftline",
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-location",
+      "expo-sensors",
+      "expo-sqlite",
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#07100F",
+          "imageWidth": 100
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
