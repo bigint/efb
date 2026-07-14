@@ -42,7 +42,8 @@ performance data.
   input unverified and currency-unknown; live retrieval, TAF, and briefing remain open.
 - A typed true-reference wind triangle returns heading, signed correction, and groundspeed or an
   explicit no-solution state. Route legs can now produce wind-adjusted ETE or identify the
-  blocking leg; winds-aloft sourcing and UI assumptions remain open.
+  blocking leg, and Plan exposes a clearly labelled constant-wind sandbox. Winds-aloft sourcing
+  and a durable plan-assumptions model remain open.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated

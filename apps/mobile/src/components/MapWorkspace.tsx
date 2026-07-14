@@ -202,7 +202,7 @@ export function MapWorkspace() {
           <NavValue
             label="ETE"
             value={summary.estimatedMinutes?.toFixed(0) ?? '—'}
-            unit={summary.status === 'ready' ? 'MIN ROUTE' : 'NO ROUTE'}
+            unit={summary.status === 'ready' ? 'MIN · 118 KT CALM' : 'NO ROUTE'}
           />
         </View>
         <Pressable
