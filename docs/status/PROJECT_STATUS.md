@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 335 passed across sixty-three test files.
+- Unit tests: 339 passed across sixty-three test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,206 modules, 5.7 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -103,7 +103,9 @@ performance data.
   immutable abandonment history and a database-level one-open-run constraint. Every surface
   remains unverified. Recent terminal runs can expand a read-only locked snapshot with exact
   UTC, elapsed time, revision evidence, full item text/critical flags, and each completed or
-  unchecked outcome; native concurrency, recovery, and accessibility evidence are open.
+  unchecked outcome. Open/history completion relations now use domain-sized sentinel limits
+  before decoding to stop unbounded reads and silent truncation; native concurrency, recovery,
+  and accessibility evidence are open.
 - PDF-only document import now validates UUID paths, MIME and bounded container markers; copies
   into app-private storage; verifies SHA-256 after the copy; and persists revalidated metadata
   and bookmark relations. The reader is explicitly disabled pending native malformed-file,
@@ -148,17 +150,17 @@ performance data.
   documented semantic contrast thresholds, and the demonstration map uses the selected palette.
   Native rendering, accessibility-tree, glare, and dark-adaptation evidence remain open.
 - Resolved demonstration routes can now be saved and loaded through transactional SQLite flight
-  and waypoint records. Reads reconstruct and revalidate ordered snapshots, future updates use a
-  compare-and-swap revision, and loading blocks if coordinates or dataset source references have
-  drifted. Drafts can link aircraft profiles, rename, replace route snapshots after
-  confirmation, archive, and restore through compare-and-swap revisions. One detail editor can
-  revise title, aircraft assignment, whole-foot cruise altitude, explicit UTC departure time,
-  and notes atomically. Saved records can be duplicated as independent revision-one drafts, and
-  ephemeral waypoints can move up/down with every route edit clearing active-leg selection. A
-  bounded current-route GPX snapshot revalidates geometry, escapes XML, verifies its cache
-  write, omits invented time/elevation, and stays explicitly fictional and unverified. MMKV no
-  longer claims route durability; drag editing, a native date/time picker, and richer conflict
-  UI remain open.
+  and waypoint records. Reads reconstruct rows and sentinel-bounded waypoints in one exclusive
+  snapshot before revalidating ordered plans; future updates use a compare-and-swap revision,
+  and loading blocks if coordinates or dataset source references have drifted. Drafts can link
+  aircraft profiles, rename, replace route snapshots after confirmation, archive, and restore
+  through compare-and-swap revisions. One detail editor can revise title, aircraft assignment,
+  whole-foot cruise altitude, explicit UTC departure time, and notes atomically. Saved records
+  can be duplicated as independent revision-one drafts, and ephemeral waypoints can move up/down
+  with every route edit clearing active-leg selection. A bounded current-route GPX snapshot
+  revalidates geometry, escapes XML, verifies its cache write, omits invented time/elevation,
+  and stays explicitly fictional and unverified. MMKV no longer claims route durability; drag
+  editing, a native date/time picker, and richer conflict UI remain open.
 - With a saved aircraft selected, Plan now derives a transient cruise-only litre estimate from
   wind-adjusted ETE and entered fuel burn, then compares it with entered usable fuel. The UI
   explicitly excludes taxi, climb, descent, contingency, alternate, and reserve fuel; scenario

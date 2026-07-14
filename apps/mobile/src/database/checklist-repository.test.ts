@@ -4,6 +4,8 @@ import {
   decodeChecklistRun,
   decodeChecklistRuns,
   decodeChecklistTemplates,
+  listRecentTerminalChecklistRuns,
+  loadLatestOpenChecklistRun,
   replaceChecklistTemplate,
   type ChecklistItemRow,
   type ChecklistTemplateRow,
@@ -160,5 +162,61 @@ describe('checklist SQLite read boundary', () => {
       replaceChecklistTemplate(database as never, 1, revisedTemplate()),
     ).rejects.toThrow('another writer');
     expect(statements).toHaveLength(1);
+  });
+
+  it('stops an unbounded open-run completion collection before decoding', async () => {
+    const database = {
+      getAllAsync: () =>
+        Promise.resolve(Array.from({ length: 101 }, (_, item_sequence) => ({ item_sequence }))),
+      getFirstAsync: () =>
+        Promise.resolve({
+          abandoned_at: null,
+          completed_at: null,
+          id: '019f5f42-a146-7c00-861d-7ad2313bbbd5',
+          item_count: 1,
+          started_at: '2026-07-14T11:00:00.000Z',
+          state_revision: 1,
+          template_id: templateRow.id,
+          template_revision: 1,
+          template_snapshot_json: '{}',
+        }),
+    };
+    await expect(loadLatestOpenChecklistRun(database as never)).rejects.toThrow(
+      'supported limits',
+    );
+  });
+
+  it('stops unbounded terminal-run completions inside the snapshot transaction', async () => {
+    let read = 0;
+    const database = {
+      getAllAsync: () => {
+        read += 1;
+        return Promise.resolve(
+          read === 1
+            ? [
+                {
+                  abandoned_at: '2026-07-14T11:01:00.000Z',
+                  completed_at: null,
+                  id: '019f5f42-a146-7c00-861d-7ad2313bbbd5',
+                  item_count: 1,
+                  started_at: '2026-07-14T11:00:00.000Z',
+                  state_revision: 2,
+                  template_id: templateRow.id,
+                  template_revision: 1,
+                  template_snapshot_json: '{}',
+                },
+              ]
+            : Array.from({ length: 2_001 }, (_, item_sequence) => ({
+                item_sequence,
+                run_id: '019f5f42-a146-7c00-861d-7ad2313bbbd5',
+              })),
+        );
+      },
+      withExclusiveTransactionAsync: (operation: (transaction: unknown) => Promise<void>) =>
+        operation(database),
+    };
+    await expect(listRecentTerminalChecklistRuns(database as never)).rejects.toThrow(
+      'supported limits',
+    );
   });
 });

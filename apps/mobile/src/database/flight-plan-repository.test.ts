@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   decodeSavedFlightPlans,
+  listSavedFlightPlans,
   type FlightRow,
   type FlightWaypointRow,
 } from './flight-plan-repository';
@@ -46,5 +47,37 @@ describe('saved flight SQLite read boundary', () => {
     expect(() =>
       decodeSavedFlightPlans([], [{ ...waypoint(0, 'DVL1'), flight_id: 'missing' }]),
     ).toThrow('no loaded flight owner');
+  });
+
+  it('reconstructs rows and waypoints inside one exclusive read transaction', async () => {
+    let transactionCount = 0;
+    const database = {
+      getAllAsync: (sql: string) =>
+        Promise.resolve(
+          sql.includes('FROM flights') ? [flight] : [waypoint(0, 'DVL1'), waypoint(1, 'DVL2')],
+        ),
+      withExclusiveTransactionAsync: (operation: (transaction: unknown) => Promise<void>) => {
+        transactionCount += 1;
+        return operation(database);
+      },
+    };
+    await expect(listSavedFlightPlans(database as never)).resolves.toHaveLength(1);
+    expect(transactionCount).toBe(1);
+  });
+
+  it('detects waypoint overflow with a limit sentinel row', async () => {
+    const database = {
+      getAllAsync: (sql: string) =>
+        Promise.resolve(
+          sql.includes('FROM flights')
+            ? [flight]
+            : Array.from({ length: 10_001 }, (_, sequence) =>
+                waypoint(sequence, `P${sequence}`),
+              ),
+        ),
+      withExclusiveTransactionAsync: (operation: (transaction: unknown) => Promise<void>) =>
+        operation(database),
+    };
+    await expect(listSavedFlightPlans(database as never)).rejects.toThrow('supported limits');
   });
 });

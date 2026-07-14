@@ -67,23 +67,30 @@ const listSavedFlightPlansByState = async (
   archived: boolean,
 ): Promise<readonly SavedFlightPlan[]> => {
   const predicate = archived ? `= 'archived'` : `<> 'archived'`;
-  const [rows, waypointRows] = await Promise.all([
-    database.getAllAsync<FlightRow>(
-      `SELECT * FROM flights WHERE status ${predicate} ORDER BY updated_at DESC LIMIT 101`,
-    ),
-    database.getAllAsync<FlightWaypointRow>(
-      `SELECT waypoint.*
-       FROM flight_waypoints AS waypoint
-       JOIN flights AS flight ON flight.id = waypoint.flight_id
-       WHERE flight.status ${predicate}
-       ORDER BY waypoint.flight_id, waypoint.sequence
-       LIMIT 10000`,
-    ),
-  ]);
-  if (rows.length > 100 || waypointRows.length > 10_000) {
-    throw new Error('Saved flight collection exceeds supported limits.');
+  const result: { plans?: readonly SavedFlightPlan[] } = {};
+  await database.withExclusiveTransactionAsync(async (transaction) => {
+    const [rows, waypointRows] = await Promise.all([
+      transaction.getAllAsync<FlightRow>(
+        `SELECT * FROM flights WHERE status ${predicate} ORDER BY updated_at DESC LIMIT 101`,
+      ),
+      transaction.getAllAsync<FlightWaypointRow>(
+        `SELECT waypoint.*
+         FROM flight_waypoints AS waypoint
+         JOIN flights AS flight ON flight.id = waypoint.flight_id
+         WHERE flight.status ${predicate}
+         ORDER BY waypoint.flight_id, waypoint.sequence
+         LIMIT 10001`,
+      ),
+    ]);
+    if (rows.length > 100 || waypointRows.length > 10_000) {
+      throw new Error('Saved flight collection exceeds supported limits.');
+    }
+    result.plans = decodeSavedFlightPlans(rows, waypointRows);
+  });
+  if (result.plans === undefined) {
+    throw new Error('Saved flight read transaction produced no result.');
   }
-  return decodeSavedFlightPlans(rows, waypointRows);
+  return result.plans;
 };
 
 export const listSavedFlightPlans = (

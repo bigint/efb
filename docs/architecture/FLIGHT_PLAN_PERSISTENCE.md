@@ -81,9 +81,11 @@ bound parameters. The update repository accepts only the next revision, uses
 A zero-row update is treated as a concurrent-writer conflict; partial waypoint replacement rolls
 back.
 
-Reads bound collection size, reconstruct relational waypoint order, and revalidate the entire
-domain object. Owner mismatches, sequence gaps, duplicate identifiers, malformed coordinates,
-bad timestamps, or invalid revisions stop the saved-flight library.
+Reads reconstruct flight rows and relational waypoint order inside one exclusive snapshot
+transaction, then revalidate the entire domain object. A 10,001st waypoint sentinel detects
+overflow beyond 100 plans by 100 waypoints rather than silently truncating the relation. Owner
+mismatches, sequence gaps, duplicate identifiers, malformed coordinates, bad timestamps, or
+invalid revisions stop the saved-flight library.
 
 ## Dataset drift
 

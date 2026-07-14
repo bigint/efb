@@ -32,12 +32,14 @@ normal, abnormal, or emergency procedure content. Every template and active run 
   unchanged item timestamps are preserved.
 - The Library exposes at most 20 recent completed or abandoned runs as read-only locked
   snapshots. History rows and their relational completions are read in one exclusive
-  transaction, decoded through the same domain boundary as an active run, and a malformed
-  historical row disables only the history view rather than hiding otherwise valid templates or
-  the open run. Each row can expand its immutable snapshot to show start/terminal UTC, elapsed
-  seconds, state/template revision, full challenge/response text, critical flags, and the exact
-  completed/unchecked outcome for every item. Expansion never creates a transition or reads the
-  current mutable template.
+  transaction. Open-run completions use a 101st sentinel row; terminal history uses a
+  `run limit × 100 + 1` sentinel, so a corrupt relation cannot cause an unbounded read or silent
+  truncation. Results are decoded through the same domain boundary as an active run, and a
+  malformed historical row disables only the history view rather than hiding otherwise valid
+  templates or the open run. Each row can expand its immutable snapshot to show start/terminal
+  UTC, elapsed seconds, state/template revision, full challenge/response text, critical flags,
+  and the exact completed/unchecked outcome for every item. Expansion never creates a transition
+  or reads the current mutable template.
 - The active template collection is bounded to 100 templates and 10,000 item rows. Items are
   joined only from non-deleted templates, so an obsolete soft-deleted template cannot poison the
   active library read.

@@ -7,6 +7,8 @@ import {
 } from '@driftline/aviation-domain';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+const MAX_CHECKLIST_ITEMS = 100;
+
 export interface ChecklistTemplateRow {
   readonly aircraft_id: string | null;
   readonly aircraft_label: string;
@@ -285,9 +287,13 @@ export const loadLatestOpenChecklistRun = async (
   if (row === null) return null;
   const completions = await database.getAllAsync<ChecklistCompletionRow>(
     `SELECT item_sequence FROM checklist_completions
-     WHERE run_id = ? ORDER BY item_sequence`,
+     WHERE run_id = ? ORDER BY item_sequence
+     LIMIT ${MAX_CHECKLIST_ITEMS + 1}`,
     row.id,
   );
+  if (completions.length > MAX_CHECKLIST_ITEMS) {
+    throw new Error('Open checklist completion collection exceeds supported limits');
+  }
   return decodeChecklistRun(row, completions);
 };
 
@@ -300,6 +306,7 @@ export const listRecentTerminalChecklistRuns = async (
   }
   let decoded: readonly ChecklistRun[] = [];
   await database.withExclusiveTransactionAsync(async (transaction) => {
+    const completionLimit = limit * MAX_CHECKLIST_ITEMS;
     const rows = await transaction.getAllAsync<ChecklistRunRow>(
       `SELECT id, template_id, template_revision, started_at, completed_at, abandoned_at,
         item_count, template_snapshot_json, state_revision
@@ -322,9 +329,14 @@ export const listRecentTerminalChecklistRuns = async (
          ORDER BY COALESCE(completed_at, abandoned_at) DESC, id DESC
          LIMIT ?
        )
-       ORDER BY run_id, item_sequence`,
+       ORDER BY run_id, item_sequence
+       LIMIT ?`,
       limit,
+      completionLimit + 1,
     );
+    if (completions.length > completionLimit) {
+      throw new Error('Checklist history completion collection exceeds supported limits');
+    }
     decoded = decodeChecklistRuns(rows, completions);
   });
   return decoded;
