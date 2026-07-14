@@ -51,6 +51,12 @@ sample age, and horizontal accuracy at point of use. It disappears into an expli
 reason when the source is stale or failed. This is a relative information readout, not route
 sequencing or a direct-to command.
 
+While Map is mounted, fresh samples may form a session-only 120-point breadcrumb trail. It
+retains only moved coordinates, replaces the timestamp of stationary points, splits antimeridian
+geometry, and clears on position unavailability, source change, clock rollback, same-time
+replacement, or an explicit user action. It is not stored and cannot serve as a flight log or
+post-flight record.
+
 ## Verification boundary
 
 Pure tests cover unit conversion, nullable provider values, device status mapping, freshness,

@@ -62,17 +62,24 @@ not hold a stale rotation. Returning to north-up removes automatic centring.
 ## Layers and legend
 
 An explicit session-only panel can hide the fictional airport markers, demonstration grid,
-ownship-centred distance rings, and stored-route backdrop independently. It cannot hide ownship,
-active-leg, direct-to, measurement, or source-status evidence. The adjacent legend names every
-rendered line/symbol class and states that no chart, airspace, terrain, obstacle, navaid, or
-weather-overlay dataset is loaded. Layer switches expose checked accessibility state and keep
-the cockpit touch-target minimum.
+ownship-centred distance rings, bounded position trail, and stored-route backdrop independently.
+It cannot hide ownship, active-leg, direct-to, measurement, or source-status evidence. The
+adjacent legend names every rendered line/symbol class and states that no chart, airspace,
+terrain, obstacle, navaid, or weather-overlay dataset is loaded. Layer switches expose checked
+accessibility state and keep the cockpit touch-target minimum.
 
 When a fresh position is available, the optional fine-dashed rings show fixed spherical 5, 10,
 and 20 NM radii around ownship. Geometry is regenerated from the validated sample, splits at the
 antimeridian instead of drawing across the world, and disappears with position loss. The rings
 are distance references only: they do not encode accuracy, chart scale, terrain clearance, radar
 range, or airspace.
+
+The optional thin position trail retains at most 120 distinct moved coordinates in memory while
+a fresh source remains available. Stationary samples refresh monotonic time without adding
+visual points. Source changes, source loss, clock rollback, or same-timestamp replacement reset
+the collection; a manual control also clears it. Antimeridian crossings split into bounded line
+segments. The trail is never persisted, exported, called a flight track, or bridged across stale
+position gaps.
 
 ## Transient measure tool
 

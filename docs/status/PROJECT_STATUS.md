@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 313 passed across fifty-nine test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,199 modules, 5.7 MB
+- Unit tests: 317 passed across sixty test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,200 modules, 5.7 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -186,6 +186,10 @@ performance data.
   fresh position and split antimeridian crossings to avoid world-spanning lines. They disappear
   on position loss and explicitly carry no accuracy, terrain, chart-scale, radar, or airspace
   meaning; native rendering remains unverified.
+- A session-only map breadcrumb retains at most 120 distinct moved coordinates, refreshes time
+  without duplicating stationary points, splits antimeridian crossings, and resets on source
+  loss, source changes, clock rollback, replacement samples, or explicit clear. It is not
+  persisted or represented as a flight record; native rendering/lifecycle evidence remains open.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated

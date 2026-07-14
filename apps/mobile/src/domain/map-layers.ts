@@ -1,10 +1,12 @@
-export type MapLayerId = 'airports' | 'demo-grid' | 'range-rings' | 'route-backdrop';
+export type MapLayerId =
+  'airports' | 'demo-grid' | 'position-trail' | 'range-rings' | 'route-backdrop';
 
 export type MapLayerVisibility = Readonly<Record<MapLayerId, boolean>>;
 
 export const defaultMapLayerVisibility: MapLayerVisibility = {
   airports: true,
   'demo-grid': true,
+  'position-trail': true,
   'range-rings': true,
   'route-backdrop': true,
 };

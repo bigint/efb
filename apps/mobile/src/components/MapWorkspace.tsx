@@ -7,7 +7,7 @@ import {
   type StyleSpecification,
 } from '@maplibre/maplibre-react-native';
 import { cockpitTarget, radii, spacing, typography } from '@driftline/design-system';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { demoAirports } from '@driftline/aviation-domain';
@@ -33,6 +33,11 @@ import {
 } from '@/domain/map-layers';
 import { inspectMapPoint, type MapInspection } from '@/domain/map-inspection';
 import { buildMapRangeRings } from '@/domain/map-range-rings';
+import {
+  appendPositionTrail,
+  buildPositionTrailGeometry,
+  type PositionTrailPoint,
+} from '@/domain/position-trail';
 import { useDevicePower } from '@/hooks/use-device-power';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
@@ -72,6 +77,7 @@ export function MapWorkspace() {
   const [inspection, setInspection] = useState<MapInspection | null>(null);
   const [measurementPoints, setMeasurementPoints] = useState<MapMeasurementPoints>([]);
   const [orientationMode, setOrientationMode] = useState<MapOrientationMode>('north-up');
+  const [positionTrail, setPositionTrail] = useState<readonly PositionTrailPoint[]>([]);
   const activeLegIndex = useFlightStore((state) => state.activeLegIndex);
   const directToIdentifier = useFlightStore((state) => state.directToIdentifier);
   const mapStyle = useMemo<StyleSpecification>(
@@ -159,6 +165,23 @@ export function MapWorkspace() {
           geospatialPosition(ownship.latitude, ownship.longitude),
           [5, 10, 20],
         );
+  useEffect(() => {
+    if (ownship === null || ownshipOrigin === null) {
+      setPositionTrail((current) => (current.length === 0 ? current : []));
+      return;
+    }
+    setPositionTrail((current) => appendPositionTrail(current, ownshipOrigin, ownship));
+  }, [ownship?.latitude, ownship?.longitude, ownship?.sampledAt, ownshipOrigin]);
+  const positionTrailGeoJson = {
+    features: [
+      {
+        geometry: buildPositionTrailGeometry(positionTrail),
+        properties: {},
+        type: 'Feature' as const,
+      },
+    ],
+    type: 'FeatureCollection' as const,
+  };
   const positionUnit =
     position.kind === 'available'
       ? position.origin === 'device'
@@ -298,6 +321,19 @@ export function MapWorkspace() {
             <Layer
               id="active-leg-line"
               paint={{ 'line-color': theme.accent, 'line-width': 6 }}
+              type="line"
+            />
+          </GeoJSONSource>
+        )}
+        {layers['position-trail'] && ownship !== null && positionTrail.length >= 2 && (
+          <GeoJSONSource data={positionTrailGeoJson} id="position-trail">
+            <Layer
+              id="position-trail-line"
+              paint={{
+                'line-color': theme.accent,
+                'line-opacity': 0.72,
+                'line-width': 2,
+              }}
               type="line"
             />
           </GeoJSONSource>
@@ -533,6 +569,22 @@ export function MapWorkspace() {
               </Text>
             </Pressable>
           )}
+          {positionTrail.length >= 2 && (
+            <Pressable
+              accessibilityLabel={`Clear ${positionTrail.length}-point session position trail`}
+              accessibilityRole="button"
+              onPress={() => setPositionTrail([])}
+              style={({ pressed }) => [
+                styles.orientationControl,
+                { backgroundColor: theme.panelRaised, borderColor: theme.separator },
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[styles.orientationText, { color: theme.primary }]}>
+                CLEAR TRAIL · {positionTrail.length}
+              </Text>
+            </Pressable>
+          )}
         </View>
         {layerPanelOpen && (
           <View style={[styles.layerPanel, { backgroundColor: theme.panelRaised }]}>
@@ -544,6 +596,7 @@ export function MapWorkspace() {
                 [
                   ['demo-grid', 'Demo grid'],
                   ['airports', 'Airports'],
+                  ['position-trail', 'Session trail'],
                   ['range-rings', 'Ownship rings'],
                   ['route-backdrop', 'Stored route'],
                 ] as const satisfies readonly (readonly [MapLayerId, string])[]
@@ -558,8 +611,9 @@ export function MapWorkspace() {
             </View>
             <Text style={[styles.legendCopy, { color: theme.secondary }]}>
               LEGEND · accent solid = active leg · attention dashed = direct-to · attention thin
-              = measure · fine dashed = 5/10/20 NM ownship rings · outlined labels = fictional
-              airports · directional/ring ownship = course known/unknown
+              = measure · accent thin = session position trail · fine dashed = 5/10/20 NM
+              ownship rings · outlined labels = fictional airports · directional/ring ownship =
+              course known/unknown
             </Text>
             <Text style={[styles.legendCopy, { color: theme.attention }]}>
               No chart, airspace, terrain, obstacle, navaid, or weather-overlay data loaded.
