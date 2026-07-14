@@ -38,6 +38,13 @@ original/amended/corrected state, issue UTC, and validity start/end across adjac
 impossible or greater-than-48-hour windows fail closed. Forecast change groups and weather
 content remain raw and uninterpreted.
 
+After header validation, the display may identify bounded change markers only. `FMDDHHMM`
+resolves to a UTC start instant; `TEMPO`, `BECMG`, `PROB30`, and `PROB40` periods resolve to UTC
+start/end instants, including a combined `PROBxx TEMPO` marker. Every marker must fall inside
+the report validity and carry at least one following condition token. The condition tokens
+remain verbatim and are explicitly labelled raw; no prevailing-condition merge or weather
+semantic is inferred.
+
 Successful data carries explicit AWC source, retrieval time, observation source time, API model
 version, worldwide jurisdiction, real origin, and source-verified status. Product currency uses
 the observation time and a one-hour validity limit. A future or stale observation renders
@@ -69,7 +76,8 @@ The live card says `SUPPLEMENTAL WEATHER ONLY`, states the shared one-request-pe
 and does not call either result a briefing. Decoded METAR output displays source and retrieval
 UTC alongside observation UTC. Raw TAF output is visually separated from decoded observations
 and shows issue/amendment/valid-from/valid-to evidence plus current/not-yet-valid/expired state.
-Manual pasted reports remain unverified and currency-unknown.
+A separate section labels conservative change-marker timing while saying that weather conditions
+are not decoded. Manual pasted reports remain unverified and currency-unknown.
 
 Decoded observations show a separately labelled `U.S. NWS DISPLAY CATEGORY` derived from the
 worse of parsed ceiling and statute-mile visibility. The visible evidence includes the ceiling
@@ -85,7 +93,9 @@ and multiple-report bodies. Schema/repository tests cover timestamp shape, stati
 rebinding, multiple TAF rejection, header month rollover, hour-24 validity, expiry, and explicit
 local-cache provenance. Classifier tests cover worse-input selection, category boundaries,
 greater-than visibility, missing inputs, obscured ceiling height, and ambiguous less-than
-bounds. Direct HTTPS smoke requests to the documented endpoints returned current raw METAR and
-multiline TAF reports on 2026-07-14. Native network loss, captive portals, TLS interception, app
-lifecycle, physical-device rendering, cache recovery, provider schema changes, forecast
-decoding, and briefing completeness remain release blockers.
+bounds. TAF timeline tests cover FM minute precision, month rollover, bounded periods,
+probability/temporary composition, base-only forecasts, malformed markers, empty bodies, and
+out-of-validity rejection. Direct HTTPS smoke requests to the documented endpoints returned
+current raw METAR and multiline TAF reports on 2026-07-14. Native network loss, captive portals,
+TLS interception, app lifecycle, physical-device rendering, cache recovery, provider schema
+changes, forecast decoding, and briefing completeness remain release blockers.

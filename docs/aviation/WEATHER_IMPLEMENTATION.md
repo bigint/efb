@@ -18,8 +18,12 @@ latest METAR or bounded raw TAF from AWC and retains successful raw products in 
 timestamped SQLite cache. Cache reads revalidate and reparse their source text; a cached METAR
 has currency recomputed against the current clock. TAF parsing is deliberately limited to header
 amendment state, issue time, and a resolved UTC validity window; current/not-yet-valid/expired
-is recomputed on display. Forecast change groups and their weather semantics remain raw and
-uninterpreted.
+is recomputed on display. A separate conservative timeline pass recognizes `FM`, `TEMPO`,
+`BECMG`, `PROB30`, `PROB40`, and combined probability/temporary markers, resolves their explicit
+UTC points or periods within the header validity, and preserves each following condition body as
+raw text. It does not interpret wind, visibility, weather, or cloud meaning inside those bodies,
+and malformed/out-of-window markers make the timeline unavailable while the complete raw TAF
+remains visible.
 
 Decoded METAR output may also derive a display-only flight category using the published U.S. NWS
 ceiling and statute-mile visibility thresholds. The classifier uses the worse of the lowest
@@ -28,6 +32,6 @@ and returns unavailable when either required input is missing or ambiguous acros
 boundaries. This is explicitly a U.S. threshold aid, not a worldwide regulatory classification
 or a substitute for a complete observation or briefing.
 
-Background retrieval, briefing completeness, full TAF decoding, runway visual range,
+Background retrieval, briefing completeness, full TAF condition decoding, runway visual range,
 international metre visibility, weather-code semantics, and operational weather availability are
 not yet credited as implemented.

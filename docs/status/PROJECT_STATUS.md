@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 307 passed across fifty-eight test files.
+- Unit tests: 310 passed across fifty-eight test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,198 modules, 5.7 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -43,13 +43,15 @@ performance data.
   with a one-minute request interval, provider/station validation, source provenance, and
   currency evaluation. The same client retrieves one bounded raw TAF with station binding and a
   shared request gate. A conservative header parser resolves issue/amendment state and UTC
-  validity across month boundaries while leaving all forecast groups raw. Successful raw reports
-  now persist in a bounded per-product/station SQLite cache with receipt/source times. Reads
-  revalidate and reparse source text, cached results are visibly labelled, METAR currency and
-  TAF header validity are recomputed. Decoded observations derive a separately labelled U.S. NWS
-  display category from the worse parsed ceiling/visibility input, preserve threshold evidence,
-  and fail closed on incomplete or ambiguous inputs. The category is not presented as worldwide
-  or regulatory. Native network/cache recovery QA and briefing completeness remain open.
+  validity across month boundaries. A second pass identifies bounded FM/TEMPO/BECMG/PROB change
+  marker timing while leaving every forecast condition body raw and uninterpreted. Successful
+  raw reports now persist in a bounded per-product/station SQLite cache with receipt/source
+  times. Reads revalidate and reparse source text, cached results are visibly labelled, METAR
+  currency and TAF header validity are recomputed. Decoded observations derive a separately
+  labelled U.S. NWS display category from the worse parsed ceiling/visibility input, preserve
+  threshold evidence, and fail closed on incomplete or ambiguous inputs. The category is not
+  presented as worldwide or regulatory. Native network/cache recovery QA and briefing
+  completeness remain open.
 - A typed true-reference wind triangle returns heading, signed correction, and groundspeed or an
   explicit no-solution state. Route legs can now produce wind-adjusted ETE or identify the
   blocking leg, and Plan exposes a clearly labelled constant-wind sandbox. Winds-aloft sourcing

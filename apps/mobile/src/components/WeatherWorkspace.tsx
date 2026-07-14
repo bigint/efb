@@ -10,6 +10,7 @@ import {
   evaluateMetarCurrency,
   evaluateTafValidity,
   parseMetar,
+  parseTafTimeline,
   type AwcTafReport,
   type MetarObservation,
 } from '@driftline/weather';
@@ -316,6 +317,12 @@ function RawTaf({
 }) {
   const theme = useDriftlineTheme();
   const validity = evaluateTafValidity(report, new Date());
+  let timeline: ReturnType<typeof parseTafTimeline> | null = null;
+  try {
+    timeline = parseTafTimeline(report);
+  } catch {
+    timeline = null;
+  }
   return (
     <View style={styles.decoded}>
       <View>
@@ -327,7 +334,7 @@ function RawTaf({
           {validity.kind === 'current'
             ? 'CURRENT'
             : validity.reason.replaceAll('-', ' ').toUpperCase()}{' '}
-          · GROUPS NOT DECODED
+          · WEATHER CONDITIONS NOT DECODED
         </Text>
       </View>
       <Card>
@@ -342,6 +349,39 @@ function RawTaf({
         <Fact label="Valid to UTC" value={report.validTo} />
         <Fact label="Source" value={report.provenance.source} />
         <Fact label="Retrieved UTC" value={report.receivedAt} />
+      </Card>
+      <Card>
+        <Text style={[styles.sourceState, { color: theme.attention }]}>
+          CHANGE MARKERS ONLY ·{' '}
+          {timeline === null ? 'UNAVAILABLE' : `${timeline.groups.length} IDENTIFIED`} · RAW
+          CONDITIONS
+        </Text>
+        {timeline === null ? (
+          <Text style={[styles.error, { color: theme.danger }]}>
+            Change-marker structure failed conservative validation. Use the complete raw TAF.
+          </Text>
+        ) : (
+          <View style={styles.tafGroups}>
+            <View style={[styles.tafGroup, { borderColor: theme.separator }]}>
+              <Fact label="Base forecast · overall validity" value={timeline.baseForecastRaw} />
+            </View>
+            {timeline.groups.map((group, index) => (
+              <View
+                key={`${group.marker}-${index}`}
+                style={[styles.tafGroup, { borderColor: theme.separator }]}
+              >
+                <Fact
+                  label={`${group.kind.replaceAll('-', ' ').toUpperCase()} · ${group.marker}`}
+                  value={group.rawConditions}
+                />
+                <Text style={[styles.tafTiming, { color: theme.secondary }]}>
+                  START {group.startsAt}
+                  {group.endsAt === null ? ' · END NOT EXPLICIT' : ` · END ${group.endsAt}`}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
       </Card>
     </View>
   );
@@ -517,6 +557,13 @@ const styles = StyleSheet.create({
   },
   station: { fontFamily: typography.mono, fontSize: 24, fontWeight: '800' },
   stationInput: { minHeight: 48, minWidth: 140, width: 180 },
+  tafGroup: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+  },
+  tafGroups: { marginTop: spacing.md },
+  tafTiming: { fontFamily: typography.mono, fontSize: 10 },
   warning: {
     fontFamily: typography.mono,
     fontSize: 11,
