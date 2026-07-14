@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 296 passed across fifty-four test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,194 modules, 5.6 MB
+- Unit tests: 301 passed across fifty-six test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,196 modules, 5.7 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -69,7 +69,10 @@ performance data.
   airport browsing remains available.
 - Airport dossiers expose runway geometry and full available provenance metadata, rank nearby
   demonstration airports by validated great-circle distance, and explicitly mark frequencies,
-  services, fuel, notes, NOTAM, and sunrise/sunset as unavailable rather than inventing values.
+  services, fuel, notes, and NOTAM as unavailable rather than inventing values. Sunrise/sunset
+  is a separate NOAA-derived local astronomical calculation for the airport's current local
+  calendar date, shown in UTC with polar/invalid failure states and no legal day/night or
+  operational claim.
 - A local Records workspace now writes validated logbook entries through parameterized SQLite
   transactions and labels regulatory compliance as unevaluated. An atomic dashboard and
   exclusive keyset pagination bound each rendered page to 100 validated entries and 2,000

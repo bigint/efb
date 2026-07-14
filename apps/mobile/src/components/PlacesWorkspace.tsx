@@ -3,11 +3,17 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { demoAirports, findNearbyAirports, searchAirports } from '@driftline/aviation-domain';
+import {
+  calculateSolarEvents,
+  demoAirports,
+  findNearbyAirports,
+  searchAirports,
+} from '@driftline/aviation-domain';
 import { classifyDataCurrency } from '@driftline/data-contracts';
 
 import { evaluatePosition } from '@/domain/position-source';
 import { calculateRelativePosition } from '@/domain/relative-position';
+import { calendarDateInTimeZone } from '@/domain/calendar-date';
 import {
   listAirportFavourites,
   setAirportFavourite,
@@ -44,6 +50,12 @@ export function PlacesWorkspace() {
       ? null
       : calculateRelativePosition(evaluatedPosition, selected.position);
   const nearby = selected === undefined ? [] : findNearbyAirports(demoAirports, selected, 5);
+  const solarCalendarDate =
+    selected === undefined ? null : calendarDateInTimeZone(new Date(), selected.timezone);
+  const solarEvents =
+    selected === undefined || solarCalendarDate === null
+      ? null
+      : calculateSolarEvents(selected.position, solarCalendarDate);
 
   const reloadFavourites = useCallback(async () => {
     try {
@@ -235,6 +247,51 @@ export function PlacesWorkspace() {
               </Card>
             ))}
             <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
+              Computed solar events
+            </Text>
+            <Card>
+              <Text style={[styles.warning, { color: theme.attention }]}>
+                NOAA-DERIVED ASTRONOMICAL ESTIMATE · NOT OBSERVED
+              </Text>
+              <View style={styles.facts}>
+                <Fact label="Airport local date" value={solarCalendarDate ?? 'UNAVAILABLE'} />
+                <Fact
+                  label="Sunrise UTC"
+                  value={
+                    solarEvents?.kind === 'available'
+                      ? `${solarEvents.sunriseUtc.slice(0, 10)} ${solarEvents.sunriseUtc.slice(11, 16)}Z`
+                      : 'UNAVAILABLE'
+                  }
+                />
+                <Fact
+                  label="Sunset UTC"
+                  value={
+                    solarEvents?.kind === 'available'
+                      ? `${solarEvents.sunsetUtc.slice(0, 10)} ${solarEvents.sunsetUtc.slice(11, 16)}Z`
+                      : 'UNAVAILABLE'
+                  }
+                />
+                <Fact
+                  label="Calculation state"
+                  value={
+                    solarEvents === null
+                      ? 'CLOCK / TIMEZONE UNAVAILABLE'
+                      : solarEvents.kind === 'available'
+                        ? solarEvents.accuracy.replaceAll('-', ' ').toUpperCase()
+                        : solarEvents.reason.replaceAll('-', ' ').toUpperCase()
+                  }
+                />
+              </View>
+              <Text
+                style={[panelStyles.copy, styles.unavailableCopy, { color: theme.secondary }]}
+              >
+                Uses the selected coordinate, a 0.833° refraction assumption, and the airport's
+                current local calendar date. NOAA says theoretical error increases beyond ±72°
+                latitude and actual atmosphere can shift observed times. Do not infer legal
+                day/night, lighting, or airport availability.
+              </Text>
+            </Card>
+            <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
               Operational fields
             </Text>
             <Card>
@@ -247,7 +304,6 @@ export function PlacesWorkspace() {
                 <Fact label="Fuel" value="NOT SUPPLIED" />
                 <Fact label="Operating notes" value="NOT SUPPLIED" />
                 <Fact label="Current NOTAM" value="NOT AVAILABLE" />
-                <Fact label="Sunrise / sunset" value="NOT CALCULATED" />
               </View>
               <Text
                 style={[panelStyles.copy, styles.unavailableCopy, { color: theme.secondary }]}
