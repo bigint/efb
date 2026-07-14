@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 160 passed across twenty-four test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,155 modules, 5.4 MB
+- Unit tests: 169 passed across twenty-six test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,157 modules, 5.4 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -48,7 +48,9 @@ performance data.
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,
   wrong-region, invalid-time, and unauthorized-rollback transitions. Filesystem, signature, and
-  atomic activation adapters remain open.
+  atomic activation adapters remain open. A read-only System manager now cross-checks active
+  pointers, manifests, file metadata, and recent attempts before reporting registry state, while
+  explicitly stating that filesystem contents have not been rehashed.
 - A local Records workspace now writes validated logbook entries through parameterized SQLite
   transactions, restores and revalidates them for totals, and labels regulatory compliance as
   unevaluated. Migration v2 preserves v1 rows and moves attachments to relational references; a

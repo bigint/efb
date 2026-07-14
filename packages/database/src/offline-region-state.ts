@@ -1,7 +1,7 @@
 import { decideDatasetActivation, type ActivationBlock } from './dataset-activation';
-import type { VerifiedDatasetGeneration } from './dataset-manifest';
+import { MAX_DATASET_TOTAL_BYTES, type VerifiedDatasetGeneration } from './dataset-manifest';
 
-export const MAX_OFFLINE_DATASET_BYTES = 20 * 1024 * 1024 * 1024;
+export const MAX_OFFLINE_DATASET_BYTES = MAX_DATASET_TOTAL_BYTES;
 
 export interface ActiveOfflineGeneration {
   readonly activatedAt: string;

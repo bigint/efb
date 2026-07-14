@@ -31,3 +31,22 @@ staging; that authorization travels with the staged state and is rechecked at co
 
 The package state machine is pure and platform-independent. Network, filesystem, signature,
 digest, and SQLite adapters must report evidence into it; they do not redefine its policy.
+
+## Registry read boundary
+
+The System workspace now reads `control.sqlite` through a separate, read-only adapter. It joins
+active pointers to generation records, reparses each manifest, and requires dataset ID, region,
+jurisdiction, sequence, state, activation time, signature metadata, and manifest metadata to
+agree. It then requires an exact manifest-to-file-row match for path, media type, byte count,
+and SHA-256 before reporting a package. Recent transfer attempts are revalidated for bounded,
+monotonic byte counts, status/failure consistency, required candidate IDs, and timestamp order.
+
+Registry queries and manifests are bounded to 100 active packages, 10,000 active file rows, and
+20 GiB aggregate package size. Excess collections fail closed. The manager states that the
+filesystem has not been rehashed: registry metadata is not equivalent to a current filesystem
+integrity check.
+
+Until download, signature verification, app-private staging, digest streaming, filesystem
+reconciliation, and atomic activation adapters exist, the manager is intentionally read-only.
+The empty state says that no verified region is active and does not misclassify bundled
+fictional fixtures as an aviation dataset.

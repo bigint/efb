@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+export const MAX_DATASET_FILE_COUNT = 10_000;
+export const MAX_DATASET_TOTAL_BYTES = 20 * 1024 * 1024 * 1024;
+
 const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/u, 'Expected lowercase SHA-256 hex');
 
 export const datasetFileSchema = z
@@ -24,7 +27,7 @@ export const datasetManifestSchema = z
     datasetId: z.uuid(),
     effectiveAt: z.iso.datetime(),
     expiresAt: z.iso.datetime(),
-    files: z.array(datasetFileSchema).min(1),
+    files: z.array(datasetFileSchema).min(1).max(MAX_DATASET_FILE_COUNT),
     formatVersion: z.literal(1),
     generatedAt: z.iso.datetime(),
     jurisdiction: z.string().min(1),
@@ -43,6 +46,7 @@ export const datasetManifestSchema = z
       });
     }
     const paths = new Set<string>();
+    let totalBytes = 0;
     for (const [index, file] of manifest.files.entries()) {
       if (paths.has(file.path)) {
         context.addIssue({
@@ -52,6 +56,15 @@ export const datasetManifestSchema = z
         });
       }
       paths.add(file.path);
+      totalBytes += file.byteLength;
+      if (!Number.isSafeInteger(totalBytes) || totalBytes > MAX_DATASET_TOTAL_BYTES) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Dataset aggregate size exceeds the supported limit',
+          path: ['files', index, 'byteLength'],
+        });
+        break;
+      }
     }
   });
 

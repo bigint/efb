@@ -7,6 +7,7 @@ import { useDriftlineTheme } from '@/theme';
 import { evaluatePosition } from '@/domain/position-source';
 
 import { Card, PanelHeader, panelStyles } from './PanelPrimitives';
+import { OfflineDataPanel } from './OfflineDataPanel';
 
 export function SystemWorkspace() {
   const theme = useDriftlineTheme();
@@ -86,6 +87,7 @@ export function SystemWorkspace() {
           }
         />
       </Card>
+      <OfflineDataPanel />
       <Text style={[styles.safety, { color: theme.danger }]}>
         NOT APPROVED AS A PRIMARY NAVIGATION INSTRUMENT
       </Text>
