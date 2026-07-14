@@ -58,8 +58,10 @@ performance data.
   transactions, restores and revalidates them for totals, and labels regulatory compliance as
   unevaluated. Migration v2 preserves v1 rows and moves attachments to relational references; a
   database failure stops the normal shell. Native recovery and visual/accessibility QA remain
-  open. React Native Web is not a usable visual-QA surface because the current MapLibre native
-  module fails its web codegen boundary before render.
+  open. Saved aircraft references and up to 20 document attachments are now selectable; their
+  libraries fail independently so corrupt reference metadata does not hide valid entries. React
+  Native Web is not a usable visual-QA surface because the current MapLibre native module fails
+  its web codegen boundary before render.
 - The Library now supports user-authored normal, abnormal, and emergency-labelled checklist
   templates without bundling aircraft procedures. Active runs retain immutable revision
   snapshots and use compare-and-swap state revisions for atomic completion updates. Every
