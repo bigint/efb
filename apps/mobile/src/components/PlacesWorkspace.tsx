@@ -5,6 +5,8 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { demoAirports, searchAirports } from '@driftline/aviation-domain';
 import { classifyDataCurrency } from '@driftline/data-contracts';
 
+import { evaluatePosition } from '@/domain/position-source';
+import { calculateRelativePosition } from '@/domain/relative-position';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
 
@@ -14,6 +16,8 @@ export function PlacesWorkspace() {
   const theme = useDriftlineTheme();
   const [query, setQuery] = useState('');
   const addWaypoint = useFlightStore((state) => state.addWaypoint);
+  const positionSample = useFlightStore((state) => state.positionSample);
+  const positionScenario = useFlightStore((state) => state.positionScenario);
   const selectedIdentifier = useFlightStore((state) => state.selectedAirport);
   const selectAirport = useFlightStore((state) => state.selectAirport);
   const setWorkspace = useFlightStore((state) => state.setWorkspace);
@@ -24,6 +28,11 @@ export function PlacesWorkspace() {
   const selected = demoAirports.find(({ icao }) => icao === selectedIdentifier) ?? results[0];
   const currency =
     selected === undefined ? null : classifyDataCurrency(selected.provenance, new Date());
+  const evaluatedPosition = evaluatePosition(positionScenario, positionSample, Date.now());
+  const relative =
+    selected === undefined
+      ? null
+      : calculateRelativePosition(evaluatedPosition, selected.position);
 
   return (
     <ScrollView
@@ -108,6 +117,48 @@ export function PlacesWorkspace() {
                 <Fact label="Confidence" value={selected.provenance.confidence} />
                 <Fact label="Currency" value={currency ?? 'unknown'} />
               </View>
+              <View style={[styles.relative, { borderColor: theme.separator }]}>
+                <Text style={[styles.warning, { color: theme.attention }]}>
+                  RELATIVE POSITION · ADVISORY · TRUE REFERENCE
+                </Text>
+                {relative === null ? (
+                  <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+                    Unavailable: position source is{' '}
+                    {evaluatedPosition.kind === 'unavailable'
+                      ? evaluatedPosition.reason.replaceAll('-', ' ')
+                      : 'not usable'}
+                    .
+                  </Text>
+                ) : (
+                  <View style={styles.facts}>
+                    <Fact
+                      label="Distance"
+                      value={`${relative.distanceNauticalMiles.toFixed(1)} NM`}
+                    />
+                    <Fact
+                      label="Initial bearing"
+                      value={
+                        relative.bearingTrue === null
+                          ? '—'
+                          : `${relative.bearingTrue.toFixed(0).padStart(3, '0')}°T`
+                      }
+                    />
+                    <Fact label="Source" value={relative.origin.toUpperCase()} />
+                    <Fact
+                      label="Position age"
+                      value={`${(relative.ageMilliseconds / 1_000).toFixed(1)} S`}
+                    />
+                    <Fact
+                      label="Horizontal accuracy"
+                      value={
+                        relative.accuracyMetres === null
+                          ? 'UNAVAILABLE'
+                          : `${relative.accuracyMetres.toFixed(0)} M`
+                      }
+                    />
+                  </View>
+                )}
+              </View>
             </Card>
             <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
               Runways
@@ -170,6 +221,12 @@ const styles = StyleSheet.create({
   result: { borderRadius: radii.control, borderWidth: 1, minHeight: 70, padding: spacing.md },
   resultId: { fontFamily: typography.mono, fontSize: 15, fontWeight: '800' },
   resultName: { fontFamily: typography.body, fontSize: 11, lineHeight: 15, marginTop: 3 },
+  relative: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+  },
   results: { flex: 1, gap: spacing.sm, minWidth: 210 },
   routeCopy: { flex: 1 },
   runway: { fontFamily: typography.mono, fontSize: 18, fontWeight: '800', minWidth: 70 },

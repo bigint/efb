@@ -42,6 +42,12 @@ accent colour and `DEVICE POSITION` / `foreground location` labels. Unknown accu
 instead of formatted as a numeric radius. A position-source failure removes groundspeed,
 altitude, and ownship values.
 
+Airport details derive a read-only great-circle distance and initial true bearing only while the
+same three-second position evaluation is available. The panel shows simulated/device source,
+sample age, and horizontal accuracy at point of use. It disappears into an explicit unavailable
+reason when the source is stale or failed. This is a relative information readout, not route
+sequencing or a direct-to command.
+
 ## Verification boundary
 
 Pure tests cover unit conversion, nullable provider values, device status mapping, freshness,
