@@ -51,4 +51,41 @@ describe('density altitude rule-of-thumb estimate', () => {
       }),
     ).toEqual({ kind: 'unavailable', reason: 'approximation-out-of-range' });
   });
+
+  it('increases exactly 120 feet per Celsius degree at fixed pressure altitude', () => {
+    const estimates = [0, 10, 20, 30].map((temperature) =>
+      estimateDensityAltitude({
+        altimeterHectopascals: standardAltimeter,
+        fieldElevationFeet: feet(3_000),
+        outsideAirTemperatureCelsius: celsius(temperature),
+      }),
+    );
+    for (let index = 1; index < estimates.length; index += 1) {
+      const previous = estimates[index - 1];
+      const current = estimates[index];
+      if (previous?.kind !== 'ready' || current?.kind !== 'ready') {
+        throw new Error('Expected bounded density-altitude estimates.');
+      }
+      expect(current.densityAltitudeFeet - previous.densityAltitudeFeet).toBeCloseTo(1_200, 8);
+    }
+  });
+
+  it('increases pressure and density altitude as the altimeter setting falls', () => {
+    const estimates = [1_030, 1_013, 990].map((altimeter) =>
+      estimateDensityAltitude({
+        altimeterHectopascals: hectopascals(altimeter),
+        fieldElevationFeet: feet(2_000),
+        outsideAirTemperatureCelsius: celsius(20),
+      }),
+    );
+    for (let index = 1; index < estimates.length; index += 1) {
+      const previous = estimates[index - 1];
+      const current = estimates[index];
+      if (previous?.kind !== 'ready' || current?.kind !== 'ready') {
+        throw new Error('Expected bounded density-altitude estimates.');
+      }
+      expect(current.pressureAltitudeFeet).toBeGreaterThan(previous.pressureAltitudeFeet);
+      expect(current.densityAltitudeFeet).toBeGreaterThan(previous.densityAltitudeFeet);
+    }
+  });
 });
