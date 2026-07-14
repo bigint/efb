@@ -173,6 +173,9 @@ importers:
       '@driftline/data-contracts':
         specifier: workspace:*
         version: link:../data-contracts
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
     devDependencies:
       typescript:
         specifier: 'catalog:'

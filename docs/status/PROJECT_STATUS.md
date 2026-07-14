@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 142 passed across twenty-two test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,145 modules, 5.3 MB
+- Unit tests: 150 passed across twenty-four test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,147 modules, 5.4 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -67,6 +67,10 @@ performance data.
   068-degree great-circle track. Updates are bounded to five-second ticks, longer lifecycle gaps
   pause in place, and invalid time or track data fails closed. Native timer, lifecycle, and
   physical-device behavior remain unverified.
+- User-entered aircraft profiles now persist locally with explicit kilogram, metre, litre, and
+  knot units, immutable unverified provenance, schema revision, parameterized writes, and a
+  fail-closed JSON read boundary. The fictional loading sandbox remains separate; approved
+  source linking, profile editing, envelope authoring, and native recovery are open.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated

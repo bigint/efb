@@ -257,4 +257,40 @@ describe('user database migration plan', () => {
     });
     database.close();
   });
+
+  it('upgrades legacy aircraft profiles with explicit unverified provenance', () => {
+    const database = new DatabaseSync(':memory:');
+    for (const migration of userDatabaseMigrations.slice(0, 4)) {
+      for (const statement of migration.statements) database.exec(statement);
+    }
+    database
+      .prepare(
+        `INSERT INTO aircraft_profiles (
+          id, created_at, updated_at, registration, type_designator, display_name,
+          units_json, performance_json, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        '019f5f42-a146-7c00-861d-7ad2313bbbd4',
+        '2026-07-14T10:00:00.000Z',
+        '2026-07-14T10:00:00.000Z',
+        'N123DL',
+        'DEMO',
+        'Legacy aircraft',
+        '{}',
+        '{}',
+        '',
+      );
+    const fifth = userDatabaseMigrations[4];
+    if (fifth === undefined) throw new Error('Missing migration fixture');
+    for (const statement of fifth.statements) database.exec(statement);
+    expect(
+      database
+        .prepare(
+          `SELECT source, verification_status, revision FROM aircraft_profiles WHERE id = ?`,
+        )
+        .get('019f5f42-a146-7c00-861d-7ad2313bbbd4'),
+    ).toEqual({ revision: 1, source: 'user-entered', verification_status: 'unverified' });
+    database.close();
+  });
 });

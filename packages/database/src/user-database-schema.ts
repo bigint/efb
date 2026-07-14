@@ -1,4 +1,4 @@
-export const USER_DATABASE_VERSION = 4;
+export const USER_DATABASE_VERSION = 5;
 
 export interface UserDatabaseMigration {
   readonly statements: readonly string[];
@@ -266,6 +266,17 @@ export const userDatabaseMigrations: readonly UserDatabaseMigration[] = [
         CHECK (page_count IS NULL OR (page_count > 0 AND page_count <= 100000))`,
       `ALTER TABLE documents ADD COLUMN text_index_status TEXT NOT NULL DEFAULT 'unavailable'
         CHECK (text_index_status IN ('unavailable', 'pending', 'ready', 'failed'))`,
+    ],
+  },
+  {
+    version: 5,
+    statements: [
+      `ALTER TABLE aircraft_profiles ADD COLUMN source TEXT NOT NULL DEFAULT 'user-entered'
+        CHECK (source = 'user-entered')`,
+      `ALTER TABLE aircraft_profiles ADD COLUMN verification_status TEXT NOT NULL DEFAULT 'unverified'
+        CHECK (verification_status = 'unverified')`,
+      `ALTER TABLE aircraft_profiles ADD COLUMN revision INTEGER NOT NULL DEFAULT 1
+        CHECK (revision >= 1)`,
     ],
   },
 ] as const;
