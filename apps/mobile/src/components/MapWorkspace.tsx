@@ -31,6 +31,7 @@ import {
   toggleMapLayer,
   type MapLayerId,
 } from '@/domain/map-layers';
+import { inspectMapPoint, type MapInspection } from '@/domain/map-inspection';
 import { useDevicePower } from '@/hooks/use-device-power';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
@@ -67,6 +68,7 @@ export function MapWorkspace() {
   const [measureEnabled, setMeasureEnabled] = useState(false);
   const [layerPanelOpen, setLayerPanelOpen] = useState(false);
   const [layers, setLayers] = useState(defaultMapLayerVisibility);
+  const [inspection, setInspection] = useState<MapInspection | null>(null);
   const [measurementPoints, setMeasurementPoints] = useState<MapMeasurementPoints>([]);
   const [orientationMode, setOrientationMode] = useState<MapOrientationMode>('north-up');
   const activeLegIndex = useFlightStore((state) => state.activeLegIndex);
@@ -226,10 +228,23 @@ export function MapWorkspace() {
         logo={false}
         mapStyle={mapStyle}
         onLongPress={({ nativeEvent }) => {
-          if (!measureEnabled) return;
           const [longitude, latitude] = nativeEvent.lngLat;
-          setMeasurementPoints((current) =>
-            appendMapMeasurementPoint(current, longitude, latitude),
+          if (measureEnabled) {
+            setInspection(null);
+            setMeasurementPoints((current) =>
+              appendMapMeasurementPoint(current, longitude, latitude),
+            );
+            return;
+          }
+          setInspection(
+            inspectMapPoint(
+              longitude,
+              latitude,
+              demoAirports.map((airport) => ({
+                identifier: airport.icao,
+                position: airport.position,
+              })),
+            ),
           );
         }}
         preferredFramesPerSecond={60}
@@ -331,6 +346,23 @@ export function MapWorkspace() {
             </View>
           </Marker>
         ))}
+        {inspection !== null && (
+          <Marker
+            anchor="center"
+            id="inspection"
+            lngLat={[inspection.longitude, inspection.latitude]}
+          >
+            <View
+              accessibilityLabel="Inspected map coordinate"
+              style={[
+                styles.measureMarker,
+                { backgroundColor: theme.panelRaised, borderColor: theme.attention },
+              ]}
+            >
+              <Text style={[styles.measureMarkerText, { color: theme.attention }]}>I</Text>
+            </View>
+          </Marker>
+        )}
         {layers.airports &&
           demoAirports.map((airport) => (
             <Marker
@@ -429,6 +461,7 @@ export function MapWorkspace() {
             accessibilityRole="button"
             onPress={() => {
               setMeasureEnabled((current) => !current);
+              setInspection(null);
               setMeasurementPoints([]);
             }}
             style={({ pressed }) => [
@@ -459,6 +492,22 @@ export function MapWorkspace() {
             >
               <Text style={[styles.orientationText, { color: theme.attention }]}>
                 CANCEL DIRECT TO {directToIdentifier}
+              </Text>
+            </Pressable>
+          )}
+          {inspection !== null && (
+            <Pressable
+              accessibilityLabel="Clear map inspection"
+              accessibilityRole="button"
+              onPress={() => setInspection(null)}
+              style={({ pressed }) => [
+                styles.orientationControl,
+                { backgroundColor: theme.panelRaised, borderColor: theme.separator },
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[styles.orientationText, { color: theme.primary }]}>
+                CLEAR INSPECT
               </Text>
             </Pressable>
           )}
@@ -506,6 +555,22 @@ export function MapWorkspace() {
             </Text>
             <Text style={[styles.mapChipSecondary, { color: theme.secondary }]}>
               Great-circle display measure · third long-press starts again
+            </Text>
+          </View>
+        )}
+        {inspection !== null && (
+          <View style={[styles.measureChip, { backgroundColor: theme.panelRaised }]}>
+            <Text style={[styles.mapChipPrimary, { color: theme.primary }]}>
+              {inspection.latitude.toFixed(4)}, {inspection.longitude.toFixed(4)}
+            </Text>
+            <Text style={[styles.mapChipSecondary, { color: theme.secondary }]}>
+              {inspection.nearest === null
+                ? 'Nearest fictional airport unavailable'
+                : `Nearest fictional · ${inspection.nearest.identifier} · ${inspection.nearest.distanceNauticalMiles.toFixed(1)} NM · ${inspection.nearest.bearingTrue === null ? 'BRG —' : `${inspection.nearest.bearingTrue.toFixed(0).padStart(3, '0')}°T`}`}
+            </Text>
+            <Text style={[styles.mapChipSecondary, { color: theme.attention }]}>
+              Coordinate inspection only · no chart, terrain, airspace, obstacle, or weather
+              data
             </Text>
           </View>
         )}

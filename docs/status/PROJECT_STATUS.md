@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 277 passed across forty-eight test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,183 modules, 5.6 MB
+- Unit tests: 279 passed across forty-nine test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,184 modules, 5.6 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -159,6 +159,9 @@ performance data.
   route backdrop. Guidance/ownship evidence cannot be hidden, and the visible legend explicitly
   names both rendered symbols and absent chart/airspace/terrain/weather classes. Native touch
   and screen-reader validation remain open.
+- Outside measure mode, map long-press now inspects one validated coordinate and reports nearest
+  fictional-airport great-circle distance/true bearing. It explicitly withholds chart, terrain,
+  airspace, obstacle, and weather inspection; native gesture QA remains open.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated

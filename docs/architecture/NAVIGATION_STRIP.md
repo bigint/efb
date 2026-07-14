@@ -76,6 +76,11 @@ zero distance with bearing unavailable, and invalid coordinates are rejected. A 
 starts a new measurement; disabling the tool clears all points. Measurements are session state
 only and never become route intent or persisted flight data.
 
+When measurement is off, a long press instead creates one transient coordinate inspection. It
+shows validated latitude/longitude and the nearest fictional airport's great-circle distance and
+initial true bearing. The panel explicitly withholds chart, terrain, airspace, obstacle, and
+weather claims. Starting measurement clears inspection, and inspection has its own clear action.
+
 ## Direct-to display
 
 With a fresh position, direct-to derives one current-to-target great-circle distance, initial
