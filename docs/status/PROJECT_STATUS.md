@@ -85,6 +85,8 @@ performance data.
   survive a lifecycle hold or restart an advance.
 - Session trail append and geometry generation reject oversized, mixed-source, unordered,
   negative-clock, and malformed-coordinate histories before they reach the map renderer.
+- Guidance intent validates route cardinality and bounded, unique, normalized direct-to target
+  collections before changing mutually exclusive navigation state.
 - Separate versioned user and control SQLite schemas now migrate before app render. Executable
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,

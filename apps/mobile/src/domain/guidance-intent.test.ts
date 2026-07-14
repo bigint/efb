@@ -17,5 +17,9 @@ describe('navigation guidance intent', () => {
   it('rejects unavailable targets and out-of-range legs', () => {
     expect(() => selectDirectToIntent('MISSING', ['DVL1'])).toThrow('unavailable');
     expect(() => selectActiveLegIntent(1, 2)).toThrow('outside');
+    expect(() => selectActiveLegIntent(null, Number.NaN)).toThrow('length');
+    expect(() => selectActiveLegIntent(0, 101)).toThrow('length');
+    expect(() => selectDirectToIntent('bad input', ['DVL1'])).toThrow('identifier');
+    expect(() => selectDirectToIntent(null, ['DVL1', 'DVL1'])).toThrow('ambiguous');
   });
 });
