@@ -29,11 +29,37 @@ export type RouteResolution =
   | { readonly status: 'resolved'; readonly waypoints: readonly RouteWaypoint[] }
   | { readonly status: 'unresolved'; readonly unresolvedIdentifiers: readonly string[] };
 
+const MAXIMUM_ROUTE_WAYPOINTS = 100;
+const waypointIdentifierPattern = /^[A-Z0-9-]{1,16}$/u;
+
+const requireWaypointIdentifier = (identifier: string): void => {
+  if (!waypointIdentifierPattern.test(identifier)) {
+    throw new RangeError('Waypoint identifier is invalid');
+  }
+};
+
 export const resolveRouteIdentifiers = (
   identifiers: readonly string[],
   available: readonly RouteWaypoint[],
 ): RouteResolution => {
-  const byIdentifier = new Map(available.map((waypoint) => [waypoint.identifier, waypoint]));
+  if (identifiers.length > MAXIMUM_ROUTE_WAYPOINTS) {
+    throw new RangeError('Route exceeds the supported waypoint limit');
+  }
+  const requested = new Set<string>();
+  for (const identifier of identifiers) {
+    requireWaypointIdentifier(identifier);
+    if (requested.has(identifier))
+      throw new RangeError('Route waypoint identifiers are ambiguous');
+    requested.add(identifier);
+  }
+  const byIdentifier = new Map<string, RouteWaypoint>();
+  for (const waypoint of available) {
+    requireWaypointIdentifier(waypoint.identifier);
+    if (byIdentifier.has(waypoint.identifier)) {
+      throw new RangeError('Available waypoint identifiers are ambiguous');
+    }
+    byIdentifier.set(waypoint.identifier, waypoint);
+  }
   const unresolvedIdentifiers = identifiers.filter(
     (identifier) => !byIdentifier.has(identifier),
   );
@@ -52,10 +78,12 @@ export const calculateRoute = (
   waypoints: readonly RouteWaypoint[],
   cruiseGroundspeed: Knots | null,
 ): RouteSummary => {
+  if (waypoints.length > MAXIMUM_ROUTE_WAYPOINTS) {
+    throw new RangeError('Route exceeds the supported waypoint limit');
+  }
   const identifiers = new Set<string>();
   for (const waypoint of waypoints) {
-    if (waypoint.identifier.trim().length === 0)
-      throw new RangeError('Waypoint identifier is required');
+    requireWaypointIdentifier(waypoint.identifier);
     if (identifiers.has(waypoint.identifier))
       throw new RangeError('Duplicate waypoint identifiers are ambiguous');
     identifiers.add(waypoint.identifier);
@@ -87,7 +115,7 @@ export const calculateRoute = (
   const estimatedMinutes =
     cruiseGroundspeed === null
       ? null
-      : cruiseGroundspeed <= 0
+      : !Number.isFinite(cruiseGroundspeed) || cruiseGroundspeed <= 0
         ? (() => {
             throw new RangeError('Cruise groundspeed must be positive');
           })()

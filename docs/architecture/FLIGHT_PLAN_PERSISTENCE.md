@@ -24,6 +24,11 @@ The current Plan workspace saves resolved routes with at least two fictional dem
 waypoints as revision-one drafts. Planning wind assumptions are not saved and the UI does not
 claim otherwise.
 
+The framework-independent route resolver and calculator repeat the 100-waypoint ceiling,
+uppercase identifier shape, route/source uniqueness, and finite positive groundspeed checks.
+They therefore fail closed even when a future adapter bypasses the persistence schema instead of
+allocating an unbounded route or silently selecting one of two ambiguous waypoint records.
+
 When a local aircraft is selected for a new draft and the constant-wind route resolves, Plan
 multiplies wind-adjusted ETE by that profile's entered litres-per-hour cruise burn. It compares
 the result with entered usable litres. This transient estimate is bounded to seven days and

@@ -42,7 +42,21 @@ describe('route calculation', () => {
 
   it('rejects ambiguous and unsafe inputs', () => {
     expect(() => calculateRoute(route, knots(0))).toThrow(RangeError);
+    expect(() => calculateRoute(route, Number.NaN as never)).toThrow(RangeError);
     expect(() => calculateRoute([route[0], route[0]], knots(100))).toThrow(RangeError);
+    expect(() =>
+      calculateRoute(
+        Array.from({ length: 101 }, (_, index) => ({
+          identifier: `W${index}`,
+          position: position(0, index / 1_000),
+        })),
+        knots(100),
+      ),
+    ).toThrow('limit');
+    expect(() => resolveRouteIdentifiers(['A'], [route[0], { ...route[0] }])).toThrow(
+      'ambiguous',
+    );
+    expect(() => resolveRouteIdentifiers(['bad input'], route)).toThrow('identifier');
   });
 
   it('preserves unresolved route intent instead of silently shortening it', () => {
