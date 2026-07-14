@@ -635,7 +635,14 @@ function DecodedObservation({
           />
         </View>
       </Card>
-      <DensityAltitudeTool current={currency.kind === 'current'} observation={observation} />
+      <DensityAltitudeTool
+        sourceVerifiedCurrent={
+          currency.kind === 'current' &&
+          observation.provenance.origin === 'real' &&
+          observation.provenance.verificationStatus === 'source-verified'
+        }
+        observation={observation}
+      />
       <Card>
         <Fact label="Source" value={observation.provenance.source} />
         <Fact label="Retrieved UTC" value={observation.receivedAt} />
@@ -654,11 +661,11 @@ function DecodedObservation({
 }
 
 function DensityAltitudeTool({
-  current,
   observation,
+  sourceVerifiedCurrent,
 }: {
-  readonly current: boolean;
   readonly observation: MetarObservation;
+  readonly sourceVerifiedCurrent: boolean;
 }) {
   const theme = useDriftlineTheme();
   const [expanded, setExpanded] = useState(false);
@@ -667,7 +674,7 @@ function DensityAltitudeTool({
   const elevationValid = /^-?\d{1,5}$/u.test(trimmedElevation);
   const elevation = elevationValid ? Number(trimmedElevation) : null;
   const estimate =
-    current &&
+    sourceVerifiedCurrent &&
     elevation !== null &&
     observation.altimeter !== null &&
     observation.temperature !== null
@@ -678,7 +685,7 @@ function DensityAltitudeTool({
         })
       : null;
   const inputAvailable =
-    current && observation.altimeter !== null && observation.temperature !== null;
+    sourceVerifiedCurrent && observation.altimeter !== null && observation.temperature !== null;
 
   return (
     <View style={styles.densityTool}>
