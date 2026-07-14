@@ -2,7 +2,7 @@ import { spacing } from '@driftline/design-system';
 import { randomUUID } from 'expo-crypto';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   aircraftProfileSchema,
@@ -14,6 +14,7 @@ import {
 import { kilograms, metres } from '@driftline/data-contracts';
 
 import {
+  deleteAircraftProfile,
   insertAircraftProfile,
   listAircraftProfiles,
   replaceAircraftProfile,
@@ -294,6 +295,43 @@ export function AircraftWorkspace() {
       setSaving(false);
     }
   };
+
+  const removeProfile = async (profile: AircraftProfile) => {
+    setSaving(true);
+    try {
+      await deleteAircraftProfile(database, profile);
+      if (selectedProfileId === profile.id) {
+        setSelectedProfileId(null);
+        setExtraStations('');
+      }
+      if (editingProfileId === profile.id) {
+        setEditingProfileId(null);
+        setProfileForm(profileDefaults());
+      }
+      await reload();
+      setProfileError(null);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Unable to delete aircraft.';
+      if (await reload()) setProfileError(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmRemoveProfile = (profile: AircraftProfile) => {
+    Alert.alert(
+      'Delete aircraft profile?',
+      `${profile.registration} will be permanently deleted only if no saved flight, checklist, or logbook entry references it.`,
+      [
+        { style: 'cancel', text: 'Cancel' },
+        {
+          onPress: () => void removeProfile(profile),
+          style: 'destructive',
+          text: 'Delete',
+        },
+      ],
+    );
+  };
   return (
     <ScrollView
       contentContainerStyle={styles.scroll}
@@ -318,7 +356,9 @@ export function AircraftWorkspace() {
       ) : (
         profiles.map((profile) => (
           <SavedProfile
+            disabled={saving || readBlocked}
             key={profile.id}
+            onDelete={() => confirmRemoveProfile(profile)}
             onEdit={() => {
               setEditingProfileId(profile.id);
               setProfileForm(profileFormFromRecord(profile));
@@ -657,11 +697,15 @@ function ProfileInput({
 }
 
 function SavedProfile({
+  disabled,
+  onDelete,
   onEdit,
   onUse,
   profile,
   selected,
 }: {
+  readonly disabled: boolean;
+  readonly onDelete: () => void;
   readonly onEdit: () => void;
   readonly onUse: () => void;
   readonly profile: AircraftProfile;
@@ -692,11 +736,12 @@ function SavedProfile({
       )}
       <View style={styles.profileAction}>
         <Action
-          disabled={selected}
+          disabled={disabled || selected}
           label={selected ? 'Selected' : 'Use for loading'}
           onPress={onUse}
         />
-        <Action label="Edit values" onPress={onEdit} />
+        <Action disabled={disabled} label="Edit values" onPress={onEdit} />
+        <Action destructive disabled={disabled} label="Delete" onPress={onDelete} />
       </View>
     </View>
   );

@@ -29,6 +29,12 @@ Identity, creation time, fixed units, user-entered provenance, and unverified st
 preserved. SQLite updates use `WHERE id = ? AND revision = ?`; a concurrent writer conflict
 reloads current storage, clears the stale editor, and does not overwrite the newer record.
 
+Permanent profile deletion requires native destructive confirmation. An exclusive transaction
+counts references from saved flights, checklist templates, and logbook entries before deleting
+the exact current revision. Any reference blocks the write, preserving the profile instead of
+allowing legacy foreign-key cascade or null behavior to detach durable history. A concurrent
+revision also blocks deletion.
+
 ## Validation
 
 Identifiers are bounded and normalized, numeric values must be finite and within broad storage
@@ -59,10 +65,10 @@ continues to label both the data and limits `USER-ENTERED` and `UNVERIFIED`. Thi
 decision against user input, not a statement that the polygon came from an approved source. The
 separate built-in polygon sandbox remains fictional.
 
-Profile deletion, revision history/rollback, durable loading-station authoring, scenario saving,
-envelope graph rendering, fuel-density conversion, take-off and landing models, and
-source-document links remain open. Native persistence recovery and visual/accessibility
-validation are release blockers.
+Revision history/rollback, durable loading-station authoring, scenario saving, envelope graph
+rendering, fuel-density conversion, take-off and landing models, and source-document links
+remain open. Native persistence recovery and visual/accessibility validation are release
+blockers.
 
 Checklist authoring can link a validated local profile UUID and derives the template label from
 its normalized registration. This is referential organization only; it does not verify the

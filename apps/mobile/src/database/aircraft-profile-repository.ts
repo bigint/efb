@@ -113,3 +113,40 @@ export const replaceAircraftProfile = async (
   );
   if (result.changes !== 1) throw new Error('Aircraft profile changed on another writer.');
 };
+
+export const deleteAircraftProfile = async (
+  database: SQLiteDatabase,
+  source: AircraftProfile,
+): Promise<void> => {
+  const profile = aircraftProfileSchema.parse(source);
+  await database.withExclusiveTransactionAsync(async (transaction) => {
+    const references = await transaction.getFirstAsync<{ reference_count: number }>(
+      `SELECT
+        (SELECT count(*) FROM flights WHERE aircraft_id = ?) +
+        (SELECT count(*) FROM checklist_templates WHERE aircraft_id = ?) +
+        (SELECT count(*) FROM logbook_entries WHERE aircraft_id = ?)
+        AS reference_count`,
+      profile.id,
+      profile.id,
+      profile.id,
+    );
+    if (
+      references === null ||
+      !Number.isSafeInteger(references.reference_count) ||
+      references.reference_count < 0
+    ) {
+      throw new Error('Aircraft reference check failed.');
+    }
+    if (references.reference_count > 0) {
+      throw new Error(
+        'Aircraft profile is referenced by saved flights, checklists, or logbook entries.',
+      );
+    }
+    const result = await transaction.runAsync(
+      'DELETE FROM aircraft_profiles WHERE id = ? AND revision = ? AND deleted_at IS NULL',
+      profile.id,
+      profile.revision,
+    );
+    if (result.changes !== 1) throw new Error('Aircraft profile changed on another writer.');
+  });
+};

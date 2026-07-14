@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   decodeAircraftProfileRows,
+  deleteAircraftProfile,
   type AircraftProfileRow,
 } from './aircraft-profile-repository';
 
@@ -48,5 +49,45 @@ describe('aircraft profile SQLite read boundary', () => {
         { ...row, units_json: JSON.stringify({ arm: 'in', fuel: 'gal', mass: 'lb' }) },
       ]),
     ).toThrow();
+  });
+
+  it('deletes an unreferenced current revision inside one exclusive transaction', async () => {
+    const statements: string[] = [];
+    const database = {
+      getFirstAsync: (sql: string) => {
+        statements.push(sql);
+        return Promise.resolve({ reference_count: 0 });
+      },
+      runAsync: (sql: string) => {
+        statements.push(sql);
+        return Promise.resolve({ changes: 1 });
+      },
+      withExclusiveTransactionAsync: (operation: (transaction: unknown) => Promise<void>) =>
+        operation(database),
+    };
+    const profile = decodeAircraftProfileRows([row])[0];
+    if (profile === undefined) throw new Error('Expected profile fixture');
+    await deleteAircraftProfile(database as never, profile);
+    expect(statements[0]).toContain('checklist_templates');
+    expect(statements[1]).toContain('revision = ?');
+  });
+
+  it('blocks deletion before writing when durable records reference the profile', async () => {
+    let writes = 0;
+    const database = {
+      getFirstAsync: () => Promise.resolve({ reference_count: 1 }),
+      runAsync: () => {
+        writes += 1;
+        return Promise.resolve({ changes: 1 });
+      },
+      withExclusiveTransactionAsync: (operation: (transaction: unknown) => Promise<void>) =>
+        operation(database),
+    };
+    const profile = decodeAircraftProfileRows([row])[0];
+    if (profile === undefined) throw new Error('Expected profile fixture');
+    await expect(deleteAircraftProfile(database as never, profile)).rejects.toThrow(
+      'referenced',
+    );
+    expect(writes).toBe(0);
   });
 });
