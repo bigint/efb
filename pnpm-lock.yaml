@@ -217,6 +217,9 @@ importers:
         specifier: workspace:*
         version: link:../geospatial
     devDependencies:
+      fast-check:
+        specifier: ^4.9.0
+        version: 4.9.0
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

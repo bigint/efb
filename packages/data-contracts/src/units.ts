@@ -12,6 +12,7 @@ export type MagneticDegrees = BrandedUnit<'magnetic-degrees'>;
 export type Metres = BrandedUnit<'metres'>;
 export type NauticalMiles = BrandedUnit<'nautical-miles'>;
 export type Radians = BrandedUnit<'radians'>;
+export type SignedDegrees = BrandedUnit<'signed-degrees'>;
 export type TrueDegrees = BrandedUnit<'true-degrees'>;
 
 const requireFinite = (value: number, unit: string): number => {
@@ -40,11 +41,18 @@ export const metres = (value: number): Metres => requireFinite(value, 'Metres') 
 export const nauticalMiles = (value: number): NauticalMiles =>
   requireFinite(value, 'Nautical miles') as NauticalMiles;
 export const radians = (value: number): Radians => requireFinite(value, 'Radians') as Radians;
+export const signedDegrees = (value: number): SignedDegrees => {
+  requireFinite(value, 'Signed degrees');
+  if (value < -180 || value > 180)
+    throw new RangeError('Signed degrees must be in [-180, 180]');
+  return value as SignedDegrees;
+};
 export const trueDegrees = (value: number): TrueDegrees =>
   requireBearing(value, 'True degrees') as TrueDegrees;
 
-export const toRadians = (value: Degrees | MagneticDegrees | TrueDegrees): Radians =>
-  radians((value * Math.PI) / 180);
+export const toRadians = (
+  value: Degrees | MagneticDegrees | SignedDegrees | TrueDegrees,
+): Radians => radians((value * Math.PI) / 180);
 export const toDegrees = (value: Radians): Degrees => degrees((value * 180) / Math.PI);
 export const metresToNauticalMiles = (value: Metres): NauticalMiles =>
   nauticalMiles(value / 1852);

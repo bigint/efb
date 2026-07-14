@@ -8,6 +8,7 @@ import {
   metresToNauticalMiles,
   magneticDegrees,
   normaliseDegrees,
+  signedDegrees,
   toDegrees,
   toRadians,
   trueDegrees,
@@ -44,5 +45,10 @@ describe('typed unit conversions', () => {
     expectTypeOf(trueBearing).not.toMatchTypeOf(magneticBearing);
     expect(() => trueDegrees(360)).toThrow(RangeError);
     expect(() => magneticDegrees(-1)).toThrow(RangeError);
+  });
+
+  it('bounds signed angular offsets without normalising their direction', () => {
+    expect(signedDegrees(-12.5)).toBe(-12.5);
+    expect(() => signedDegrees(181)).toThrow(RangeError);
   });
 });

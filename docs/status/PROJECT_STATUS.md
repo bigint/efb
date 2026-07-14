@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 71 passed across eleven test files.
+- Unit tests: 76 passed across twelve test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,059 modules, 4.9 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -40,6 +40,8 @@ performance data.
 - A conservative METAR/SPECI adapter now preserves raw/provenance data, explicit visibility
   bounds, observation time, and unsupported body groups. An offline manual decoder labels all
   input unverified and currency-unknown; live retrieval, TAF, and briefing remain open.
+- A typed true-reference wind triangle returns heading, signed correction, and groundspeed or an
+  explicit no-solution state. Winds-aloft sourcing and route-level integration remain open.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated

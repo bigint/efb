@@ -17,7 +17,8 @@ education, pre-flight planning, and non-certified situational awareness.
 - Persistent route editing, local airport search/details, generic aircraft profile, and a
   clearly fictional weight-and-balance sandbox, and data/source status
 - Framework-independent typed units, provenance contracts, great-circle calculations,
-  cross-/along-track calculations, and route summaries with deterministic tests
+  cross-/along-track calculations, true-reference wind-triangle solving, and route summaries
+  with deterministic and property-based tests
 - Conservative METAR/SPECI parsing contracts that retain raw text, provenance, uncertainty, and
   unsupported groups without pretending live weather is configured
 
