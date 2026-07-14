@@ -216,4 +216,45 @@ describe('user database migration plan', () => {
     });
     database.close();
   });
+
+  it('upgrades legacy document metadata into the app-private library', () => {
+    const database = new DatabaseSync(':memory:');
+    const migrations = userDatabaseMigrations.slice(0, 3);
+    for (const migration of migrations) {
+      for (const statement of migration.statements) database.exec(statement);
+    }
+    database
+      .prepare(
+        `INSERT INTO documents
+          (id, imported_at, display_name, local_uri, sha256, byte_length, mime_type, source)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        '019f5f42-a146-7c00-861d-7ad2313bbbd4',
+        '2026-07-14T10:00:00.000Z',
+        'Legacy.pdf',
+        'file:///documents/legacy.pdf',
+        'a'.repeat(64),
+        1024,
+        'application/pdf',
+        'user-imported',
+      );
+    const fourth = userDatabaseMigrations[3];
+    if (fourth === undefined) throw new Error('Missing migration fixture');
+    for (const statement of fourth.statements) database.exec(statement);
+    expect(
+      database
+        .prepare(
+          `SELECT storage_scope, folder, is_favourite, text_index_status
+           FROM documents`,
+        )
+        .get(),
+    ).toEqual({
+      folder: 'Unfiled',
+      is_favourite: 0,
+      storage_scope: 'app-private',
+      text_index_status: 'unavailable',
+    });
+    database.close();
+  });
 });

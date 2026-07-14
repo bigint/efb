@@ -1,4 +1,4 @@
-export const USER_DATABASE_VERSION = 3;
+export const USER_DATABASE_VERSION = 4;
 
 export interface UserDatabaseMigration {
   readonly statements: readonly string[];
@@ -251,6 +251,21 @@ export const userDatabaseMigrations: readonly UserDatabaseMigration[] = [
           FROM checklist_templates AS template
           WHERE template.id = checklist_runs.template_id
         )`,
+    ],
+  },
+  {
+    version: 4,
+    statements: [
+      `ALTER TABLE documents ADD COLUMN storage_scope TEXT NOT NULL DEFAULT 'app-private'
+        CHECK (storage_scope = 'app-private')`,
+      `ALTER TABLE documents ADD COLUMN folder TEXT NOT NULL DEFAULT 'Unfiled'`,
+      `ALTER TABLE documents ADD COLUMN is_favourite INTEGER NOT NULL DEFAULT 0
+        CHECK (is_favourite IN (0, 1))`,
+      `ALTER TABLE documents ADD COLUMN last_opened_at TEXT`,
+      `ALTER TABLE documents ADD COLUMN page_count INTEGER
+        CHECK (page_count IS NULL OR (page_count > 0 AND page_count <= 100000))`,
+      `ALTER TABLE documents ADD COLUMN text_index_status TEXT NOT NULL DEFAULT 'unavailable'
+        CHECK (text_index_status IN ('unavailable', 'pending', 'ready', 'failed'))`,
     ],
   },
 ] as const;

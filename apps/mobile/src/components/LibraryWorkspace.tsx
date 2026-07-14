@@ -22,6 +22,7 @@ import {
 import { useDriftlineTheme } from '@/theme';
 
 import { Action, Card, PanelHeader, panelStyles } from './PanelPrimitives';
+import { DocumentsPanel } from './DocumentsPanel';
 
 interface ChecklistFormItem {
   readonly challenge: string;
@@ -149,7 +150,11 @@ export function LibraryWorkspace() {
       keyboardShouldPersistTaps="handled"
       style={[panelStyles.body, { backgroundColor: theme.background }]}
     >
-      <PanelHeader eyebrow="LOCAL LIBRARY" title="Checklists" />
+      <PanelHeader eyebrow="LOCAL LIBRARY" title="Library" />
+      <DocumentsPanel />
+      <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
+        Checklists
+      </Text>
       <Text style={[styles.notice, { color: theme.attention }]}>
         USER-AUTHORED · UNVERIFIED
       </Text>

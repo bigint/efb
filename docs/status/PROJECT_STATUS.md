@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 131 passed across twenty test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,120 modules, 5.3 MB
+- Unit tests: 139 passed across twenty-two test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,145 modules, 5.3 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -59,6 +59,10 @@ performance data.
   templates without bundling aircraft procedures. Active runs retain immutable revision
   snapshots and use compare-and-swap state revisions for atomic completion updates. Every
   surface remains unverified; native concurrency, recovery, and accessibility evidence are open.
+- PDF-only document import now validates UUID paths, MIME and bounded container markers; copies
+  into app-private storage; verifies SHA-256 after the copy; and persists revalidated metadata
+  and bookmark relations. The reader is explicitly disabled pending native malformed-file,
+  accessibility, memory, and offline QA, and orphan-file reconciliation remains open.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated
