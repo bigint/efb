@@ -63,6 +63,9 @@ mistaken for successful replacement.
 
 - The cache stores only bounded raw provider text, the bound station, product, receipt UTC, and
   METAR observation UTC. It does not store decoded values as an independent authority.
+- The write boundary accepts only real products whose provenance is source-verified or
+  cross-checked; unverified and simulated products cannot enter the live-product cache even if a
+  caller bypasses the current Weather workspace.
 - Every read validates the row and reparses METAR text. The parsed station and observation time
   must still match the stored binding. Cached TAF text must still contain exactly one matching
   header.

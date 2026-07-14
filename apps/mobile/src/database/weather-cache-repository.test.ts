@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  cacheMetar,
+  cacheTaf,
   clearCachedWeather,
   decodeCachedWeather,
   deleteCachedWeather,
@@ -93,5 +95,29 @@ describe('weather cache SQLite boundary', () => {
     };
     await expect(deleteCachedWeather(database as never, 'TAF', 'KMCI')).resolves.toBe(false);
     await expect(clearCachedWeather(database as never)).resolves.toBe(12);
+  });
+
+  it('rejects unverified or simulated products before a cache write', async () => {
+    const database = {
+      runAsync: () => {
+        throw new Error('Cache write must not run.');
+      },
+    };
+    await expect(
+      cacheMetar(
+        database as never,
+        {
+          provenance: { origin: 'real', verificationStatus: 'unverified' },
+        } as never,
+      ),
+    ).rejects.toThrow('trusted real-source');
+    await expect(
+      cacheTaf(
+        database as never,
+        {
+          provenance: { origin: 'simulated', verificationStatus: 'source-verified' },
+        } as never,
+      ),
+    ).rejects.toThrow('trusted real-source');
   });
 });

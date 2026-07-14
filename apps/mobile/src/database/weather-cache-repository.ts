@@ -1,4 +1,4 @@
-import { dataProvenanceSchema } from '@driftline/data-contracts';
+import { dataProvenanceSchema, type DataProvenance } from '@driftline/data-contracts';
 import {
   parseMetar,
   parseTafHeader,
@@ -44,6 +44,16 @@ export interface WeatherCacheRow {
 export type CachedWeather =
   | { readonly observation: MetarObservation; readonly product: 'METAR' }
   | { readonly product: 'TAF'; readonly report: AwcTafReport };
+
+const requireCacheableProvenance = (provenance: DataProvenance): void => {
+  if (
+    provenance.origin !== 'real' ||
+    (provenance.verificationStatus !== 'source-verified' &&
+      provenance.verificationStatus !== 'cross-checked')
+  ) {
+    throw new Error('Only trusted real-source weather can enter the live-product cache');
+  }
+};
 
 const retrievalProvenance = (retrievedAt: string) =>
   dataProvenanceSchema.parse({
@@ -145,6 +155,7 @@ export const cacheMetar = async (
   database: SQLiteDatabase,
   observation: MetarObservation,
 ): Promise<void> => {
+  requireCacheableProvenance(observation.provenance);
   const record = cachedWeatherSchema.parse({
     observedAt: observation.observedAt,
     product: 'METAR',
@@ -159,6 +170,7 @@ export const cacheTaf = async (
   database: SQLiteDatabase,
   report: AwcTafReport,
 ): Promise<void> => {
+  requireCacheableProvenance(report.provenance);
   const record = cachedWeatherSchema.parse({
     observedAt: null,
     product: 'TAF',
