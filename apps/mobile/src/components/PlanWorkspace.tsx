@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { demoAirports } from '@driftline/aviation-domain';
 import { knots } from '@driftline/data-contracts';
-import { calculateRoute } from '@driftline/flight-planning';
+import { calculateRoute, resolveRouteIdentifiers } from '@driftline/flight-planning';
 
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
@@ -18,9 +18,18 @@ export function PlanWorkspace() {
   const reverseRoute = useFlightStore((state) => state.reverseRoute);
   const routeIdentifiers = useFlightStore((state) => state.routeIdentifiers);
   const setWorkspace = useFlightStore((state) => state.setWorkspace);
-  const airports = routeIdentifiers
-    .map((identifier) => demoAirports.find(({ icao }) => icao === identifier))
-    .filter((airport) => airport !== undefined);
+  const routeResolution = resolveRouteIdentifiers(
+    routeIdentifiers,
+    demoAirports.map((airport) => ({ identifier: airport.icao, position: airport.position })),
+  );
+  const airports =
+    routeResolution.status === 'resolved'
+      ? routeResolution.waypoints.map((waypoint) => {
+          const airport = demoAirports.find(({ icao }) => icao === waypoint.identifier);
+          if (airport === undefined) throw new Error('Resolved airport invariant failed');
+          return airport;
+        })
+      : [];
   const summary = calculateRoute(
     airports.map((airport) => ({ identifier: airport.icao, position: airport.position })),
     knots(118),
@@ -34,44 +43,76 @@ export function PlanWorkspace() {
       <PanelHeader eyebrow="DRAFT ROUTE · DEMONSTRATION" title="Plan" />
       <Card>
         <View style={styles.summary}>
-          <Summary label="Distance" value={`${summary.totalDistance.toFixed(1)} NM`} />
+          <Summary
+            label="Distance"
+            value={
+              summary.status === 'ready'
+                ? `${summary.totalDistance?.toFixed(1) ?? '—'} NM`
+                : '—'
+            }
+          />
           <Summary
             label="ETE at 118 KT"
             value={`${summary.estimatedMinutes?.toFixed(0) ?? '—'} MIN`}
           />
           <Summary label="Legs" value={String(summary.legs.length)} />
+          <Summary
+            label="State"
+            value={
+              routeResolution.status === 'unresolved' ? 'BLOCKED' : summary.status.toUpperCase()
+            }
+          />
         </View>
       </Card>
+
+      {routeResolution.status === 'unresolved' && (
+        <Card>
+          <Text style={[styles.blocked, { color: theme.danger }]}>
+            ROUTE CALCULATION BLOCKED
+          </Text>
+          <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+            The active dataset cannot resolve:{' '}
+            {routeResolution.unresolvedIdentifiers.join(', ')}. Remove or replace every
+            unresolved waypoint before using route results.
+          </Text>
+        </Card>
+      )}
 
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
         Route sequence
       </Text>
       <View style={styles.routeList}>
-        {airports.length === 0 && (
+        {routeIdentifiers.length === 0 && (
           <Card>
             <Text style={[panelStyles.copy, { color: theme.secondary }]}>
               No route yet. Add a demonstration airport below.
             </Text>
           </Card>
         )}
-        {airports.map((airport, index) => (
-          <Card key={airport.icao}>
-            <View style={panelStyles.row}>
-              <Text style={[styles.sequence, { color: theme.accent }]}>
-                {String(index + 1).padStart(2, '0')}
-              </Text>
-              <View style={styles.routeCopy}>
-                <Text style={[styles.identifier, { color: theme.primary }]}>
-                  {airport.icao}
+        {routeIdentifiers.map((identifier, index) => {
+          const airport = demoAirports.find(({ icao }) => icao === identifier);
+          return (
+            <Card key={`${identifier}-${index}`}>
+              <View style={panelStyles.row}>
+                <Text style={[styles.sequence, { color: theme.accent }]}>
+                  {String(index + 1).padStart(2, '0')}
                 </Text>
-                <Text numberOfLines={1} style={[panelStyles.copy, { color: theme.secondary }]}>
-                  {airport.name}
-                </Text>
+                <View style={styles.routeCopy}>
+                  <Text style={[styles.identifier, { color: theme.primary }]}>
+                    {identifier}
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={[panelStyles.copy, { color: theme.secondary }]}
+                  >
+                    {airport?.name ?? 'Unresolved in active demonstration dataset'}
+                  </Text>
+                </View>
+                <Action label="Remove" onPress={() => removeWaypoint(identifier)} />
               </View>
-              <Action label="Remove" onPress={() => removeWaypoint(airport.icao)} />
-            </View>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </View>
 
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
@@ -118,6 +159,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
+  blocked: { fontFamily: 'Menlo', fontSize: 12, fontWeight: '800', marginBottom: spacing.sm },
   disclaimer: {
     fontSize: 12,
     fontWeight: '700',

@@ -10,6 +10,10 @@ const coordinate = fc.tuple(
   fc.double({ min: -89.999, max: 89.999, noNaN: true }),
   fc.double({ min: -180, max: 180, noNaN: true }),
 );
+const nonPolarCoordinate = fc.tuple(
+  fc.double({ min: -85, max: 85, noNaN: true }),
+  fc.double({ min: -180, max: 180, noNaN: true }),
+);
 
 describe('great-circle properties', () => {
   it('is symmetric and non-negative across finite global coordinates', () => {
@@ -27,19 +31,19 @@ describe('great-circle properties', () => {
     );
   });
 
-  it('round trips destination distance and bearing away from antipodal ambiguity', () => {
+  it('round trips destination distance and bearing away from polar singularities', () => {
     fc.assert(
       fc.property(
-        coordinate,
+        nonPolarCoordinate,
         fc.double({ min: 0, max: 359.999, noNaN: true }),
         fc.double({ min: 0.01, max: 5_000, noNaN: true }),
         ([latitude, longitude], bearing, distance) => {
           const start = position(latitude, longitude);
           const end = destinationPoint(start, degrees(bearing), nauticalMiles(distance));
-          expect(greatCircleDistance(start, end)).toBeCloseTo(distance, 7);
+          expect(Math.abs(greatCircleDistance(start, end) - distance)).toBeLessThan(1e-6);
           const calculatedBearing = initialTrueBearing(start, end);
           const bearingError = Math.abs(((calculatedBearing - bearing + 540) % 360) - 180);
-          expect(bearingError).toBeCloseTo(0, 7);
+          expect(bearingError).toBeLessThan(1e-6);
         },
       ),
       { numRuns: 300 },

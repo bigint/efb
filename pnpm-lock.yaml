@@ -150,6 +150,16 @@ importers:
         specifier: ~6.0.3
         version: 6.0.3
 
+  packages/aircraft-performance:
+    dependencies:
+      '@driftline/data-contracts':
+        specifier: workspace:*
+        version: link:../data-contracts
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
   packages/aviation-domain:
     dependencies:
       '@driftline/data-contracts':

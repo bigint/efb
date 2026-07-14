@@ -27,7 +27,17 @@ export const dataProvenanceSchema = z
 
 export type DataProvenance = z.infer<typeof dataProvenanceSchema>;
 
-export const isStale = (provenance: DataProvenance, now: Date): boolean => {
-  if (provenance.expiresAt === null) return false;
-  return Date.parse(provenance.expiresAt) <= now.getTime();
+export type DataCurrency = 'current' | 'expired' | 'invalid' | 'not-effective' | 'unknown';
+
+export const classifyDataCurrency = (provenance: DataProvenance, now: Date): DataCurrency => {
+  if (!Number.isFinite(now.getTime()) || provenance.verificationStatus === 'invalid') {
+    return 'invalid';
+  }
+  if (provenance.effectiveAt === null || provenance.expiresAt === null) return 'unknown';
+  if (Date.parse(provenance.effectiveAt) > now.getTime()) return 'not-effective';
+  if (Date.parse(provenance.expiresAt) <= now.getTime()) return 'expired';
+  return 'current';
 };
+
+export const isStale = (provenance: DataProvenance, now: Date): boolean =>
+  classifyDataCurrency(provenance, now) !== 'current';

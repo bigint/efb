@@ -12,8 +12,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { demoAirports } from '@driftline/aviation-domain';
 import { knots } from '@driftline/data-contracts';
-import { calculateRoute } from '@driftline/flight-planning';
+import { calculateRoute, resolveRouteIdentifiers } from '@driftline/flight-planning';
 
+import { evaluatePosition } from '@/domain/position-source';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
 
@@ -51,14 +52,25 @@ const graticule = {
 
 export function MapWorkspace() {
   const theme = useDriftlineTheme();
-  const gpsOutage = useFlightStore((state) => state.gpsOutage);
+  const positionSample = useFlightStore((state) => state.positionSample);
+  const positionScenario = useFlightStore((state) => state.positionScenario);
   const routeIdentifiers = useFlightStore((state) => state.routeIdentifiers);
   const selectAirport = useFlightStore((state) => state.selectAirport);
   const setWorkspace = useFlightStore((state) => state.setWorkspace);
 
-  const routeAirports = routeIdentifiers
-    .map((identifier) => demoAirports.find(({ icao }) => icao === identifier))
-    .filter((airport) => airport !== undefined);
+  const position = evaluatePosition(positionScenario, positionSample, Date.now());
+  const routeResolution = resolveRouteIdentifiers(
+    routeIdentifiers,
+    demoAirports.map((airport) => ({ identifier: airport.icao, position: airport.position })),
+  );
+  const routeAirports =
+    routeResolution.status === 'resolved'
+      ? routeResolution.waypoints.map((waypoint) => {
+          const airport = demoAirports.find(({ icao }) => icao === waypoint.identifier);
+          if (airport === undefined) throw new Error('Resolved airport invariant failed');
+          return airport;
+        })
+      : [];
   const summary = useMemo(
     () =>
       calculateRoute(
@@ -86,7 +98,7 @@ export function MapWorkspace() {
     ],
     type: 'FeatureCollection' as const,
   };
-  const ownship = routeAirports[0]?.position ?? demoAirports[0]?.position;
+  const ownship = position.kind === 'available' ? position.sample : null;
 
   return (
     <View style={styles.container}>
@@ -133,6 +145,9 @@ export function MapWorkspace() {
             }}
           >
             <View
+              accessibilityLabel={`${airport.icao}, fictional demonstration airport`}
+              accessibilityRole="button"
+              accessible
               style={[
                 styles.airportMarker,
                 { backgroundColor: theme.panelRaised, borderColor: theme.accent },
@@ -144,9 +159,9 @@ export function MapWorkspace() {
             </View>
           </Marker>
         ))}
-        {ownship !== undefined && (
+        {ownship !== null && (
           <Marker anchor="center" id="ownship" lngLat={[ownship.longitude, ownship.latitude]}>
-            <OwnshipGlyph degraded={gpsOutage} />
+            <OwnshipGlyph />
           </Marker>
         )}
       </Map>
@@ -154,20 +169,40 @@ export function MapWorkspace() {
       <View pointerEvents="box-none" style={styles.overlay}>
         <View style={[styles.mapChip, { backgroundColor: theme.panelRaised }]}>
           <Text style={[styles.mapChipPrimary, { color: theme.primary }]}>
-            OFFLINE DEMO GRID
+            {routeResolution.status === 'unresolved' ? 'ROUTE BLOCKED' : 'OFFLINE DEMO GRID'}
           </Text>
           <Text style={[styles.mapChipSecondary, { color: theme.secondary }]}>
-            No chart data loaded
+            {routeResolution.status === 'unresolved'
+              ? `Unresolved: ${routeResolution.unresolvedIdentifiers.join(', ')}`
+              : 'No chart data loaded'}
           </Text>
         </View>
         <View style={styles.navStrip}>
-          <NavValue label="GS" value={gpsOutage ? '—' : '118'} unit="KT" />
-          <NavValue label="ALT" value={gpsOutage ? '—' : '4,500'} unit="FT GPS" />
-          <NavValue label="DIST" value={summary.totalDistance.toFixed(1)} unit="NM" />
+          <NavValue
+            label="GS"
+            value={
+              position.kind === 'available' ? position.sample.groundspeedKnots.toFixed(0) : '—'
+            }
+            unit="KT SIM"
+          />
+          <NavValue
+            label="ALT"
+            value={
+              position.kind === 'available'
+                ? position.sample.altitudeFeet.toLocaleString('en-US')
+                : '—'
+            }
+            unit="FT SIM"
+          />
+          <NavValue
+            label="DIST"
+            value={summary.totalDistance?.toFixed(1) ?? '—'}
+            unit={summary.status === 'ready' ? 'NM ROUTE' : 'NO ROUTE'}
+          />
           <NavValue
             label="ETE"
             value={summary.estimatedMinutes?.toFixed(0) ?? '—'}
-            unit="MIN"
+            unit={summary.status === 'ready' ? 'MIN ROUTE' : 'NO ROUTE'}
           />
         </View>
         <Pressable
@@ -179,7 +214,7 @@ export function MapWorkspace() {
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.nearestText}>⌖ NEAREST</Text>
+          <Text style={[styles.nearestText, { color: theme.onAccent }]}>⌖ PLACES</Text>
         </Pressable>
       </View>
     </View>
@@ -217,8 +252,17 @@ function NavValue({
 }
 
 const styles = StyleSheet.create({
-  airportMarker: { borderRadius: 7, borderWidth: 2, paddingHorizontal: 6, paddingVertical: 4 },
-  airportMarkerText: { fontFamily: typography.mono, fontSize: 10, fontWeight: '800' },
+  airportMarker: {
+    alignItems: 'center',
+    borderRadius: 7,
+    borderWidth: 2,
+    justifyContent: 'center',
+    minHeight: cockpitTarget,
+    minWidth: cockpitTarget,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  airportMarkerText: { fontFamily: typography.mono, fontSize: 12, fontWeight: '800' },
   container: { flex: 1, overflow: 'hidden' },
   mapChip: {
     alignSelf: 'flex-start',
@@ -233,10 +277,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   mapChipSecondary: { fontFamily: typography.body, fontSize: 10, marginTop: 2 },
-  navLabel: { fontFamily: typography.body, fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
-  navNumber: { fontFamily: typography.mono, fontSize: 19, fontWeight: '700', marginTop: 2 },
+  navLabel: {
+    fontFamily: typography.body,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  navNumber: { fontFamily: typography.mono, fontSize: 21, fontWeight: '700', marginTop: 2 },
   navStrip: { flexDirection: 'row', gap: spacing.xs, marginTop: 'auto' },
-  navUnit: { fontFamily: typography.body, fontSize: 8, fontWeight: '700' },
+  navUnit: { fontFamily: typography.body, fontSize: 10, fontWeight: '700' },
   navValue: {
     borderRadius: radii.control,
     borderWidth: 1,
@@ -254,7 +303,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   nearestText: {
-    color: '#FFFFFF',
     fontFamily: typography.body,
     fontSize: 11,
     fontWeight: '800',

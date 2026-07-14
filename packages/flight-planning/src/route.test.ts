@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { knots } from '@driftline/data-contracts';
 import { position } from '@driftline/geospatial';
 
-import { calculateRoute } from './route';
+import { calculateRoute, resolveRouteIdentifiers } from './route';
 
 describe('route calculation', () => {
   const route = [
@@ -14,6 +14,7 @@ describe('route calculation', () => {
 
   it('calculates deterministic legs, course, distance and time', () => {
     const result = calculateRoute(route, knots(120));
+    expect(result.status).toBe('ready');
     expect(result.legs).toHaveLength(2);
     expect(result.legs[0]?.initialTrueCourse).toBeCloseTo(90, 10);
     expect(result.totalDistance).toBeCloseTo(120.08, 1);
@@ -24,8 +25,30 @@ describe('route calculation', () => {
     expect(calculateRoute(route, null).estimatedMinutes).toBeNull();
   });
 
+  it('marks empty and one-waypoint plans incomplete without invented totals', () => {
+    expect(calculateRoute([], knots(100))).toEqual({
+      estimatedMinutes: null,
+      legs: [],
+      status: 'empty',
+      totalDistance: null,
+    });
+    expect(calculateRoute([route[0]], knots(100))).toEqual({
+      estimatedMinutes: null,
+      legs: [],
+      status: 'incomplete',
+      totalDistance: null,
+    });
+  });
+
   it('rejects ambiguous and unsafe inputs', () => {
     expect(() => calculateRoute(route, knots(0))).toThrow(RangeError);
     expect(() => calculateRoute([route[0], route[0]], knots(100))).toThrow(RangeError);
+  });
+
+  it('preserves unresolved route intent instead of silently shortening it', () => {
+    expect(resolveRouteIdentifiers(['A', 'MISSING', 'C'], route)).toEqual({
+      status: 'unresolved',
+      unresolvedIdentifiers: ['MISSING'],
+    });
   });
 });

@@ -3,12 +3,23 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
+import { evaluatePosition } from '@/domain/position-source';
 
 export function StatusPlane() {
   const theme = useDriftlineTheme();
-  const simulation = useFlightStore((state) => state.simulationEnabled);
-  const gpsOutage = useFlightStore((state) => state.gpsOutage);
+  const scenario = useFlightStore((state) => state.positionScenario);
+  const sample = useFlightStore((state) => state.positionSample);
   const setWorkspace = useFlightStore((state) => state.setWorkspace);
+  const position = evaluatePosition(scenario, sample, Date.now());
+  const available = position.kind === 'available';
+  const title = available
+    ? 'SIMULATION'
+    : position.reason === 'gps-outage'
+      ? 'GPS OUTAGE'
+      : 'POSITION UNAVAILABLE';
+  const detail = available
+    ? `SIM fixture · ±${position.sample.horizontalAccuracyMetres} m · ${Math.floor(position.ageMilliseconds / 1000)} s old`
+    : `${position.reason.replaceAll('-', ' ')} · no live values`;
 
   return (
     <Pressable
@@ -19,7 +30,7 @@ export function StatusPlane() {
         styles.container,
         {
           backgroundColor: theme.panelRaised,
-          borderColor: simulation ? theme.simulation : theme.separator,
+          borderColor: available ? theme.simulation : theme.danger,
         },
         pressed && styles.pressed,
       ]}
@@ -27,15 +38,13 @@ export function StatusPlane() {
       <View
         style={[
           styles.statusMark,
-          { backgroundColor: gpsOutage ? theme.danger : theme.simulation },
+          { backgroundColor: available ? theme.simulation : theme.danger },
         ]}
       />
       <View style={styles.copy}>
-        <Text style={[styles.primary, { color: theme.primary }]}>
-          {gpsOutage ? 'GPS OUTAGE' : simulation ? 'SIMULATION' : 'POSITION STANDBY'}
-        </Text>
+        <Text style={[styles.primary, { color: theme.primary }]}>{title}</Text>
         <Text numberOfLines={1} style={[styles.secondary, { color: theme.secondary }]}>
-          Demo data · offline · version demo-2026-07-14
+          {detail}
         </Text>
       </View>
       <Text style={[styles.disclosure, { color: theme.secondary }]}>STATUS ›</Text>

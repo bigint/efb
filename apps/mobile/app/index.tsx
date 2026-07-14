@@ -18,7 +18,7 @@ export default function HomeScreen() {
   const colourScheme = useColorScheme();
   const { width } = useWindowDimensions();
   const compact = width < 760;
-  const simulation = useFlightStore((state) => state.simulationEnabled);
+  const scenario = useFlightStore((state) => state.positionScenario);
   const workspace = useFlightStore((state) => state.workspace);
 
   const content = (() => {
@@ -43,7 +43,7 @@ export default function HomeScreen() {
         styles.safeArea,
         {
           backgroundColor: theme.background,
-          borderColor: simulation ? theme.simulation : theme.background,
+          borderColor: scenario.kind === 'simulated' ? theme.simulation : theme.background,
         },
       ]}
     >

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { demoAirports, searchAirports } from '@driftline/aviation-domain';
+import { classifyDataCurrency } from '@driftline/data-contracts';
 
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
@@ -21,6 +22,8 @@ export function PlacesWorkspace() {
     [query],
   );
   const selected = demoAirports.find(({ icao }) => icao === selectedIdentifier) ?? results[0];
+  const currency =
+    selected === undefined ? null : classifyDataCurrency(selected.provenance, new Date());
 
   return (
     <ScrollView
@@ -65,7 +68,7 @@ export function PlacesWorkspace() {
               <Text
                 style={[
                   styles.resultId,
-                  { color: selected?.icao === airport.icao ? '#FFFFFF' : theme.primary },
+                  { color: selected?.icao === airport.icao ? theme.onAccent : theme.primary },
                 ]}
               >
                 {airport.icao}
@@ -74,7 +77,7 @@ export function PlacesWorkspace() {
                 numberOfLines={2}
                 style={[
                   styles.resultName,
-                  { color: selected?.icao === airport.icao ? '#E8FFFF' : theme.secondary },
+                  { color: selected?.icao === airport.icao ? theme.onAccent : theme.secondary },
                 ]}
               >
                 {airport.name}
@@ -100,6 +103,10 @@ export function PlacesWorkspace() {
                   value={`${selected.position.latitude.toFixed(4)}, ${selected.position.longitude.toFixed(4)}`}
                 />
                 <Fact label="Source" value={selected.provenance.source} />
+                <Fact label="Dataset" value={selected.provenance.datasetVersion} />
+                <Fact label="Verification" value={selected.provenance.verificationStatus} />
+                <Fact label="Confidence" value={selected.provenance.confidence} />
+                <Fact label="Currency" value={currency ?? 'unknown'} />
               </View>
             </Card>
             <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
@@ -116,7 +123,7 @@ export function PlacesWorkspace() {
                       {runway.lengthMetres} × {runway.widthMetres} M
                     </Text>
                     <Text style={[panelStyles.copy, { color: theme.secondary }]}>
-                      {runway.surface}
+                      {runway.surface} · HDG {runway.headingTrueDegrees ?? '—'}°T
                     </Text>
                   </View>
                 </View>

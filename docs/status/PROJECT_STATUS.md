@@ -17,7 +17,7 @@ performance data.
 
 - Native iOS/Android development-build and physical-device validation
 - SQLite user/control database and immutable dataset-generation registry
-- Simulator clock, movement, accuracy degradation, and lifecycle recovery
+- Simulator movement, accuracy degradation, and native lifecycle recovery
 - Property/golden coverage for antimeridian, polar, zero-length, and malformed calculations
 - Accessibility, split-view, performance, battery, and process-death evidence
 - U.S. source-ingestion proof without redistribution while written data rights are clarified
@@ -25,12 +25,15 @@ performance data.
 ## Verification
 
 - pnpm workspace and frozen lockfile are present.
-- Expo Doctor: 20/20 checks passed on 2026-07-14.
-- Strict TypeScript: passed across six implementation packages/apps.
+- Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
+- Strict TypeScript: passed across eight implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 17 passed across four test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,058 modules, 4.9 MB
+- Unit tests: 44 passed across nine test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,059 modules, 4.9 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
+- The first remediation candidate adds an atomic fail-closed simulated position source, route
+  resolution blocking, explicit data-currency classification, semantic airport validation, and a
+  generic typed weight-and-balance core. Independent re-review is pending.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated

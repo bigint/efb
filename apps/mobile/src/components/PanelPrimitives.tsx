@@ -51,7 +51,7 @@ export function Action({
     : destructive
       ? `${theme.danger}18`
       : theme.panelRaised;
-  const color = primary ? '#FFFFFF' : destructive ? theme.danger : theme.primary;
+  const color = primary ? theme.onAccent : destructive ? theme.danger : theme.primary;
   return (
     <Pressable
       accessibilityRole="button"

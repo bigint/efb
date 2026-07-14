@@ -3,15 +3,19 @@ import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
+import { evaluatePosition } from '@/domain/position-source';
 
 import { Card, PanelHeader, panelStyles } from './PanelPrimitives';
 
 export function SystemWorkspace() {
   const theme = useDriftlineTheme();
-  const gpsOutage = useFlightStore((state) => state.gpsOutage);
+  const scenario = useFlightStore((state) => state.positionScenario);
+  const sample = useFlightStore((state) => state.positionSample);
   const setGpsOutage = useFlightStore((state) => state.setGpsOutage);
   const setSimulationEnabled = useFlightStore((state) => state.setSimulationEnabled);
-  const simulation = useFlightStore((state) => state.simulationEnabled);
+  const simulation = scenario.kind === 'simulated';
+  const gpsOutage = scenario.kind === 'simulated' && !scenario.gpsAvailable;
+  const position = evaluatePosition(scenario, sample, Date.now());
 
   return (
     <ScrollView
@@ -28,6 +32,7 @@ export function SystemWorkspace() {
         />
         <View style={[styles.separator, { backgroundColor: theme.separator }]} />
         <Setting
+          disabled={!simulation}
           detail="Inject a complete position-source failure and block derived GPS values."
           label="GPS outage injection"
           onValueChange={setGpsOutage}
@@ -43,7 +48,11 @@ export function SystemWorkspace() {
         <Status label="Weather" value="unavailable · no provider configured" />
         <Status
           label="Position"
-          value={gpsOutage ? 'unavailable · injected failure' : 'simulated · fixture origin'}
+          value={
+            position.kind === 'available'
+              ? `simulated · ±${position.sample.horizontalAccuracyMetres} m · ${Math.floor(position.ageMilliseconds / 1000)} s old`
+              : `unavailable · ${position.reason.replaceAll('-', ' ')}`
+          }
         />
       </Card>
       <Text style={[styles.safety, { color: theme.danger }]}>
@@ -59,11 +68,13 @@ export function SystemWorkspace() {
 }
 
 function Setting({
+  disabled = false,
   detail,
   label,
   onValueChange,
   value,
 }: {
+  readonly disabled?: boolean;
   readonly detail: string;
   readonly label: string;
   readonly onValueChange: (value: boolean) => void;
@@ -76,7 +87,12 @@ function Setting({
         <Text style={[styles.settingLabel, { color: theme.primary }]}>{label}</Text>
         <Text style={[panelStyles.copy, { color: theme.secondary }]}>{detail}</Text>
       </View>
-      <Switch accessibilityLabel={label} onValueChange={onValueChange} value={value} />
+      <Switch
+        accessibilityLabel={label}
+        disabled={disabled}
+        onValueChange={onValueChange}
+        value={value}
+      />
     </View>
   );
 }

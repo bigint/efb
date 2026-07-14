@@ -25,15 +25,47 @@ const runwaySchema = z
 export const airportSourceSchema = z
   .object({
     elevationFeet: z.number(),
-    iata: z.string().length(3).nullable(),
-    icao: z.string().min(3).max(4),
+    iata: z
+      .string()
+      .regex(/^[A-Z]{3}$/)
+      .nullable(),
+    icao: z.string().regex(/^[A-Z0-9]{3,4}$/),
     name: z.string().min(1),
     position: positionSchema,
     provenance: dataProvenanceSchema,
     runways: z.array(runwaySchema),
     timezone: z.string().min(1),
   })
-  .strict();
+  .strict()
+  .superRefine((airport, context) => {
+    if (airport.provenance.verificationStatus === 'invalid') {
+      context.addIssue({
+        code: 'custom',
+        message: 'Invalid source data cannot enter the aviation domain',
+        path: ['provenance', 'verificationStatus'],
+      });
+    }
+    const designators = new Set<string>();
+    airport.runways.forEach((runway, index) => {
+      if (designators.has(runway.designator)) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Runway designators must be unique per airport',
+          path: ['runways', index, 'designator'],
+        });
+      }
+      designators.add(runway.designator);
+    });
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: airport.timezone });
+    } catch {
+      context.addIssue({
+        code: 'custom',
+        message: 'Timezone must be a valid IANA time zone',
+        path: ['timezone'],
+      });
+    }
+  });
 
 export interface Runway {
   readonly designator: string;

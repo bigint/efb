@@ -6,6 +6,6 @@ export default defineConfig({
       include: ['packages/*/src/**/*.ts'],
       provider: 'v8',
     },
-    include: ['packages/*/src/**/*.test.ts'],
+    include: ['apps/mobile/src/**/*.test.ts', 'packages/*/src/**/*.test.ts'],
   },
 });

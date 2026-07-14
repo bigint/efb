@@ -46,15 +46,12 @@ export function WorkspaceRail({ compact }: WorkspaceRailProps) {
               ]}
             >
               <Text
-                style={[styles.mark, { color: selected ? theme.panelRaised : theme.secondary }]}
+                style={[styles.mark, { color: selected ? theme.onAccent : theme.secondary }]}
               >
                 {item.mark}
               </Text>
               <Text
-                style={[
-                  styles.label,
-                  { color: selected ? theme.panelRaised : theme.secondary },
-                ]}
+                style={[styles.label, { color: selected ? theme.onAccent : theme.secondary }]}
               >
                 {item.label}
               </Text>
