@@ -87,5 +87,27 @@ describe('generic weight and balance', () => {
         ],
       }),
     ).toThrow('intersect');
+    expect(() =>
+      calculateLoadingSummary({
+        maximumMass: Number.NaN as never,
+        stations: validInput.stations,
+      }),
+    ).toThrow('finite');
+    expect(() =>
+      calculateLoadingSummary({
+        maximumMass: validInput.maximumMass,
+        stations: Array.from({ length: 101 }, (_, index) => ({
+          arm: metres(1),
+          id: `station-${index}`,
+          mass: kilograms(1),
+        })),
+      }),
+    ).toThrow('limit');
+    expect(() =>
+      calculateLoadingSummary({
+        maximumMass: validInput.maximumMass,
+        stations: [{ arm: metres(1), id: 'unsafe\nstation', mass: kilograms(1) }],
+      }),
+    ).toThrow('identifier');
   });
 });

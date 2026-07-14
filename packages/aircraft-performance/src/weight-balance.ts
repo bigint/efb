@@ -47,6 +47,15 @@ export interface LoadingSummary {
   readonly totalMoment: KilogramMetres;
 }
 
+const MAXIMUM_LOADING_STATIONS = 100;
+const hasSafeStationIdentifier = (value: string): boolean =>
+  value.length > 0 &&
+  value.length <= 80 &&
+  [...value].every((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code >= 32 && code !== 127;
+  });
+
 const kilogramMetres = (value: number): KilogramMetres => {
   if (!Number.isFinite(value)) throw new RangeError('Moment must be finite');
   return value as KilogramMetres;
@@ -160,13 +169,25 @@ export const assertValidCgEnvelope = (envelope: readonly EnvelopePoint[]): void 
 };
 
 export const calculateLoadingSummary = (input: LoadingSummaryInput): LoadingSummary => {
-  if (input.maximumMass <= 0) throw new RangeError('Maximum mass must be positive');
+  if (!Number.isFinite(input.maximumMass) || input.maximumMass <= 0) {
+    throw new RangeError('Maximum mass must be finite and positive');
+  }
+  if (input.stations.length > MAXIMUM_LOADING_STATIONS) {
+    throw new RangeError('Loading scenario exceeds the supported station limit');
+  }
   const ids = new Set<string>();
   const stations = input.stations.map((station): StationResult => {
-    if (station.id.trim().length === 0) throw new RangeError('Station identifier is required');
+    if (!hasSafeStationIdentifier(station.id)) {
+      throw new RangeError('Station identifier is invalid');
+    }
     if (ids.has(station.id))
       throw new RangeError(`Duplicate station identifier: ${station.id}`);
-    if (station.mass < 0) throw new RangeError(`Station ${station.id} mass cannot be negative`);
+    if (!Number.isFinite(station.mass) || station.mass < 0) {
+      throw new RangeError(`Station ${station.id} mass must be finite and non-negative`);
+    }
+    if (!Number.isFinite(station.arm)) {
+      throw new RangeError(`Station ${station.id} arm must be finite`);
+    }
     ids.add(station.id);
     return { ...station, moment: kilogramMetres(station.mass * station.arm) };
   });
