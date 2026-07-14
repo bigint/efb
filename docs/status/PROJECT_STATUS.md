@@ -33,6 +33,8 @@ performance data.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
 - Unit tests: 372 passed across sixty-four test files.
+- The complete suite also passes under `Pacific/Kiritimati`, `America/Adak`, and a Turkish
+  process locale to exercise date/UTC and locale-sensitive boundaries.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,207 modules, 5.7 MB
   uncompressed bundle artifact). Android production JavaScript/Hermes export passed (2,299
   modules, 5.9 MB uncompressed bundle artifact). Pinned CI now compiles both exports after the
