@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   parsePersistedFlightState,
+  restorePersistedFlightPreferences,
   safePersistedFlightState,
   sanitisePersistedJson,
 } from './persisted-flight';
@@ -46,6 +47,20 @@ describe('persisted flight recovery', () => {
         positionScenario: { kind: 'device', status: 'watching' },
       }),
     ).toEqual(safePersistedFlightState);
+  });
+
+  it('does not restore a legacy MMKV route as durable user intent', () => {
+    expect(restorePersistedFlightPreferences(validState)).toMatchObject({
+      routeIdentifiers: [],
+      selectedAirport: 'DVL1',
+      workspace: 'map',
+    });
+    const preferencesOnly = {
+      positionScenario: validState.positionScenario,
+      selectedAirport: validState.selectedAirport,
+      workspace: validState.workspace,
+    };
+    expect(parsePersistedFlightState(preferencesOnly).routeIdentifiers).toEqual([]);
   });
 
   it.each([

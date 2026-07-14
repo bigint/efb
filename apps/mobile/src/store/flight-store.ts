@@ -5,7 +5,7 @@ import { createJSONStorage, persist, type StateStorage } from 'zustand/middlewar
 import { demoAirports } from '@driftline/aviation-domain';
 
 import {
-  parsePersistedFlightState,
+  restorePersistedFlightPreferences,
   safePersistedFlightState,
   sanitisePersistedJson,
   type Workspace,
@@ -30,6 +30,7 @@ interface FlightState {
   clearRoute: () => void;
   ingestDeviceLocation: (location: DeviceLocationInput) => void;
   removeWaypoint: (identifier: string) => void;
+  replaceRoute: (identifiers: readonly string[]) => void;
   reverseRoute: () => void;
   selectAirport: (identifier: string | null) => void;
   setDevicePositionEnabled: (enabled: boolean) => void;
@@ -43,7 +44,7 @@ interface FlightState {
 }
 
 const storage = createMMKV({ id: 'driftline-preferences' });
-const PERSISTENCE_VERSION = 3;
+const PERSISTENCE_VERSION = 4;
 
 const zustandStorage: StateStorage = {
   getItem: (name) =>
@@ -87,6 +88,7 @@ export const useFlightStore = create<FlightState>()(
         set((state) => ({
           routeIdentifiers: state.routeIdentifiers.filter((value) => value !== identifier),
         })),
+      replaceRoute: (identifiers) => set({ routeIdentifiers: [...identifiers] }),
       reverseRoute: () =>
         set((state) => ({ routeIdentifiers: [...state.routeIdentifiers].reverse() })),
       routeIdentifiers: demoAirports.slice(0, 2).map(({ icao }) => icao),
@@ -152,7 +154,7 @@ export const useFlightStore = create<FlightState>()(
     }),
     {
       merge: (persisted, current) => {
-        const parsed = parsePersistedFlightState(persisted);
+        const parsed = restorePersistedFlightPreferences(persisted);
         return {
           ...current,
           ...parsed,
@@ -160,14 +162,13 @@ export const useFlightStore = create<FlightState>()(
         };
       },
       migrate: (persistedState, storedVersion) =>
-        storedVersion <= 2 ? persistedState : safePersistedFlightState,
+        storedVersion <= 3 ? persistedState : safePersistedFlightState,
       name: 'flight-workspace-v2',
-      partialize: ({ positionScenario, routeIdentifiers, selectedAirport, workspace }) => ({
+      partialize: ({ positionScenario, selectedAirport, workspace }) => ({
         positionScenario:
           positionScenario.kind === 'device'
             ? { kind: 'device' as const, status: 'checking' as const }
             : positionScenario,
-        routeIdentifiers,
         selectedAirport,
         workspace,
       }),

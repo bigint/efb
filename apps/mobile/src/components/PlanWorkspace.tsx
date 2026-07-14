@@ -1,8 +1,15 @@
 import { radii, spacing, typography } from '@driftline/design-system';
-import { useState } from 'react';
+import { randomUUID } from 'expo-crypto';
+import { useSQLiteContext } from 'expo-sqlite';
+import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { demoAirports } from '@driftline/aviation-domain';
+import {
+  demoAirports,
+  resolveSavedFlightPlan,
+  savedFlightPlanSchema,
+  type SavedFlightPlan,
+} from '@driftline/aviation-domain';
 import { knots, trueDegrees } from '@driftline/data-contracts';
 import {
   calculateRoute,
@@ -10,19 +17,27 @@ import {
   resolveRouteIdentifiers,
 } from '@driftline/flight-planning';
 
+import { insertSavedFlightPlan, listSavedFlightPlans } from '@/database/flight-plan-repository';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
 
 import { Action, Card, PanelHeader, panelStyles } from './PanelPrimitives';
 
 export function PlanWorkspace() {
+  const database = useSQLiteContext();
   const theme = useDriftlineTheme();
+  const [savedPlans, setSavedPlans] = useState<readonly SavedFlightPlan[]>([]);
+  const [saveTitle, setSaveTitle] = useState('');
+  const [persistenceError, setPersistenceError] = useState<string | null>(null);
+  const [readBlocked, setReadBlocked] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [trueAirspeed, setTrueAirspeed] = useState('118');
   const [windFromTrue, setWindFromTrue] = useState('0');
   const [windSpeed, setWindSpeed] = useState('0');
   const addWaypoint = useFlightStore((state) => state.addWaypoint);
   const clearRoute = useFlightStore((state) => state.clearRoute);
   const removeWaypoint = useFlightStore((state) => state.removeWaypoint);
+  const replaceRoute = useFlightStore((state) => state.replaceRoute);
   const reverseRoute = useFlightStore((state) => state.reverseRoute);
   const routeIdentifiers = useFlightStore((state) => state.routeIdentifiers);
   const setWorkspace = useFlightStore((state) => state.setWorkspace);
@@ -62,6 +77,58 @@ export function PlanWorkspace() {
         windSpeed: knots(assumptionValues[2] ?? Number.NaN),
       })
     : null;
+
+  const reloadSavedPlans = useCallback(async () => {
+    try {
+      setSavedPlans(await listSavedFlightPlans(database));
+      setPersistenceError(null);
+      setReadBlocked(false);
+    } catch {
+      setSavedPlans([]);
+      setPersistenceError('Saved flights unavailable: stored routes failed integrity checks.');
+      setReadBlocked(true);
+    }
+  }, [database]);
+
+  useEffect(() => {
+    void reloadSavedPlans();
+  }, [reloadSavedPlans]);
+
+  const saveRoute = async () => {
+    setSaving(true);
+    try {
+      if (routeResolution.status !== 'resolved' || airports.length < 2) {
+        throw new Error('A saved flight requires at least two resolved waypoints.');
+      }
+      const now = new Date().toISOString();
+      const plan = savedFlightPlanSchema.parse({
+        aircraftId: null,
+        altitudeFeet: null,
+        createdAt: now,
+        departureTime: null,
+        id: randomUUID(),
+        notes: '',
+        revision: 1,
+        status: 'draft',
+        title: saveTitle,
+        updatedAt: now,
+        waypoints: airports.map((airport, sequence) => ({
+          identifier: airport.icao,
+          latitude: airport.position.latitude,
+          longitude: airport.position.longitude,
+          sequence,
+          sourceRef: `${airport.provenance.datasetVersion}:${airport.icao}`,
+        })),
+      });
+      await insertSavedFlightPlan(database, plan);
+      setSaveTitle('');
+      await reloadSavedPlans();
+    } catch (caught) {
+      setPersistenceError(caught instanceof Error ? caught.message : 'Unable to save flight.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <ScrollView
@@ -104,6 +171,107 @@ export function PlanWorkspace() {
                     : summary.status.toUpperCase()
             }
           />
+        </View>
+      </Card>
+
+      <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
+        Saved offline
+      </Text>
+      <Card>
+        <Text style={[styles.assumptionWarning, { color: theme.attention }]}>
+          USER DRAFT · FICTIONAL DEMONSTRATION WAYPOINTS
+        </Text>
+        <View style={styles.saveRow}>
+          <TextInput
+            accessibilityLabel="Saved flight title"
+            onChangeText={setSaveTitle}
+            placeholder="Flight title"
+            placeholderTextColor={theme.secondary}
+            style={[
+              styles.input,
+              styles.titleInput,
+              {
+                backgroundColor: theme.background,
+                borderColor: theme.separator,
+                color: theme.primary,
+              },
+            ]}
+            value={saveTitle}
+          />
+          <Action
+            disabled={
+              saving ||
+              readBlocked ||
+              routeResolution.status !== 'resolved' ||
+              airports.length < 2
+            }
+            label={saving ? 'Saving…' : 'Save draft'}
+            onPress={() => void saveRoute()}
+            primary
+          />
+        </View>
+        {persistenceError !== null && (
+          <View>
+            <Text
+              accessibilityRole="alert"
+              style={[styles.inputError, { color: theme.danger }]}
+            >
+              {persistenceError}
+            </Text>
+            {readBlocked && (
+              <View style={styles.retry}>
+                <Action label="Retry saved flights" onPress={() => void reloadSavedPlans()} />
+              </View>
+            )}
+          </View>
+        )}
+        <View style={styles.savedList}>
+          {savedPlans.length === 0 ? (
+            <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+              No saved flights.
+            </Text>
+          ) : (
+            savedPlans.map((plan) => {
+              const resolution = resolveSavedFlightPlan(
+                plan,
+                demoAirports.map((airport) => ({
+                  identifier: airport.icao,
+                  latitude: airport.position.latitude,
+                  longitude: airport.position.longitude,
+                  sourceRef: `${airport.provenance.datasetVersion}:${airport.icao}`,
+                })),
+              );
+              return (
+                <View
+                  key={plan.id}
+                  style={[styles.savedPlan, { borderColor: theme.separator }]}
+                >
+                  <View style={styles.routeCopy}>
+                    <Text style={[styles.identifier, { color: theme.primary }]}>
+                      {plan.title}
+                    </Text>
+                    <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+                      {plan.waypoints.map(({ identifier }) => identifier).join(' → ')} ·
+                      revision {plan.revision}
+                    </Text>
+                    {resolution.status === 'dataset-mismatch' && (
+                      <Text style={[panelStyles.copy, { color: theme.danger }]}>
+                        Load blocked: active data differs for{' '}
+                        {resolution.mismatchedIdentifiers.join(', ')}.
+                      </Text>
+                    )}
+                  </View>
+                  <Action
+                    disabled={resolution.status !== 'ready'}
+                    label="Load draft"
+                    onPress={() => {
+                      if (resolution.status === 'ready') replaceRoute(resolution.identifiers);
+                    }}
+                  />
+                </View>
+              );
+            })
+          )}
         </View>
       </Card>
 
@@ -328,10 +496,27 @@ const styles = StyleSheet.create({
   legTitle: { fontFamily: typography.mono, fontSize: 14, fontWeight: '800' },
   routeCopy: { flex: 1 },
   routeList: { gap: spacing.sm },
+  retry: { alignItems: 'flex-start', marginTop: spacing.sm },
+  saveRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  savedList: { gap: spacing.sm, marginTop: spacing.lg },
+  savedPlan: {
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingTop: spacing.md,
+  },
   scroll: { paddingBottom: spacing.xxl },
   section: { marginTop: spacing.xl },
   sequence: { fontFamily: 'Menlo', fontSize: 11, fontWeight: '800' },
   summary: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xl },
   summaryItem: { minWidth: 110 },
   summaryValue: { fontFamily: 'Menlo', fontSize: 20, fontWeight: '700', marginTop: 5 },
+  titleInput: { flex: 1, minWidth: 220 },
 });

@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 169 passed across twenty-six test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,157 modules, 5.4 MB
+- Unit tests: 177 passed across twenty-eight test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,159 modules, 5.4 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -77,6 +77,10 @@ performance data.
   service, provider-error, null-telemetry, and stale-sample states fail closed; metric provider
   values convert to cockpit units at a pure boundary, and source changes clear prior samples.
   Native permission, lifecycle, accuracy, energy, and physical-device evidence remain open.
+- Resolved demonstration routes can now be saved and loaded through transactional SQLite flight
+  and waypoint records. Reads reconstruct and revalidate ordered snapshots, future updates use a
+  compare-and-swap revision, and loading blocks if coordinates or dataset source references have
+  drifted. MMKV no longer claims route durability; editing and conflict UI remain open.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated

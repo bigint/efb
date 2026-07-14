@@ -40,7 +40,9 @@ const persistedFlightSchema = z
       .max(100)
       .refine((identifiers) => new Set(identifiers).size === identifiers.length, {
         message: 'Persisted route identifiers must be unique',
-      }),
+      })
+      .optional()
+      .default([]),
     selectedAirport: z.string().trim().min(1).max(16).nullable(),
     workspace: workspaceSchema,
   })
@@ -50,6 +52,11 @@ export const parsePersistedFlightState = (value: unknown): PersistedFlightState 
   const parsed = persistedFlightSchema.safeParse(value);
   return parsed.success ? parsed.data : safePersistedFlightState;
 };
+
+export const restorePersistedFlightPreferences = (value: unknown): PersistedFlightState => ({
+  ...parsePersistedFlightState(value),
+  routeIdentifiers: [],
+});
 
 export const sanitisePersistedJson = (value: string | null, version: number): string | null => {
   if (value === null) return null;
