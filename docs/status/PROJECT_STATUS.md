@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 301 passed across fifty-six test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,196 modules, 5.7 MB
+- Unit tests: 307 passed across fifty-eight test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,198 modules, 5.7 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -73,6 +73,10 @@ performance data.
   is a separate NOAA-derived local astronomical calculation for the airport's current local
   calendar date, shown in UTC with polar/invalid failure states and no legal day/night or
   operational claim.
+- Places can calculate transient steady and optional gust headwind/tailwind/crosswind components
+  for both ends of a runway only from an explicit user-entered true wind and supplied true
+  runway heading. Inputs fail closed outside 0–359°T and 0–300 KT; no METAR binding, magnetic
+  conversion, aircraft limit, runway choice, or operational recommendation is inferred.
 - A local Records workspace now writes validated logbook entries through parameterized SQLite
   transactions and labels regulatory compliance as unevaluated. An atomic dashboard and
   exclusive keyset pagination bound each rendered page to 100 validated entries and 2,000

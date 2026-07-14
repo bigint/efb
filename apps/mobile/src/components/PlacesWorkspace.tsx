@@ -9,11 +9,13 @@ import {
   findNearbyAirports,
   searchAirports,
 } from '@driftline/aviation-domain';
-import { classifyDataCurrency } from '@driftline/data-contracts';
+import { classifyDataCurrency, trueDegrees, type TrueDegrees } from '@driftline/data-contracts';
+import { calculateRunwayWindComponents } from '@driftline/flight-planning';
 
 import { evaluatePosition } from '@/domain/position-source';
 import { calculateRelativePosition } from '@/domain/relative-position';
 import { calendarDateInTimeZone } from '@/domain/calendar-date';
+import { parseRunwayWindInput, type RunwayWindInput } from '@/domain/runway-wind-input';
 import {
   listAirportFavourites,
   setAirportFavourite,
@@ -30,6 +32,9 @@ export function PlacesWorkspace() {
   const [favouriteIdentifiers, setFavouriteIdentifiers] = useState<readonly string[]>([]);
   const [savingFavourite, setSavingFavourite] = useState(false);
   const [query, setQuery] = useState('');
+  const [windDirection, setWindDirection] = useState('');
+  const [windGust, setWindGust] = useState('');
+  const [windSpeed, setWindSpeed] = useState('');
   const addWaypoint = useFlightStore((state) => state.addWaypoint);
   const positionSample = useFlightStore((state) => state.positionSample);
   const positionScenario = useFlightStore((state) => state.positionScenario);
@@ -56,6 +61,10 @@ export function PlacesWorkspace() {
     selected === undefined || solarCalendarDate === null
       ? null
       : calculateSolarEvents(selected.position, solarCalendarDate);
+  const runwayWind = useMemo(
+    () => parseRunwayWindInput(windDirection, windSpeed, windGust),
+    [windDirection, windGust, windSpeed],
+  );
 
   const reloadFavourites = useCallback(async () => {
     try {
@@ -229,6 +238,56 @@ export function PlacesWorkspace() {
             <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
               Runways
             </Text>
+            <Card>
+              <Text style={[styles.warning, { color: theme.attention }]}>
+                USER-ENTERED WIND · TRUE REFERENCE · TRANSIENT
+              </Text>
+              <Text
+                style={[panelStyles.copy, styles.unavailableCopy, { color: theme.secondary }]}
+              >
+                Enter meteorological wind-from direction in 0–359°T and speed in knots. Gust is
+                optional and must not be below steady speed. No METAR, magnetic conversion,
+                aircraft limit, runway selection, or operational recommendation is inferred.
+              </Text>
+              <View style={styles.windInputs}>
+                <WindInput
+                  label="Wind from · °T"
+                  onChange={setWindDirection}
+                  value={windDirection}
+                />
+                <WindInput label="Steady · KT" onChange={setWindSpeed} value={windSpeed} />
+                <WindInput label="Gust · KT" onChange={setWindGust} value={windGust} />
+              </View>
+              <Text
+                accessibilityRole={runwayWind.kind === 'unavailable' ? 'alert' : undefined}
+                style={[
+                  panelStyles.copy,
+                  styles.windState,
+                  {
+                    color: runwayWind.kind === 'ready' ? theme.secondary : theme.attention,
+                  },
+                ]}
+              >
+                {runwayWind.kind === 'ready'
+                  ? `${runwayWind.directionTrue.toFixed(0).padStart(3, '0')}°T · ${runwayWind.steadySpeed.toFixed(0)} KT${runwayWind.gustSpeed === null ? '' : ` G ${runwayWind.gustSpeed.toFixed(0)} KT`}`
+                  : runwayWind.reason.replaceAll('-', ' ').toUpperCase()}
+              </Text>
+              <View style={styles.windClear}>
+                <Action
+                  disabled={
+                    windDirection.length === 0 &&
+                    windSpeed.length === 0 &&
+                    windGust.length === 0
+                  }
+                  label="Clear wind"
+                  onPress={() => {
+                    setWindDirection('');
+                    setWindSpeed('');
+                    setWindGust('');
+                  }}
+                />
+              </View>
+            </Card>
             {selected.runways.map((runway) => (
               <Card key={runway.designator}>
                 <View style={panelStyles.row}>
@@ -244,6 +303,26 @@ export function PlacesWorkspace() {
                     </Text>
                   </View>
                 </View>
+                {runway.headingTrueDegrees === null ? (
+                  <Text
+                    style={[panelStyles.copy, styles.windState, { color: theme.attention }]}
+                  >
+                    WIND COMPONENTS UNAVAILABLE · RUNWAY TRUE HEADING MISSING
+                  </Text>
+                ) : (
+                  <View style={styles.runwayWindResults}>
+                    <RunwayWindEnd
+                      heading={runway.headingTrueDegrees}
+                      label={runway.designator.split('/')[0] ?? runway.designator}
+                      scenario={runwayWind}
+                    />
+                    <RunwayWindEnd
+                      heading={trueDegrees((Number(runway.headingTrueDegrees) + 180) % 360)}
+                      label={runway.designator.split('/')[1] ?? 'RECIPROCAL'}
+                      scenario={runwayWind}
+                    />
+                  </View>
+                )}
               </Card>
             ))}
             <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
@@ -388,6 +467,84 @@ function Fact({ label, value }: { readonly label: string; readonly value: string
   );
 }
 
+function WindInput({
+  label,
+  onChange,
+  value,
+}: {
+  readonly label: string;
+  readonly onChange: (value: string) => void;
+  readonly value: string;
+}) {
+  const theme = useDriftlineTheme();
+  return (
+    <View style={styles.windInputGroup}>
+      <Text style={[panelStyles.label, { color: theme.secondary }]}>{label}</Text>
+      <TextInput
+        accessibilityLabel={label}
+        keyboardType="decimal-pad"
+        onChangeText={onChange}
+        selectTextOnFocus
+        style={[
+          styles.windInput,
+          {
+            backgroundColor: theme.panelRaised,
+            borderColor: theme.separator,
+            color: theme.primary,
+          },
+        ]}
+        value={value}
+      />
+    </View>
+  );
+}
+
+function RunwayWindEnd({
+  heading,
+  label,
+  scenario,
+}: {
+  readonly heading: TrueDegrees;
+  readonly label: string;
+  readonly scenario: RunwayWindInput;
+}) {
+  const theme = useDriftlineTheme();
+  if (scenario.kind === 'unavailable') {
+    return (
+      <View style={styles.runwayWindEnd}>
+        <Text style={[panelStyles.label, { color: theme.secondary }]}>RWY {label}</Text>
+        <Text style={[panelStyles.copy, { color: theme.secondary }]}>INPUT REQUIRED</Text>
+      </View>
+    );
+  }
+  const steady = calculateRunwayWindComponents(
+    heading,
+    scenario.directionTrue,
+    scenario.steadySpeed,
+  );
+  const gust =
+    scenario.gustSpeed === null
+      ? null
+      : calculateRunwayWindComponents(heading, scenario.directionTrue, scenario.gustSpeed);
+  const format = (value: ReturnType<typeof calculateRunwayWindComponents>): string =>
+    `${value.longitudinal.kind.toUpperCase()} ${value.longitudinal.speed.toFixed(1)} KT · XWIND ${value.crosswind.speed.toFixed(1)} KT${value.crosswind.from === 'none' ? '' : ` FROM ${value.crosswind.from.toUpperCase()}`}`;
+  return (
+    <View style={styles.runwayWindEnd}>
+      <Text style={[panelStyles.label, { color: theme.secondary }]}>
+        RWY {label} · {heading.toFixed(0).padStart(3, '0')}°T
+      </Text>
+      <Text style={[panelStyles.value, styles.windResult, { color: theme.primary }]}>
+        STEADY · {format(steady)}
+      </Text>
+      {gust !== null && (
+        <Text style={[panelStyles.value, styles.windResult, { color: theme.attention }]}>
+          GUST · {format(gust)}
+        </Text>
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.lg },
   detail: { flex: 2, minWidth: 280 },
@@ -416,6 +573,13 @@ const styles = StyleSheet.create({
   results: { flex: 1, gap: spacing.sm, minWidth: 210 },
   routeCopy: { flex: 1 },
   runway: { fontFamily: typography.mono, fontSize: 18, fontWeight: '800', minWidth: 70 },
+  runwayWindEnd: { flex: 1, gap: spacing.xs, minWidth: 230 },
+  runwayWindResults: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.lg,
+    marginTop: spacing.lg,
+  },
   scroll: { paddingBottom: spacing.xxl },
   search: {
     borderRadius: radii.control,
@@ -427,6 +591,24 @@ const styles = StyleSheet.create({
   },
   section: { marginTop: spacing.xl },
   unavailableCopy: { marginTop: spacing.md },
+  windClear: { alignItems: 'flex-start', marginTop: spacing.md },
+  windInput: {
+    borderRadius: radii.control,
+    borderWidth: 1,
+    fontFamily: typography.mono,
+    fontSize: 15,
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
+  },
+  windInputGroup: { flex: 1, gap: spacing.xs, minWidth: 130 },
+  windInputs: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  windResult: { fontFamily: typography.mono, fontSize: 11 },
+  windState: { marginTop: spacing.md },
   warning: {
     fontFamily: typography.mono,
     fontSize: 10,
