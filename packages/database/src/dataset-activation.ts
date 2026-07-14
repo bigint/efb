@@ -1,7 +1,8 @@
-import type { VerifiedDatasetGeneration } from './dataset-manifest';
+import { datasetManifestSchema, type VerifiedDatasetGeneration } from './dataset-manifest';
 
 export type ActivationBlock =
   | 'candidate-expired'
+  | 'candidate-manifest-invalid'
   | 'candidate-not-effective'
   | 'candidate-timestamp-invalid'
   | 'candidate-validity-window-invalid'
@@ -9,6 +10,8 @@ export type ActivationBlock =
   | 'dataset-mismatch'
   | 'manifest-digest-invalid'
   | 'rollback-not-authorised'
+  | 'current-generation-invalid'
+  | 'signature-key-invalid'
   | 'verification-timestamp-invalid'
   | 'verification-after-integrity';
 
@@ -24,6 +27,8 @@ interface ActivationInput {
 }
 
 const isSha256 = (value: string): boolean => /^[a-f0-9]{64}$/u.test(value);
+const isSignatureKeyId = (value: string): boolean =>
+  value.length >= 1 && value.length <= 128 && /^[A-Za-z0-9._:-]+$/u.test(value);
 
 /**
  * Pure pre-activation policy. Filesystem/SQLite adapters still must activate the verified
@@ -39,6 +44,9 @@ export const decideDatasetActivation = ({
   if (!Number.isFinite(nowMs)) return { allowed: false, block: 'clock-invalid' };
   if (!isSha256(candidate.manifestDigest)) {
     return { allowed: false, block: 'manifest-digest-invalid' };
+  }
+  if (!isSignatureKeyId(candidate.signatureKeyId)) {
+    return { allowed: false, block: 'signature-key-invalid' };
   }
   const signatureVerifiedAt = Date.parse(candidate.signatureVerifiedAt);
   const integrityCheckedAt = Date.parse(candidate.integrityCheckedAt);
@@ -62,7 +70,22 @@ export const decideDatasetActivation = ({
   if (expiresAt <= nowMs) {
     return { allowed: false, block: 'candidate-expired' };
   }
+  if (!datasetManifestSchema.safeParse(candidate.manifest).success) {
+    return { allowed: false, block: 'candidate-manifest-invalid' };
+  }
   if (current === null) return { allowed: true, replacesSequence: null };
+  const currentSignatureVerifiedAt = Date.parse(current.signatureVerifiedAt);
+  const currentIntegrityCheckedAt = Date.parse(current.integrityCheckedAt);
+  if (
+    !datasetManifestSchema.safeParse(current.manifest).success ||
+    !isSha256(current.manifestDigest) ||
+    !isSignatureKeyId(current.signatureKeyId) ||
+    !Number.isFinite(currentSignatureVerifiedAt) ||
+    !Number.isFinite(currentIntegrityCheckedAt) ||
+    currentSignatureVerifiedAt > currentIntegrityCheckedAt
+  ) {
+    return { allowed: false, block: 'current-generation-invalid' };
+  }
   if (
     current.manifest.regionId !== candidate.manifest.regionId ||
     current.manifest.jurisdiction !== candidate.manifest.jurisdiction

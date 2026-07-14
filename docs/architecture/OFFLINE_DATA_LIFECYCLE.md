@@ -50,6 +50,11 @@ bounded single-line display text. Excess or unsafe metadata fails closed. The ma
 that the filesystem has not been rehashed: registry metadata is not equivalent to a current
 filesystem integrity check.
 
+The pure activation policy reparses the candidate manifest, validates its digest, verification
+chronology, and bounded signature-key identifier, and revalidates the complete current
+generation before sequence or rollback decisions. Constructing a TypeScript-shaped object cannot
+bypass those checks.
+
 The manager independently reads native total and available device-storage bytes. Values must be
 positive/non-negative safe integers with available no greater than total before the UI derives
 used bytes and percentage. The display explicitly says this is device capacity, not space

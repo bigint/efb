@@ -20,7 +20,14 @@ const generation = (
     datasetId: `019f5f42-a146-7c00-861d-7ad2313bbbd${sequence}`,
     effectiveAt: '2026-07-01T00:00:00.000Z',
     expiresAt: '2026-08-01T00:00:00.000Z',
-    files: [],
+    files: [
+      {
+        byteLength: 42,
+        mediaType: 'application/vnd.sqlite3',
+        path: 'aviation.sqlite',
+        sha256: 'a'.repeat(64),
+      },
+    ],
     formatVersion: 1,
     generatedAt: '2026-06-25T00:00:00.000Z',
     jurisdiction: 'US-DEMO',

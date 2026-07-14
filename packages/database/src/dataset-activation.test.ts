@@ -149,4 +149,42 @@ describe('dataset activation policy', () => {
       datasetManifestSchema.parse({ ...base, files: [base.files[0], base.files[0]] }),
     ).toThrow();
   });
+
+  it('revalidates manifest and signature identity inside the activation policy', () => {
+    const base = generation(2);
+    expect(
+      decideDatasetActivation({
+        allowRecoveryRollback: false,
+        candidate: {
+          ...base,
+          manifest: {
+            ...base.manifest,
+            files: [{ ...base.manifest.files[0]!, path: 'unsafe path' }],
+          },
+        },
+        current: generation(1),
+        now,
+      }),
+    ).toEqual({ allowed: false, block: 'candidate-manifest-invalid' });
+    expect(
+      decideDatasetActivation({
+        allowRecoveryRollback: false,
+        candidate: generation(2, { signatureKeyId: 'unsafe key' }),
+        current: generation(1),
+        now,
+      }),
+    ).toEqual({ allowed: false, block: 'signature-key-invalid' });
+    const current = generation(1);
+    expect(
+      decideDatasetActivation({
+        allowRecoveryRollback: false,
+        candidate: generation(2),
+        current: {
+          ...current,
+          manifest: { ...current.manifest, source: 'Unsafe\nsource' },
+        },
+        now,
+      }),
+    ).toEqual({ allowed: false, block: 'current-generation-invalid' });
+  });
 });
