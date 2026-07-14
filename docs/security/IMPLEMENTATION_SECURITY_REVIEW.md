@@ -118,7 +118,8 @@ version and the same compatibility gates.
 
 Remediation verification on 2026-07-14: `pnpm audit --prod` reports no known vulnerabilities,
 the Xcode-scoped UUID v4/v5 API smoke check passes with `uuid@11.1.1`, Expo public config
-evaluates, and Expo Doctor remains 20/20.
+evaluates, and Expo Doctor remains 20/20. CI now enforces the production audit at Moderate or
+higher severity after its frozen install.
 
 ## Required follow-up
 
