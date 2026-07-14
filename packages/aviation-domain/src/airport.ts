@@ -10,33 +10,42 @@ import {
 } from '@driftline/data-contracts';
 import { greatCircleDistance, position, type Position } from '@driftline/geospatial';
 
+const hasNoControlCharacters = (value: string): boolean =>
+  [...value].every((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code >= 32 && code !== 127;
+  });
+
 const positionSchema = z
-  .object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) })
+  .object({
+    latitude: z.number().finite().min(-90).max(90),
+    longitude: z.number().finite().min(-180).max(180),
+  })
   .strict();
 
 const runwaySchema = z
   .object({
-    designator: z.string().min(1).max(7),
-    headingTrueDegrees: z.number().min(0).lt(360).nullable(),
-    lengthMetres: z.number().positive(),
-    surface: z.string().min(1),
-    widthMetres: z.number().positive(),
+    designator: z.string().regex(/^[A-Z0-9/-]{1,7}$/u),
+    headingTrueDegrees: z.number().finite().min(0).lt(360).nullable(),
+    lengthMetres: z.number().finite().positive().max(20_000),
+    surface: z.string().trim().min(1).max(80).refine(hasNoControlCharacters),
+    widthMetres: z.number().finite().positive().max(1_000),
   })
   .strict();
 
 export const airportSourceSchema = z
   .object({
-    elevationFeet: z.number(),
+    elevationFeet: z.number().finite().min(-2_000).max(30_000),
     iata: z
       .string()
       .regex(/^[A-Z]{3}$/)
       .nullable(),
     icao: z.string().regex(/^[A-Z0-9]{3,4}$/),
-    name: z.string().min(1),
+    name: z.string().trim().min(1).max(160).refine(hasNoControlCharacters),
     position: positionSchema,
     provenance: dataProvenanceSchema,
-    runways: z.array(runwaySchema),
-    timezone: z.string().min(1),
+    runways: z.array(runwaySchema).max(20),
+    timezone: z.string().trim().min(1).max(100).refine(hasNoControlCharacters),
   })
   .strict()
   .superRefine((airport, context) => {
@@ -107,6 +116,7 @@ export const parseAirport = (source: unknown): Airport => {
 };
 
 export const searchAirports = (airports: readonly Airport[], query: string): Airport[] => {
+  if (query.length > 80) return [];
   const needle = query.trim().toLocaleUpperCase('en-US');
   if (needle.length < 2) return [];
   return airports

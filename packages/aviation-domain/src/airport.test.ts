@@ -73,6 +73,33 @@ describe('airport adapter boundary', () => {
     ).toThrow();
   });
 
+  it('rejects unbounded or unsafe display fields before normalization', () => {
+    const source = {
+      elevationFeet: 1,
+      iata: null,
+      icao: 'TEST',
+      name: 'Test',
+      position: { latitude: 1, longitude: 1 },
+      provenance: demoAirports[0]?.provenance,
+      runways: [],
+      timezone: 'UTC',
+    };
+    expect(() => parseAirport({ ...source, name: 'Unsafe\nname' })).toThrow();
+    expect(() =>
+      parseAirport({
+        ...source,
+        runways: Array.from({ length: 21 }, (_, index) => ({
+          designator: String(index).padStart(2, '0'),
+          headingTrueDegrees: index,
+          lengthMetres: 1_000,
+          surface: 'Test',
+          widthMetres: 20,
+        })),
+      }),
+    ).toThrow();
+    expect(searchAirports(demoAirports, 'X'.repeat(81))).toEqual([]);
+  });
+
   it('ranks nearby airports deterministically and excludes the origin', () => {
     const origin = demoAirports[0];
     if (origin === undefined) throw new Error('Missing origin fixture');

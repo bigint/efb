@@ -5,6 +5,11 @@ shows identifier, coordinates, elevation, IANA timezone, runway geometry, source
 version, retrieval/effective/expiry metadata, verification, confidence, and currency. Runway
 heading is explicitly true-referenced.
 
+The adapter rejects non-finite or out-of-domain coordinates/elevation/runway dimensions, more
+than 20 runways, unsafe or oversized display strings, duplicate designators, invalid
+identifiers, and invalid IANA zones before creating an `Airport`. Local search input is capped
+at 80 characters in both the control and pure search boundary.
+
 Nearby airports are a pure deterministic great-circle ranking over unique active candidates. The
 origin is excluded, results are distance/identifier sorted, and callers must choose a limit from
 1 through 50. The current demonstration collection requests at most five.

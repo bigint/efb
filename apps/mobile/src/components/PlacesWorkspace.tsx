@@ -110,6 +110,7 @@ export function PlacesWorkspace() {
       <TextInput
         accessibilityLabel="Search demonstration airports"
         autoCapitalize="characters"
+        maxLength={80}
         onChangeText={setQuery}
         placeholder="Identifier or airport name"
         placeholderTextColor={theme.secondary}
