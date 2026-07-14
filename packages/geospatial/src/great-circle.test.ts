@@ -37,6 +37,7 @@ describe('spherical great-circle calculations', () => {
 
   it('fails closed for undefined bearings and tracks', () => {
     expect(() => initialTrueBearing(position(1, 2), position(1, 2))).toThrow(RangeError);
+    expect(() => initialTrueBearing(position(0, 0), position(0, 180))).toThrow('antipodal');
     expect(() => trackOffset(position(1, 2), position(1, 2), position(2, 3))).toThrow(
       RangeError,
     );

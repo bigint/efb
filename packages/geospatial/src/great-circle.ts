@@ -43,6 +43,9 @@ export const initialTrueBearing = (from: Position, to: Position): TrueDegrees =>
   if (from.latitude === to.latitude && from.longitude === to.longitude) {
     throw new RangeError('Bearing is undefined for identical positions');
   }
+  if (Math.abs(Math.PI - angularDistance(from, to)) <= 1e-12) {
+    throw new RangeError('Bearing is undefined for antipodal positions');
+  }
   const fromLatitude = toRadians(from.latitude);
   const toLatitude = toRadians(to.latitude);
   const deltaLongitude = toRadians(degrees(to.longitude - from.longitude));

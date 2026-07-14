@@ -31,7 +31,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 355 passed across sixty-four test files.
+- Unit tests: 356 passed across sixty-four test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,206 modules, 5.7 MB
   uncompressed bundle artifact). Android production JavaScript/Hermes export passed (2,298
   modules, 5.9 MB uncompressed bundle artifact). Pinned CI now compiles both exports after the
@@ -190,8 +190,9 @@ performance data.
 - Plan now requires explicit transient active-leg selection; every route mutation clears it.
   With a fresh position, the map derives next distance, true bearing, signed cross-track,
   remaining distance, and groundspeed-based next/route ETE through a pure spherical calculator.
-  It also displays a bounded transient destination UTC ETA with explicit date rollover and clock
-  failure states. There is no automatic sequencing, magnetic course, or certification claim.
+  Exact antipodal pairs fail closed instead of emitting an arbitrary initial bearing. It also
+  displays a bounded transient destination UTC ETA with explicit date rollover and clock failure
+  states. There is no automatic sequencing, magnetic course, or certification claim.
 - The map navigation strip now exposes position source, sample age, horizontal accuracy, battery
   percentage, charging state, and system low-power mode. Unsupported or malformed native battery
   telemetry fails to an explicit unavailable state; physical-device events, energy impact, and

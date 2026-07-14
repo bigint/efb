@@ -86,9 +86,10 @@ position gaps.
 Measurement is off by default. After explicit activation, two long presses create labelled A/B
 points and a visible line. The result uses the same spherical great-circle boundary as route
 display and reports distance in nautical miles plus initial true bearing. Coincident points show
-zero distance with bearing unavailable, and invalid coordinates are rejected. A third long press
-starts a new measurement; disabling the tool clears all points. Measurements are session state
-only and never become route intent or persisted flight data.
+zero distance with bearing unavailable, exact antipodal points also withhold their non-unique
+initial bearing, and invalid coordinates are rejected. A third long press starts a new
+measurement; disabling the tool clears all points. Measurements are session state only and never
+become route intent or persisted flight data.
 
 When measurement is off, a long press instead creates one transient coordinate inspection. It
 shows validated latitude/longitude and the nearest fictional airport's great-circle distance and
