@@ -78,8 +78,10 @@ export type MetarCurrency =
         | 'observation-stale'
         | 'provenance-expired'
         | 'provenance-invalid'
+        | 'provenance-non-real'
         | 'provenance-not-effective'
         | 'provenance-unknown'
+        | 'provenance-unverified'
         | 'receipt-future';
     };
 
@@ -100,6 +102,18 @@ export const evaluateMetarCurrency = (
   const receivedAt = Date.parse(observation.receivedAt);
   if (observedAt > nowMs) return { kind: 'unavailable', reason: 'observation-future' };
   if (receivedAt > nowMs) return { kind: 'unavailable', reason: 'receipt-future' };
+  if (observation.provenance.verificationStatus === 'invalid') {
+    return { kind: 'unavailable', reason: 'provenance-invalid' };
+  }
+  if (
+    observation.provenance.verificationStatus !== 'source-verified' &&
+    observation.provenance.verificationStatus !== 'cross-checked'
+  ) {
+    return { kind: 'unavailable', reason: 'provenance-unverified' };
+  }
+  if (observation.provenance.origin !== 'real') {
+    return { kind: 'unavailable', reason: 'provenance-non-real' };
+  }
   const provenanceCurrency = classifyDataCurrency(observation.provenance, now);
   if (provenanceCurrency !== 'current') {
     return { kind: 'unavailable', reason: `provenance-${provenanceCurrency}` };

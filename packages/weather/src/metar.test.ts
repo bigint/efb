@@ -142,4 +142,26 @@ describe('conservative METAR adapter', () => {
       reason: 'clock-invalid',
     });
   });
+
+  it('does not label unverified or simulated provenance as current weather', () => {
+    const observation = parse('METAR KAAA 091955Z 00000KT 10SM');
+    expect(
+      evaluateMetarCurrency(
+        {
+          ...observation,
+          provenance: { ...observation.provenance, verificationStatus: 'unverified' },
+        },
+        new Date('2026-07-09T20:00:00.000Z'),
+      ),
+    ).toEqual({ kind: 'unavailable', reason: 'provenance-unverified' });
+    expect(
+      evaluateMetarCurrency(
+        {
+          ...observation,
+          provenance: { ...observation.provenance, origin: 'simulated' },
+        },
+        new Date('2026-07-09T20:00:00.000Z'),
+      ),
+    ).toEqual({ kind: 'unavailable', reason: 'provenance-non-real' });
+  });
 });
