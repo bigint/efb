@@ -30,7 +30,8 @@ const angularDistance = (from: Position, to: Position): Radians => {
   const haversine =
     Math.sin(deltaLatitude / 2) ** 2 +
     Math.cos(fromLatitude) * Math.cos(toLatitude) * Math.sin(deltaLongitude / 2) ** 2;
-  return radians(2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine)));
+  const boundedHaversine = clamp(haversine, 0, 1);
+  return radians(2 * Math.atan2(Math.sqrt(boundedHaversine), Math.sqrt(1 - boundedHaversine)));
 };
 
 export const greatCircleDistanceMetres = (from: Position, to: Position): Metres =>

@@ -42,4 +42,10 @@ describe('spherical great-circle calculations', () => {
       RangeError,
     );
   });
+
+  it('keeps antipodal distance finite at the spherical floating-point boundary', () => {
+    const distance = greatCircleDistance(position(90, 0), position(-90, 180));
+    expect(Number.isFinite(distance)).toBe(true);
+    expect(distance).toBeCloseTo((Math.PI * 6_371_008.8) / 1852, 8);
+  });
 });
