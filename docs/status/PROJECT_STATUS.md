@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 342 passed across sixty-three test files.
+- Unit tests: 343 passed across sixty-three test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,206 modules, 5.7 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -154,16 +154,18 @@ performance data.
   Native rendering, accessibility-tree, glare, and dark-adaptation evidence remain open.
 - Resolved demonstration routes can now be saved and loaded through transactional SQLite flight
   and waypoint records. Reads reconstruct rows and sentinel-bounded waypoints in one exclusive
-  snapshot before revalidating ordered plans; future updates use a compare-and-swap revision,
-  and loading blocks if coordinates or dataset source references have drifted. Drafts can link
-  aircraft profiles, rename, replace route snapshots after confirmation, archive, and restore
-  through compare-and-swap revisions. One detail editor can revise title, aircraft assignment,
-  whole-foot cruise altitude, explicit UTC departure time, and notes atomically. Saved records
-  can be duplicated as independent revision-one drafts, and ephemeral waypoints can move up/down
-  with every route edit clearing active-leg selection. A bounded current-route GPX snapshot
-  revalidates geometry, escapes XML, verifies its cache write, omits invented time/elevation,
-  and stays explicitly fictional and unverified. MMKV no longer claims route durability; drag
-  editing, a native date/time picker, and richer conflict UI remain open.
+  snapshot before revalidating ordered plans; active and archived panes split one shared bounded
+  snapshot so concurrent status changes cannot create a mixed library. Future updates use a
+  compare-and-swap revision, and loading blocks if coordinates or dataset source references have
+  drifted. Drafts can link aircraft profiles, rename, replace route snapshots after
+  confirmation, archive, and restore through compare-and-swap revisions. One detail editor can
+  revise title, aircraft assignment, whole-foot cruise altitude, explicit UTC departure time,
+  and notes atomically. Saved records can be duplicated as independent revision-one drafts, and
+  ephemeral waypoints can move up/down with every route edit clearing active-leg selection. A
+  bounded current-route GPX snapshot revalidates geometry, escapes XML, verifies its cache
+  write, omits invented time/elevation, and stays explicitly fictional and unverified. MMKV no
+  longer claims route durability; drag editing, a native date/time picker, and richer conflict
+  UI remain open.
 - With a saved aircraft selected, Plan now derives a transient cruise-only litre estimate from
   wind-adjusted ETE and entered fuel burn, then compares it with entered usable fuel. The UI
   explicitly excludes taxi, climb, descent, contingency, alternate, and reserve fuel; scenario

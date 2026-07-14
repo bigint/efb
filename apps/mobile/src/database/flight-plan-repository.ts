@@ -101,6 +101,45 @@ export const listArchivedSavedFlightPlans = (
   database: SQLiteDatabase,
 ): Promise<readonly SavedFlightPlan[]> => listSavedFlightPlansByState(database, true);
 
+export interface SavedFlightPlanLibrary {
+  readonly active: readonly SavedFlightPlan[];
+  readonly archived: readonly SavedFlightPlan[];
+}
+
+export const loadSavedFlightPlanLibrary = async (
+  database: SQLiteDatabase,
+): Promise<SavedFlightPlanLibrary> => {
+  const result: { library?: SavedFlightPlanLibrary } = {};
+  await database.withExclusiveTransactionAsync(async (transaction) => {
+    const [rows, waypointRows] = await Promise.all([
+      transaction.getAllAsync<FlightRow>(
+        'SELECT * FROM flights ORDER BY updated_at DESC LIMIT 201',
+      ),
+      transaction.getAllAsync<FlightWaypointRow>(
+        `SELECT waypoint.*
+         FROM flight_waypoints AS waypoint
+         JOIN flights AS flight ON flight.id = waypoint.flight_id
+         ORDER BY waypoint.flight_id, waypoint.sequence
+         LIMIT 20001`,
+      ),
+    ]);
+    if (rows.length > 200 || waypointRows.length > 20_000) {
+      throw new Error('Saved flight library exceeds supported limits.');
+    }
+    const plans = decodeSavedFlightPlans(rows, waypointRows);
+    const active = plans.filter(({ status }) => status !== 'archived');
+    const archived = plans.filter(({ status }) => status === 'archived');
+    if (active.length > 100 || archived.length > 100) {
+      throw new Error('Saved flight state collection exceeds supported limits.');
+    }
+    result.library = { active, archived };
+  });
+  if (result.library === undefined) {
+    throw new Error('Saved flight library transaction produced no result.');
+  }
+  return result.library;
+};
+
 const insertWaypoints = async (
   database: SQLiteDatabase,
   plan: SavedFlightPlan,

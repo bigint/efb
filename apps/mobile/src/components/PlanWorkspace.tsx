@@ -23,8 +23,7 @@ import {
 
 import {
   insertSavedFlightPlan,
-  listArchivedSavedFlightPlans,
-  listSavedFlightPlans,
+  loadSavedFlightPlanLibrary,
   replaceSavedFlightPlan,
 } from '@/database/flight-plan-repository';
 import { listAircraftProfiles } from '@/database/aircraft-profile-repository';
@@ -156,12 +155,9 @@ export function PlanWorkspace() {
 
   const reloadSavedPlans = useCallback(async () => {
     try {
-      const [active, archived] = await Promise.all([
-        listSavedFlightPlans(database),
-        listArchivedSavedFlightPlans(database),
-      ]);
-      setArchivedPlans(archived);
-      setSavedPlans(active);
+      const library = await loadSavedFlightPlanLibrary(database);
+      setArchivedPlans(library.archived);
+      setSavedPlans(library.active);
       setPersistenceError(null);
       setReadBlocked(false);
       return true;

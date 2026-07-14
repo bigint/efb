@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   decodeSavedFlightPlans,
+  loadSavedFlightPlanLibrary,
   listSavedFlightPlans,
   type FlightRow,
   type FlightWaypointRow,
@@ -79,5 +80,35 @@ describe('saved flight SQLite read boundary', () => {
         operation(database),
     };
     await expect(listSavedFlightPlans(database as never)).rejects.toThrow('supported limits');
+  });
+
+  it('splits active and archived plans only after one complete snapshot read', async () => {
+    const archived = {
+      ...flight,
+      id: '019f5f42-a146-7c00-861d-7ad2313bbbd5',
+      status: 'archived' as const,
+      title: 'Archived demo',
+    };
+    const rows = [flight, archived];
+    const waypoints = [
+      waypoint(0, 'DVL1'),
+      waypoint(1, 'DVL2'),
+      { ...waypoint(0, 'DVL1'), flight_id: archived.id },
+      { ...waypoint(1, 'DVL2'), flight_id: archived.id },
+    ];
+    let transactionCount = 0;
+    const database = {
+      getAllAsync: (sql: string) =>
+        Promise.resolve(sql.includes('FROM flights') ? rows : waypoints),
+      withExclusiveTransactionAsync: (operation: (transaction: unknown) => Promise<void>) => {
+        transactionCount += 1;
+        return operation(database);
+      },
+    };
+    await expect(loadSavedFlightPlanLibrary(database as never)).resolves.toMatchObject({
+      active: [{ id: flight.id }],
+      archived: [{ id: archived.id }],
+    });
+    expect(transactionCount).toBe(1);
   });
 });

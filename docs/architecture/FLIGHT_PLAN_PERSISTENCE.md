@@ -87,6 +87,11 @@ overflow beyond 100 plans by 100 waypoints rather than silently truncating the r
 mismatches, sequence gaps, duplicate identifiers, malformed coordinates, bad timestamps, or
 invalid revisions stop the saved-flight library.
 
+The Plan workspace loads active and archived records together in one separate bounded snapshot
+of at most 200 plans and 20,000 waypoints, then splits the validated collection by status. An
+archive/restore from another writer therefore cannot make one revision appear in both lists or
+neither list during reload.
+
 ## Dataset drift
 
 Loading does not trust identifier equality alone. The saved identifier, coordinates, and source
