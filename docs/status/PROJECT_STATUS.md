@@ -74,6 +74,8 @@ performance data.
   identifier and coordinate ranges before geospatial calculations consume typed runtime values.
 - Spherical geospatial entrypoints independently reject forged out-of-range coordinates and
   destination bearings before performing trigonometric calculations.
+- Wind-triangle and runway-component entrypoints likewise revalidate branded true directions and
+  finite bounded speeds at runtime.
 - Separate versioned user and control SQLite schemas now migrate before app render. Executable
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,

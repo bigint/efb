@@ -34,5 +34,11 @@ describe('true-reference runway wind components', () => {
     expect(() =>
       calculateRunwayWindComponents(trueDegrees(0), trueDegrees(0), knots(-1)),
     ).toThrow(RangeError);
+    expect(() =>
+      calculateRunwayWindComponents(360 as never, trueDegrees(0), knots(10)),
+    ).toThrow('directions');
+    expect(() =>
+      calculateRunwayWindComponents(trueDegrees(0), Number.NaN as never, knots(10)),
+    ).toThrow('directions');
   });
 });

@@ -25,6 +25,8 @@ const toDegrees = (radians: number): number => (radians * 180) / Math.PI;
 const normalise = (degrees: number): number => ((degrees % 360) + 360) % 360;
 const MAXIMUM_TRUE_AIRSPEED_KNOTS = 1_000;
 const MAXIMUM_WIND_SPEED_KNOTS = 500;
+const validTrueDegrees = (value: number): boolean =>
+  Number.isFinite(value) && value >= 0 && value < 360;
 
 /**
  * Solves the planar wind triangle for a desired true ground track. Wind direction follows the
@@ -41,6 +43,9 @@ export const solveWindTriangle = ({
   readonly windFromTrue: TrueDegrees;
   readonly windSpeed: Knots;
 }): WindTriangleResult => {
+  if (!validTrueDegrees(desiredCourseTrue) || !validTrueDegrees(windFromTrue)) {
+    throw new RangeError('Course and wind direction must be true degrees in [0, 360)');
+  }
   if (
     !Number.isFinite(trueAirspeed) ||
     trueAirspeed <= 0 ||
