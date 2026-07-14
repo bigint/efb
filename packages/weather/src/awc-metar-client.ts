@@ -175,6 +175,7 @@ export class AwcMetarClient {
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MILLISECONDS);
+    const requestTimedOut = () => controller.signal.aborted;
     let response: Response;
     try {
       const query = new URLSearchParams({ format: 'raw', ids: station });
@@ -184,7 +185,7 @@ export class AwcMetarClient {
       });
     } catch (error) {
       clearTimeout(timeout);
-      if (controller.signal.aborted) {
+      if (requestTimedOut()) {
         throw new AwcMetarError('timeout', 'Aviation Weather Center request timed out.');
       }
       throw new AwcMetarError(
@@ -194,6 +195,9 @@ export class AwcMetarClient {
     }
 
     try {
+      if (requestTimedOut()) {
+        throw new AwcMetarError('timeout', 'Aviation Weather Center request timed out.');
+      }
       if (response.status === 204) {
         throw new AwcMetarError(
           'no-data',
@@ -221,6 +225,9 @@ export class AwcMetarClient {
         }
       }
       const raw = (await response.text()).trim();
+      if (controller.signal.aborted) {
+        throw new AwcMetarError('timeout', 'Aviation Weather Center request timed out.');
+      }
       const lineCount = raw.split(/\r?\n/u).filter((line) => line.trim().length > 0).length;
       if (
         raw.length === 0 ||

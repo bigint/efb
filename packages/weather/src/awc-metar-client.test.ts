@@ -180,6 +180,28 @@ describe('AWC METAR client', () => {
     }
   });
 
+  it('rejects a late response even when the fetch implementation ignores abort', async () => {
+    vi.useFakeTimers();
+    try {
+      const client = new AwcMetarClient(
+        () =>
+          new Promise<Response>((resolve) => {
+            setTimeout(
+              () => resolve(response('METAR KMCI 140753Z 11004KT 10SM CLR 24/19 A3019')),
+              11_000,
+            );
+          }),
+        () => now,
+      );
+      const pending = client.fetchLatest('KMCI');
+      const assertion = expect(pending).rejects.toMatchObject({ code: 'timeout' });
+      await vi.advanceTimersByTimeAsync(11_000);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('fails closed when the injected clock reverses', async () => {
     const times = [now, new Date(now.getTime() - 1)];
     const client = new AwcMetarClient(
