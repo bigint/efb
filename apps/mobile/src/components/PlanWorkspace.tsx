@@ -1,4 +1,5 @@
 import { radii, spacing, typography } from '@driftline/design-system';
+import type { AircraftProfile } from '@driftline/aircraft-performance';
 import { randomUUID } from 'expo-crypto';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
@@ -23,6 +24,7 @@ import {
   listSavedFlightPlans,
   replaceSavedFlightPlan,
 } from '@/database/flight-plan-repository';
+import { listAircraftProfiles } from '@/database/aircraft-profile-repository';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
 
@@ -31,6 +33,8 @@ import { Action, Card, PanelHeader, panelStyles } from './PanelPrimitives';
 export function PlanWorkspace() {
   const database = useSQLiteContext();
   const theme = useDriftlineTheme();
+  const [aircraft, setAircraft] = useState<readonly AircraftProfile[]>([]);
+  const [aircraftError, setAircraftError] = useState<string | null>(null);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [savedPlans, setSavedPlans] = useState<readonly SavedFlightPlan[]>([]);
@@ -38,6 +42,7 @@ export function PlanWorkspace() {
   const [persistenceError, setPersistenceError] = useState<string | null>(null);
   const [readBlocked, setReadBlocked] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectedAircraftId, setSelectedAircraftId] = useState<string | null>(null);
   const [trueAirspeed, setTrueAirspeed] = useState('118');
   const [windFromTrue, setWindFromTrue] = useState('0');
   const [windSpeed, setWindSpeed] = useState('0');
@@ -103,15 +108,37 @@ export function PlanWorkspace() {
     void reloadSavedPlans();
   }, [reloadSavedPlans]);
 
+  const reloadAircraft = useCallback(async () => {
+    try {
+      setAircraft(await listAircraftProfiles(database));
+      setAircraftError(null);
+    } catch {
+      setAircraft([]);
+      setSelectedAircraftId(null);
+      setAircraftError('Aircraft references unavailable; saved flights remain accessible.');
+    }
+  }, [database]);
+
+  useEffect(() => {
+    void reloadAircraft();
+  }, [reloadAircraft]);
+
   const saveRoute = async () => {
     setSaving(true);
     try {
       if (routeResolution.status !== 'resolved' || airports.length < 2) {
         throw new Error('A saved flight requires at least two resolved waypoints.');
       }
+      const selectedAircraft =
+        selectedAircraftId === null
+          ? null
+          : (aircraft.find(({ id }) => id === selectedAircraftId) ?? null);
+      if (selectedAircraftId !== null && selectedAircraft === null) {
+        throw new Error('Selected aircraft reference is no longer available.');
+      }
       const now = new Date().toISOString();
       const plan = savedFlightPlanSchema.parse({
-        aircraftId: null,
+        aircraftId: selectedAircraft?.id ?? null,
         altitudeFeet: null,
         createdAt: now,
         departureTime: null,
@@ -131,6 +158,7 @@ export function PlanWorkspace() {
       });
       await insertSavedFlightPlan(database, plan);
       setSaveTitle('');
+      setSelectedAircraftId(null);
       await reloadSavedPlans();
     } catch (caught) {
       setPersistenceError(caught instanceof Error ? caught.message : 'Unable to save flight.');
@@ -224,6 +252,27 @@ export function PlanWorkspace() {
         <Text style={[styles.assumptionWarning, { color: theme.attention }]}>
           USER DRAFT · FICTIONAL DEMONSTRATION WAYPOINTS
         </Text>
+        <Text style={[panelStyles.label, styles.aircraftLabel, { color: theme.secondary }]}>
+          Aircraft assignment · optional
+        </Text>
+        <View style={styles.aircraftChoices}>
+          <Action
+            label="Unassigned"
+            onPress={() => setSelectedAircraftId(null)}
+            primary={selectedAircraftId === null}
+          />
+          {aircraft.map((profile) => (
+            <Action
+              key={profile.id}
+              label={`${profile.registration} · ${profile.displayName}`}
+              onPress={() => setSelectedAircraftId(profile.id)}
+              primary={selectedAircraftId === profile.id}
+            />
+          ))}
+        </View>
+        {aircraftError !== null && (
+          <Text style={[styles.inputError, { color: theme.attention }]}>{aircraftError}</Text>
+        )}
         <View style={styles.saveRow}>
           <TextInput
             accessibilityLabel="Saved flight title"
@@ -296,6 +345,13 @@ export function PlanWorkspace() {
                     <Text style={[panelStyles.copy, { color: theme.secondary }]}>
                       {plan.waypoints.map(({ identifier }) => identifier).join(' → ')} ·
                       revision {plan.revision}
+                    </Text>
+                    <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+                      Aircraft:{' '}
+                      {plan.aircraftId === null
+                        ? 'unassigned'
+                        : (aircraft.find(({ id }) => id === plan.aircraftId)?.registration ??
+                          'linked profile unavailable')}
                     </Text>
                     {resolution.status === 'dataset-mismatch' && (
                       <Text style={[panelStyles.copy, { color: theme.danger }]}>
@@ -554,6 +610,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
+  aircraftChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  aircraftLabel: { marginBottom: spacing.sm, marginTop: spacing.md },
   assumptionCopy: { marginTop: spacing.md },
   assumptionWarning: {
     fontFamily: typography.mono,

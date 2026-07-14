@@ -29,6 +29,12 @@ the same compare-and-swap update boundary; a conflict reloads current storage be
 the error. Archive requires native destructive confirmation, hides the record from the active
 list, and retains its row and waypoint snapshot locally.
 
+New drafts may optionally reference one of at most 100 validated local aircraft profiles. The
+profile UUID is protected by SQLite's foreign key and the saved-flight list resolves the current
+normalized registration for display. Profile retrieval failures do not hide route records or
+block unassigned saves; they clear any transient selection and expose the reference as
+unavailable.
+
 ## Repository semantics
 
 Creation inserts the flight and all ordered waypoints in one exclusive SQLite transaction with
@@ -51,7 +57,7 @@ geometry under the same identifier.
 ## Current limitations
 
 The editor can create, load, rename, and archive drafts. Route replacement, archived-plan
-restore, plan selection across the whole shell, aircraft assignment, altitude/departure editing,
-assumption snapshots, outbox sync, richer conflict UI, and native
+restore, plan selection across the whole shell, revising an existing aircraft assignment,
+altitude/departure editing, assumption snapshots, outbox sync, richer conflict UI, and native
 process-death/visual/accessibility evidence remain open. The included waypoints are fictional
 and unverified, so saved routes are not suitable for navigation.
