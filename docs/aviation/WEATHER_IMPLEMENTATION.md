@@ -19,6 +19,15 @@ timestamped SQLite cache. Cache reads revalidate and reparse their source text; 
 has currency recomputed against the current clock. TAF parsing is deliberately limited to header
 amendment state, issue time, and a resolved UTC validity window; current/not-yet-valid/expired
 is recomputed on display. Forecast change groups and their weather semantics remain raw and
-uninterpreted. Background retrieval, briefing completeness, flight-category classification, full
-TAF decoding, runway visual range, international metre visibility, weather-code semantics, and
-operational weather availability are not yet credited as implemented.
+uninterpreted.
+
+Decoded METAR output may also derive a display-only flight category using the published U.S. NWS
+ceiling and statute-mile visibility thresholds. The classifier uses the worse of the lowest
+parsed `BKN`, `OVC`, or `VV` ceiling and parsed visibility, preserves visibility-bound evidence,
+and returns unavailable when either required input is missing or ambiguous across category
+boundaries. This is explicitly a U.S. threshold aid, not a worldwide regulatory classification
+or a substitute for a complete observation or briefing.
+
+Background retrieval, briefing completeness, full TAF decoding, runway visual range,
+international metre visibility, weather-code semantics, and operational weather availability are
+not yet credited as implemented.

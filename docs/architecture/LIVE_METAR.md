@@ -71,13 +71,21 @@ UTC alongside observation UTC. Raw TAF output is visually separated from decoded
 and shows issue/amendment/valid-from/valid-to evidence plus current/not-yet-valid/expired state.
 Manual pasted reports remain unverified and currency-unknown.
 
+Decoded observations show a separately labelled `U.S. NWS DISPLAY CATEGORY` derived from the
+worse of parsed ceiling and statute-mile visibility. The visible evidence includes the ceiling
+and the original exact/greater-than/less-than visibility bound. Missing ceiling height, missing
+visibility, or a less-than bound that spans multiple categories produces `UNAVAILABLE`; the
+label does not claim worldwide or regulatory meaning.
+
 ## Verification boundary
 
 Unit tests use an injected fetcher and clock to cover METAR and TAF success, shared throttling,
 no data, provider throttling, timeout, clock reversal, station mismatch, invalid identifiers,
 and multiple-report bodies. Schema/repository tests cover timestamp shape, station/time
 rebinding, multiple TAF rejection, header month rollover, hour-24 validity, expiry, and explicit
-local-cache provenance. Direct HTTPS smoke requests to the documented endpoints returned current
-raw METAR and multiline TAF reports on 2026-07-14. Native network loss, captive portals, TLS
-interception, app lifecycle, physical-device rendering, cache recovery, provider schema changes,
-forecast decoding, and briefing completeness remain release blockers.
+local-cache provenance. Classifier tests cover worse-input selection, category boundaries,
+greater-than visibility, missing inputs, obscured ceiling height, and ambiguous less-than
+bounds. Direct HTTPS smoke requests to the documented endpoints returned current raw METAR and
+multiline TAF reports on 2026-07-14. Native network loss, captive portals, TLS interception, app
+lifecycle, physical-device rendering, cache recovery, provider schema changes, forecast
+decoding, and briefing completeness remain release blockers.

@@ -6,6 +6,7 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   awcMetarClient,
+  classifyUsFlightCategory,
   evaluateMetarCurrency,
   evaluateTafValidity,
   parseMetar,
@@ -355,6 +356,7 @@ function DecodedObservation({
 }) {
   const theme = useDriftlineTheme();
   const currency = evaluateMetarCurrency(observation, new Date());
+  const flightCategory = classifyUsFlightCategory(observation);
   const wind = observation.wind;
   const visibility = observation.visibility;
   const visibilityPrefix =
@@ -373,6 +375,12 @@ function DecodedObservation({
         >
           {cached ? 'CACHED · ' : ''}CURRENCY{' '}
           {currency.kind === 'current' ? 'CURRENT' : currency.reason.toUpperCase()}
+        </Text>
+        <Text style={[styles.sourceState, { color: theme.attention }]}>
+          U.S. NWS DISPLAY CATEGORY ·{' '}
+          {flightCategory.kind === 'classified'
+            ? `${flightCategory.category} · ${flightCategory.limitingFactor.toUpperCase()}`
+            : `UNAVAILABLE · ${flightCategory.reason.replaceAll('-', ' ').toUpperCase()}`}
         </Text>
       </View>
       <Card>
@@ -416,6 +424,14 @@ function DecodedObservation({
                         : `${layer.amount} ${layer.baseFeetAgl} FT AGL${layer.convectiveType === null ? '' : ` ${layer.convectiveType}`}`,
                     )
                     .join(' · ')
+            }
+          />
+          <Fact
+            label="U.S. display category evidence"
+            value={
+              flightCategory.kind === 'classified'
+                ? `CEILING ${flightCategory.ceilingFeetAgl === null ? 'NONE REPORTED' : `${flightCategory.ceilingFeetAgl} FT AGL`} · VIS ${flightCategory.visibilityBound === 'greater-than' ? '>' : flightCategory.visibilityBound === 'less-than' ? '<' : ''}${flightCategory.visibilityStatuteMiles.toFixed(1)} SM`
+                : 'INSUFFICIENT PARSED CEILING / VISIBILITY'
             }
           />
         </View>
