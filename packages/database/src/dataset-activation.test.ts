@@ -74,6 +74,16 @@ describe('dataset activation policy', () => {
       'verification-after-integrity',
     ],
     [
+      'verification before generation',
+      generation(2, { signatureVerifiedAt: '2026-06-24T23:59:00.000Z' }),
+      'verification-before-generation',
+    ],
+    [
+      'future verification',
+      generation(2, { integrityCheckedAt: '2026-07-15T00:00:00.000Z' }),
+      'verification-in-future',
+    ],
+    [
       'invalid verification timestamp',
       generation(2, { signatureVerifiedAt: 'not-a-timestamp' }),
       'verification-timestamp-invalid',

@@ -247,7 +247,14 @@ export const reduceOfflineRegionState = (
       if (state.update.attemptId !== event.attemptId) {
         return { accepted: false, reason: 'attempt-mismatch' };
       }
-      if (!validTimestamp(event.committedAt)) {
+      const committedAt = Date.parse(event.committedAt);
+      const integrityCheckedAt = Date.parse(state.update.generation.integrityCheckedAt);
+      if (
+        !Number.isFinite(committedAt) ||
+        !Number.isFinite(integrityCheckedAt) ||
+        committedAt < integrityCheckedAt ||
+        committedAt > event.now.getTime()
+      ) {
         return { accepted: false, reason: 'invalid-timestamp' };
       }
       const decision = decideDatasetActivation({

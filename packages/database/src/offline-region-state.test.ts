@@ -260,4 +260,39 @@ describe('offline region lifecycle', () => {
     };
     expect(evaluateOfflineRegionAvailability(state, now).kind).toBe('invalid-generation');
   });
+
+  it('rejects activation commits outside the verified clock window', () => {
+    const attemptId = 'attempt-1';
+    let state = step(initial, {
+      attemptId,
+      expectedBytes: 1,
+      startedAt: '2026-07-14T10:00:00.000Z',
+      type: 'download-started',
+    });
+    state = step(state, { attemptId, receivedBytes: 1, type: 'download-progressed' });
+    const candidate = generation(1);
+    state = step(state, {
+      attemptId,
+      candidateDatasetId: candidate.manifest.datasetId,
+      type: 'download-completed',
+    });
+    state = step(state, {
+      allowRecoveryRollback: false,
+      attemptId,
+      generation: candidate,
+      now,
+      type: 'verification-succeeded',
+    });
+
+    for (const committedAt of ['2026-07-14T11:00:00.000Z', '2026-07-14T12:00:00.001Z']) {
+      expect(
+        reduceOfflineRegionState(state, {
+          attemptId,
+          committedAt,
+          now,
+          type: 'activation-committed',
+        }),
+      ).toEqual({ accepted: false, reason: 'invalid-timestamp' });
+    }
+  });
 });

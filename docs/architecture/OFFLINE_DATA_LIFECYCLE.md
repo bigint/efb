@@ -53,7 +53,9 @@ filesystem integrity check.
 The pure activation policy reparses the candidate manifest, validates its digest, verification
 chronology, and bounded signature-key identifier, and revalidates the complete current
 generation before sequence or rollback decisions. Constructing a TypeScript-shaped object cannot
-bypass those checks.
+bypass those checks. Verification must occur after manifest generation, integrity checks must
+occur after signature verification, and neither verification timestamp may be in the future. The
+final activation commit must fall between the integrity check and the supplied trusted clock.
 
 The manager independently reads native total and available device-storage bytes. Values must be
 positive/non-negative safe integers with available no greater than total before the UI derives

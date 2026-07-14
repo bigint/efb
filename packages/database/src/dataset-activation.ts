@@ -12,6 +12,8 @@ export type ActivationBlock =
   | 'rollback-not-authorised'
   | 'current-generation-invalid'
   | 'signature-key-invalid'
+  | 'verification-before-generation'
+  | 'verification-in-future'
   | 'verification-timestamp-invalid'
   | 'verification-after-integrity';
 
@@ -56,6 +58,13 @@ export const decideDatasetActivation = ({
   if (signatureVerifiedAt > integrityCheckedAt) {
     return { allowed: false, block: 'verification-after-integrity' };
   }
+  if (integrityCheckedAt > nowMs) {
+    return { allowed: false, block: 'verification-in-future' };
+  }
+  const generatedAt = Date.parse(candidate.manifest.generatedAt);
+  if (Number.isFinite(generatedAt) && generatedAt > signatureVerifiedAt) {
+    return { allowed: false, block: 'verification-before-generation' };
+  }
   const effectiveAt = Date.parse(candidate.manifest.effectiveAt);
   const expiresAt = Date.parse(candidate.manifest.expiresAt);
   if (!Number.isFinite(effectiveAt) || !Number.isFinite(expiresAt)) {
@@ -76,13 +85,17 @@ export const decideDatasetActivation = ({
   if (current === null) return { allowed: true, replacesSequence: null };
   const currentSignatureVerifiedAt = Date.parse(current.signatureVerifiedAt);
   const currentIntegrityCheckedAt = Date.parse(current.integrityCheckedAt);
+  const currentGeneratedAt = Date.parse(current.manifest.generatedAt);
   if (
     !datasetManifestSchema.safeParse(current.manifest).success ||
     !isSha256(current.manifestDigest) ||
     !isSignatureKeyId(current.signatureKeyId) ||
     !Number.isFinite(currentSignatureVerifiedAt) ||
     !Number.isFinite(currentIntegrityCheckedAt) ||
-    currentSignatureVerifiedAt > currentIntegrityCheckedAt
+    !Number.isFinite(currentGeneratedAt) ||
+    currentGeneratedAt > currentSignatureVerifiedAt ||
+    currentSignatureVerifiedAt > currentIntegrityCheckedAt ||
+    currentIntegrityCheckedAt > nowMs
   ) {
     return { allowed: false, block: 'current-generation-invalid' };
   }
