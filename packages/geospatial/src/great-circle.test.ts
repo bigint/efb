@@ -32,6 +32,12 @@ describe('spherical great-circle calculations', () => {
     expect(() => destinationPoint(position(0, 0), trueDegrees(90), nauticalMiles(-1))).toThrow(
       'non-negative',
     );
+    expect(() => destinationPoint(position(0, 0), 360 as never, nauticalMiles(1))).toThrow(
+      'bearing',
+    );
+    expect(() =>
+      greatCircleDistance({ latitude: 91, longitude: 0 } as never, position(0, 0)),
+    ).toThrow('coordinates');
   });
 
   it('reports signed cross-track and along-track distance', () => {

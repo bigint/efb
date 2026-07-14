@@ -22,7 +22,22 @@ const EARTH_MEAN_RADIUS_METRES = metres(6_371_008.8);
 const clamp = (value: number, minimum: number, maximum: number): number =>
   Math.min(maximum, Math.max(minimum, value));
 
+const requirePosition = ({ latitude, longitude }: Position): void => {
+  if (
+    !Number.isFinite(latitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    !Number.isFinite(longitude) ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    throw new RangeError('Position coordinates are invalid');
+  }
+};
+
 const angularDistance = (from: Position, to: Position): Radians => {
+  requirePosition(from);
+  requirePosition(to);
   const fromLatitude = toRadians(from.latitude);
   const toLatitude = toRadians(to.latitude);
   const deltaLatitude = toLatitude - fromLatitude;
@@ -64,6 +79,10 @@ export const destinationPoint = (
   bearing: TrueDegrees,
   distance: NauticalMiles,
 ): Position => {
+  requirePosition(from);
+  if (!Number.isFinite(bearing) || bearing < 0 || bearing >= 360) {
+    throw new RangeError('Destination bearing must be in [0, 360)');
+  }
   if (!Number.isFinite(distance) || distance < 0) {
     throw new RangeError('Destination distance must be finite and non-negative');
   }
