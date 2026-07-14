@@ -20,6 +20,11 @@ import { position as geospatialPosition } from '@driftline/geospatial';
 import { evaluatePosition } from '@/domain/position-source';
 import { estimateArrivalUtc } from '@/domain/arrival-estimate';
 import { resolveMapCamera, type MapOrientationMode } from '@/domain/map-camera';
+import {
+  appendMapMeasurementPoint,
+  calculateMapMeasurement,
+  type MapMeasurementPoints,
+} from '@/domain/map-measurement';
 import { useDevicePower } from '@/hooks/use-device-power';
 import { useFlightStore } from '@/store/flight-store';
 import { useDriftlineTheme } from '@/theme';
@@ -53,6 +58,8 @@ const graticule = {
 export function MapWorkspace() {
   const devicePower = useDevicePower();
   const theme = useDriftlineTheme();
+  const [measureEnabled, setMeasureEnabled] = useState(false);
+  const [measurementPoints, setMeasurementPoints] = useState<MapMeasurementPoints>([]);
   const [orientationMode, setOrientationMode] = useState<MapOrientationMode>('north-up');
   const activeLegIndex = useFlightStore((state) => state.activeLegIndex);
   const mapStyle = useMemo<StyleSpecification>(
@@ -147,6 +154,23 @@ export function MapWorkspace() {
     nowMilliseconds,
     activeNavigation?.status === 'ready' ? activeNavigation.estimatedMinutesRemaining : null,
   );
+  const measurement = calculateMapMeasurement(measurementPoints);
+  const measurementGeoJson = {
+    features: [
+      {
+        geometry: {
+          coordinates: measurementPoints.map(({ latitude, longitude }) => [
+            longitude,
+            latitude,
+          ]),
+          type: 'LineString' as const,
+        },
+        properties: {},
+        type: 'Feature' as const,
+      },
+    ],
+    type: 'FeatureCollection' as const,
+  };
 
   return (
     <View style={styles.container}>
@@ -155,6 +179,13 @@ export function MapWorkspace() {
         compass
         logo={false}
         mapStyle={mapStyle}
+        onLongPress={({ nativeEvent }) => {
+          if (!measureEnabled) return;
+          const [longitude, latitude] = nativeEvent.lngLat;
+          setMeasurementPoints((current) =>
+            appendMapMeasurementPoint(current, longitude, latitude),
+          );
+        }}
         preferredFramesPerSecond={60}
         scaleBar
         style={StyleSheet.absoluteFill}
@@ -200,6 +231,40 @@ export function MapWorkspace() {
             />
           </GeoJSONSource>
         )}
+        {measurementPoints.length === 2 && (
+          <GeoJSONSource data={measurementGeoJson} id="measurement">
+            <Layer
+              id="measurement-shadow"
+              paint={{ 'line-color': theme.background, 'line-width': 7 }}
+              type="line"
+            />
+            <Layer
+              id="measurement-line"
+              paint={{ 'line-color': theme.attention, 'line-width': 3 }}
+              type="line"
+            />
+          </GeoJSONSource>
+        )}
+        {measurementPoints.map((point, index) => (
+          <Marker
+            anchor="center"
+            id={`measurement-${index}`}
+            key={`measurement-${index}`}
+            lngLat={[point.longitude, point.latitude]}
+          >
+            <View
+              accessibilityLabel={`Measurement point ${index === 0 ? 'A' : 'B'}`}
+              style={[
+                styles.measureMarker,
+                { backgroundColor: theme.attention, borderColor: theme.background },
+              ]}
+            >
+              <Text style={[styles.measureMarkerText, { color: theme.background }]}>
+                {index === 0 ? 'A' : 'B'}
+              </Text>
+            </View>
+          </Marker>
+        ))}
         {demoAirports.map((airport) => (
           <Marker
             anchor="center"
@@ -239,37 +304,80 @@ export function MapWorkspace() {
       </Map>
 
       <View pointerEvents="box-none" style={styles.overlay}>
-        <Pressable
-          accessibilityLabel={
-            orientationMode === 'north-up'
-              ? 'Map orientation north up. Switch to track up.'
-              : 'Map orientation track up requested. Switch to north up.'
-          }
-          accessibilityRole="button"
-          onPress={() =>
-            setOrientationMode((current) => (current === 'north-up' ? 'track-up' : 'north-up'))
-          }
-          style={({ pressed }) => [
-            styles.orientationControl,
-            { backgroundColor: theme.panelRaised, borderColor: theme.separator },
-            pressed && styles.pressed,
-          ]}
-        >
-          <Text
-            style={[
-              styles.orientationText,
-              {
-                color: mapCamera.kind === 'track-up-unavailable' ? theme.danger : theme.primary,
-              },
+        <View style={styles.mapTools}>
+          <Pressable
+            accessibilityLabel={
+              orientationMode === 'north-up'
+                ? 'Map orientation north up. Switch to track up.'
+                : 'Map orientation track up requested. Switch to north up.'
+            }
+            accessibilityRole="button"
+            onPress={() =>
+              setOrientationMode((current) =>
+                current === 'north-up' ? 'track-up' : 'north-up',
+              )
+            }
+            style={({ pressed }) => [
+              styles.orientationControl,
+              { backgroundColor: theme.panelRaised, borderColor: theme.separator },
+              pressed && styles.pressed,
             ]}
           >
-            {mapCamera.kind === 'north-up'
-              ? 'NORTH UP'
-              : mapCamera.kind === 'track-up'
-                ? `TRACK UP · ${mapCamera.bearing.toFixed(0).padStart(3, '0')}° ${mapCamera.reference === 'true' ? 'T' : 'PLATFORM'}`
-                : 'TRACK UP UNAVAILABLE · NORTH FALLBACK'}
-          </Text>
-        </Pressable>
+            <Text
+              style={[
+                styles.orientationText,
+                {
+                  color:
+                    mapCamera.kind === 'track-up-unavailable' ? theme.danger : theme.primary,
+                },
+              ]}
+            >
+              {mapCamera.kind === 'north-up'
+                ? 'NORTH UP'
+                : mapCamera.kind === 'track-up'
+                  ? `TRACK UP · ${mapCamera.bearing.toFixed(0).padStart(3, '0')}° ${mapCamera.reference === 'true' ? 'T' : 'PLATFORM'}`
+                  : 'TRACK UP UNAVAILABLE · NORTH FALLBACK'}
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel={
+              measureEnabled ? 'Disable and clear map measurement' : 'Enable map measurement'
+            }
+            accessibilityRole="button"
+            onPress={() => {
+              setMeasureEnabled((current) => !current);
+              setMeasurementPoints([]);
+            }}
+            style={({ pressed }) => [
+              styles.orientationControl,
+              { backgroundColor: theme.panelRaised, borderColor: theme.separator },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.orientationText,
+                { color: measureEnabled ? theme.attention : theme.primary },
+              ]}
+            >
+              {measureEnabled ? 'MEASURE ON · CLEAR' : 'MEASURE'}
+            </Text>
+          </Pressable>
+        </View>
+        {measureEnabled && (
+          <View style={[styles.measureChip, { backgroundColor: theme.panelRaised }]}>
+            <Text style={[styles.mapChipPrimary, { color: theme.attention }]}>
+              {measurement.kind === 'ready'
+                ? `${measurement.nauticalMiles.toFixed(1)} NM · ${measurement.initialTrueBearing === null ? 'BRG —' : `${measurement.initialTrueBearing.toFixed(0).padStart(3, '0')}°T`}`
+                : measurement.points === 0
+                  ? 'LONG-PRESS POINT A'
+                  : 'LONG-PRESS POINT B'}
+            </Text>
+            <Text style={[styles.mapChipSecondary, { color: theme.secondary }]}>
+              Great-circle display measure · third long-press starts again
+            </Text>
+          </View>
+        )}
         <View style={[styles.mapChip, { backgroundColor: theme.panelRaised }]}>
           <Text style={[styles.mapChipPrimary, { color: theme.primary }]}>
             {routeResolution.status === 'unresolved'
@@ -471,6 +579,30 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   mapChipSecondary: { fontFamily: typography.body, fontSize: 10, marginTop: 2 },
+  mapTools: {
+    alignSelf: 'flex-end',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    justifyContent: 'flex-end',
+  },
+  measureChip: {
+    alignSelf: 'flex-end',
+    borderRadius: radii.control,
+    marginBottom: spacing.sm,
+    maxWidth: 360,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  measureMarker: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 2,
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
+  },
+  measureMarkerText: { fontFamily: typography.mono, fontSize: 12, fontWeight: '800' },
   navLabel: {
     fontFamily: typography.body,
     fontSize: 11,

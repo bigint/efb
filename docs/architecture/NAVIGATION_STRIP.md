@@ -54,6 +54,15 @@ in the control label. If position or course becomes unavailable, the requested m
 visible but the camera returns to north with `TRACK UP UNAVAILABLE · NORTH FALLBACK`; it does
 not hold a stale rotation. Returning to north-up removes automatic centring.
 
+## Transient measure tool
+
+Measurement is off by default. After explicit activation, two long presses create labelled A/B
+points and a visible line. The result uses the same spherical great-circle boundary as route
+display and reports distance in nautical miles plus initial true bearing. Coincident points show
+zero distance with bearing unavailable, and invalid coordinates are rejected. A third long press
+starts a new measurement; disabling the tool clears all points. Measurements are session state
+only and never become route intent or persisted flight data.
+
 ## Limitations
 
 This is a navigation-dashboard subset, not a flight director or certified instrument. Track-up
@@ -61,4 +70,6 @@ uses reported course, never an inferred heading. It has no automatic waypoint se
 anticipation, magnetic course, heading source, pressure altitude, vertical navigation, arrival
 detection, or route-deviation alerting. Calculations use the documented spherical Earth model
 and fictional demonstration waypoints. Native battery/event behavior, lifecycle, accessibility,
-visual, energy, and independent-flight-fixture evidence are open release blockers.
+visual, energy, and independent-flight-fixture evidence are open release blockers. Native
+long-press arbitration, marker placement, and mounted-device measure usability also remain
+unverified.

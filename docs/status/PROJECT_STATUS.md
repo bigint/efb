@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 268 passed across forty-three test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,178 modules, 5.6 MB
+- Unit tests: 270 passed across forty-four test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,179 modules, 5.6 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -140,6 +140,9 @@ performance data.
   track-up. Missing or stale position/course returns the camera to north with a visible fallback
   state rather than retaining rotation. Native gesture interaction and mounted-device camera
   behavior remain unverified.
+- An opt-in transient map measure tool accepts two long presses, renders labelled endpoints and
+  a line, and reports great-circle nautical miles plus initial true bearing. It clears on exit,
+  never mutates route intent, and still needs native gesture/accessibility evidence.
 - Phase 1 gate remains open; no performance or operational-readiness claim is made.
 
 ## Last updated
