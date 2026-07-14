@@ -57,6 +57,9 @@ describe('dataset manifest bounds', () => {
     expect(() => datasetManifestSchema.parse(manifest([file('../escape')]))).toThrow(
       'traverse',
     );
+    expect(() => datasetManifestSchema.parse(manifest([file('tiles/./same.bin')]))).toThrow(
+      'traverse',
+    );
   });
 
   it('rejects unsafe or unbounded path and display metadata', () => {

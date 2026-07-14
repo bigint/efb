@@ -29,7 +29,9 @@ export const datasetFileSchema = z
       .refine(
         (value) =>
           !value.startsWith('/') &&
-          !value.split('/').some((component) => component === '..' || component === ''),
+          !value
+            .split('/')
+            .some((component) => component === '.' || component === '..' || component === ''),
         'Dataset paths must be relative and cannot traverse directories',
       ),
     sha256: sha256Schema,
