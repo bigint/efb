@@ -39,6 +39,7 @@ export function PlanWorkspace() {
   const theme = useDriftlineTheme();
   const [aircraft, setAircraft] = useState<readonly AircraftProfile[]>([]);
   const [aircraftError, setAircraftError] = useState<string | null>(null);
+  const [alternateIdentifier, setAlternateIdentifier] = useState<string | null>(null);
   const [archivedPlans, setArchivedPlans] = useState<readonly SavedFlightPlan[]>([]);
   const [editingAircraftId, setEditingAircraftId] = useState<string | null>(null);
   const [editingAltitudeFeet, setEditingAltitudeFeet] = useState('');
@@ -110,6 +111,26 @@ export function PlanWorkspace() {
         windSpeed: knots(assumptionValues[2] ?? Number.NaN),
       })
     : null;
+  const destinationAirport = airports.at(-1) ?? null;
+  const alternateAirport =
+    alternateIdentifier === null
+      ? null
+      : (demoAirports.find(({ icao }) => icao === alternateIdentifier) ?? null);
+  const alternateWindAdjusted =
+    assumptionsValid &&
+    destinationAirport !== null &&
+    alternateAirport !== null &&
+    destinationAirport.icao !== alternateAirport.icao
+      ? calculateWindAdjustedRoute({
+          trueAirspeed: knots(assumptionValues[0] ?? Number.NaN),
+          waypoints: [destinationAirport, alternateAirport].map((airport) => ({
+            identifier: airport.icao,
+            position: airport.position,
+          })),
+          windFromTrue: trueDegrees(assumptionValues[1] ?? Number.NaN),
+          windSpeed: knots(assumptionValues[2] ?? Number.NaN),
+        })
+      : null;
   const selectedPlanningAircraft =
     selectedAircraftId === null
       ? null
@@ -119,6 +140,16 @@ export function PlanWorkspace() {
     fuelBurnLitresPerHour: selectedPlanningAircraft?.planning.fuelBurnLitresPerHour ?? null,
     usableFuelLitres: selectedPlanningAircraft?.planning.usableFuelLitres ?? null,
   });
+  const alternateFuelEstimate = calculateCruiseFuelEstimate({
+    estimatedMinutes:
+      alternateWindAdjusted?.status === 'ready' ? alternateWindAdjusted.estimatedMinutes : null,
+    fuelBurnLitresPerHour: selectedPlanningAircraft?.planning.fuelBurnLitresPerHour ?? null,
+    usableFuelLitres: selectedPlanningAircraft?.planning.usableFuelLitres ?? null,
+  });
+
+  useEffect(() => {
+    setAlternateIdentifier(null);
+  }, [destinationAirport?.icao]);
 
   const reloadSavedPlans = useCallback(async () => {
     try {
@@ -299,6 +330,14 @@ export function PlanWorkspace() {
             value={
               fuelEstimate.kind === 'ready'
                 ? `${fuelEstimate.requiredLitres.toFixed(1)} L`
+                : '—'
+            }
+          />
+          <Summary
+            label="Alternate"
+            value={
+              alternateWindAdjusted?.status === 'ready'
+                ? `${alternateWindAdjusted.totalDistance.toFixed(1)} NM`
                 : '—'
             }
           />
@@ -712,6 +751,49 @@ export function PlanWorkspace() {
         {!assumptionsValid && (
           <Text accessibilityRole="alert" style={[styles.inputError, { color: theme.danger }]}>
             Enter TAS above 0 KT, wind direction from 0–359°T, and wind speed at or above 0 KT.
+          </Text>
+        )}
+        <Text style={[panelStyles.label, styles.aircraftLabel, { color: theme.secondary }]}>
+          Alternate airport · transient · not saved
+        </Text>
+        <View style={styles.aircraftChoices}>
+          <Action
+            label="None"
+            onPress={() => setAlternateIdentifier(null)}
+            primary={alternateIdentifier === null}
+          />
+          {demoAirports
+            .filter(({ icao }) => icao !== destinationAirport?.icao)
+            .map((airport) => (
+              <Action
+                key={airport.icao}
+                label={`${airport.icao} · fictional`}
+                onPress={() => setAlternateIdentifier(airport.icao)}
+                primary={alternateIdentifier === airport.icao}
+              />
+            ))}
+        </View>
+        {alternateIdentifier !== null && (
+          <Text
+            accessibilityRole={
+              alternateWindAdjusted?.status === 'no-solution' ? 'alert' : undefined
+            }
+            style={[
+              panelStyles.copy,
+              styles.assumptionCopy,
+              {
+                color:
+                  alternateWindAdjusted?.status === 'no-solution'
+                    ? theme.danger
+                    : theme.secondary,
+              },
+            ]}
+          >
+            {alternateWindAdjusted?.status === 'ready'
+              ? `${destinationAirport?.icao ?? '—'} → ${alternateIdentifier} · ${alternateWindAdjusted.totalDistance.toFixed(1)} NM · ${alternateWindAdjusted.estimatedMinutes.toFixed(0)} MIN${alternateFuelEstimate.kind === 'ready' ? ` · ${alternateFuelEstimate.requiredLitres.toFixed(1)} L cruise-only` : ''} · NOT INCLUDED IN HEADLINE FUEL`
+              : alternateWindAdjusted?.status === 'no-solution'
+                ? `Alternate wind solution blocked: ${alternateWindAdjusted.reason.replaceAll('-', ' ')}.`
+                : 'Alternate calculation requires a resolved destination and valid wind assumptions.'}
           </Text>
         )}
       </Card>

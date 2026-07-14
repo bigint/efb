@@ -30,6 +30,12 @@ the result with entered usable litres. This transient estimate is bounded to sev
 never adds or implies taxi, climb, descent, contingency, alternate, or reserve fuel. Invalid
 assumptions and missing aircraft remain unavailable rather than becoming zero consumption.
 
+Plan can also select one fictional demonstration airport as a transient alternate. The
+destination-to-alternate leg gets its own distance, constant-wind ETE, wind no-solution state,
+and cruise-only fuel when an aircraft is available. It is explicitly excluded from the headline
+route fuel and is cleared when the route destination changes. Alternate intent is not stored in
+the current saved-flight schema.
+
 Saved drafts can be renamed and archived. Each action creates exactly the next revision and uses
 the same compare-and-swap update boundary; a conflict reloads current storage before reporting
 the error. Archive requires native destructive confirmation, hides the record from the active
@@ -84,7 +90,7 @@ geometry under the same identifier.
 The editor can create, load, duplicate, revise details, replace routes, archive, and restore
 drafts. The ephemeral route sequence can move a waypoint up or down through a pure bounded
 reorder; every successful reorder clears active-leg selection. Drag editing, arbitrary external
-waypoint search, Plan selection across the whole shell, a native date/time picker, assumption
-snapshots, outbox sync, richer conflict UI, and native process-death/visual/accessibility
-evidence remain open. The included waypoints are fictional and unverified, so saved routes are
-not suitable for navigation.
+waypoint search, durable alternate/assumption snapshots, Plan selection across the whole shell,
+a native date/time picker, outbox sync, richer conflict UI, and native
+process-death/visual/accessibility evidence remain open. The included waypoints are fictional
+and unverified, so saved routes are not suitable for navigation.

@@ -131,6 +131,10 @@ performance data.
   wind-adjusted ETE and entered fuel burn, then compares it with entered usable fuel. The UI
   explicitly excludes taxi, climb, descent, contingency, alternate, and reserve fuel; scenario
   persistence and full fuel planning remain open.
+- Plan can select a fictional transient alternate and independently calculate the
+  destination-to-alternate distance, constant-wind ETE/no-solution state, and cruise-only fuel.
+  Destination changes clear it, it is excluded from headline fuel, and durable alternate intent
+  remains open.
 - Plan now requires explicit transient active-leg selection; every route mutation clears it.
   With a fresh position, the map derives next distance, true bearing, signed cross-track,
   remaining distance, and groundspeed-based next/route ETE through a pure spherical calculator.
