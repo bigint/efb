@@ -34,8 +34,13 @@ export const classifyDataCurrency = (provenance: DataProvenance, now: Date): Dat
     return 'invalid';
   }
   if (provenance.effectiveAt === null || provenance.expiresAt === null) return 'unknown';
-  if (Date.parse(provenance.effectiveAt) > now.getTime()) return 'not-effective';
-  if (Date.parse(provenance.expiresAt) <= now.getTime()) return 'expired';
+  const effectiveAt = Date.parse(provenance.effectiveAt);
+  const expiresAt = Date.parse(provenance.expiresAt);
+  if (expiresAt <= effectiveAt || Date.parse(provenance.retrievedAt) > now.getTime()) {
+    return 'invalid';
+  }
+  if (effectiveAt > now.getTime()) return 'not-effective';
+  if (expiresAt <= now.getTime()) return 'expired';
   return 'current';
 };
 

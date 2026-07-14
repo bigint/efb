@@ -34,9 +34,12 @@ describe('data currency classification', () => {
   });
 
   it('rejects future, invalid, and invalid-clock states', () => {
-    expect(classifyDataCurrency(provenance, new Date('2026-07-13T00:00:00.000Z'))).toBe(
-      'not-effective',
-    );
+    expect(
+      classifyDataCurrency(
+        { ...provenance, retrievedAt: '2026-07-12T00:00:00.000Z' },
+        new Date('2026-07-13T00:00:00.000Z'),
+      ),
+    ).toBe('not-effective');
     expect(
       classifyDataCurrency(
         { ...provenance, verificationStatus: 'invalid' },
@@ -44,5 +47,22 @@ describe('data currency classification', () => {
       ),
     ).toBe('invalid');
     expect(classifyDataCurrency(provenance, new Date(Number.NaN))).toBe('invalid');
+  });
+
+  it('rejects contradictory chronology and future retrieval', () => {
+    const now = new Date('2026-07-14T12:00:00.000Z');
+    expect(
+      classifyDataCurrency(
+        {
+          ...provenance,
+          effectiveAt: '2026-07-15T00:00:00.000Z',
+          expiresAt: '2026-07-14T00:00:00.000Z',
+        },
+        now,
+      ),
+    ).toBe('invalid');
+    expect(
+      classifyDataCurrency({ ...provenance, retrievedAt: '2026-07-16T00:00:00.000Z' }, now),
+    ).toBe('invalid');
   });
 });

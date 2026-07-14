@@ -73,6 +73,11 @@ describe('dataset activation policy', () => {
       generation(2, { integrityCheckedAt: '2026-07-09T00:00:00.000Z' }),
       'verification-after-integrity',
     ],
+    [
+      'invalid verification timestamp',
+      generation(2, { signatureVerifiedAt: 'not-a-timestamp' }),
+      'verification-timestamp-invalid',
+    ],
   ] as const)('blocks %s', (_label, candidate, block) => {
     expect(
       decideDatasetActivation({
@@ -82,6 +87,17 @@ describe('dataset activation policy', () => {
         now,
       }),
     ).toEqual({ allowed: false, block });
+  });
+
+  it('fails closed when the activation clock is invalid', () => {
+    expect(
+      decideDatasetActivation({
+        allowRecoveryRollback: false,
+        candidate: generation(2),
+        current: generation(1),
+        now: new Date(Number.NaN),
+      }),
+    ).toEqual({ allowed: false, block: 'clock-invalid' });
   });
 
   it('blocks rollback unless an explicit recovery path authorises it', () => {

@@ -3,9 +3,11 @@ import type { VerifiedDatasetGeneration } from './dataset-manifest';
 export type ActivationBlock =
   | 'candidate-expired'
   | 'candidate-not-effective'
+  | 'clock-invalid'
   | 'dataset-mismatch'
   | 'manifest-digest-invalid'
   | 'rollback-not-authorised'
+  | 'verification-timestamp-invalid'
   | 'verification-after-integrity';
 
 export type ActivationDecision =
@@ -32,10 +34,16 @@ export const decideDatasetActivation = ({
   now,
 }: ActivationInput): ActivationDecision => {
   const nowMs = now.getTime();
+  if (!Number.isFinite(nowMs)) return { allowed: false, block: 'clock-invalid' };
   if (!isSha256(candidate.manifestDigest)) {
     return { allowed: false, block: 'manifest-digest-invalid' };
   }
-  if (Date.parse(candidate.signatureVerifiedAt) > Date.parse(candidate.integrityCheckedAt)) {
+  const signatureVerifiedAt = Date.parse(candidate.signatureVerifiedAt);
+  const integrityCheckedAt = Date.parse(candidate.integrityCheckedAt);
+  if (!Number.isFinite(signatureVerifiedAt) || !Number.isFinite(integrityCheckedAt)) {
+    return { allowed: false, block: 'verification-timestamp-invalid' };
+  }
+  if (signatureVerifiedAt > integrityCheckedAt) {
     return { allowed: false, block: 'verification-after-integrity' };
   }
   if (Date.parse(candidate.manifest.effectiveAt) > nowMs) {
