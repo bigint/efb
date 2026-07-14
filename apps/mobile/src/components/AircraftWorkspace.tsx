@@ -39,6 +39,7 @@ interface ProfileForm {
   readonly fuelArmM: string;
   readonly fuelBurnLitresPerHour: string;
   readonly maximumMassKg: string;
+  readonly notes: string;
   readonly occupantArmM: string;
   readonly registration: string;
   readonly typeDesignator: string;
@@ -54,6 +55,7 @@ const profileDefaults = (): ProfileForm => ({
   fuelArmM: '',
   fuelBurnLitresPerHour: '',
   maximumMassKg: '',
+  notes: '',
   occupantArmM: '',
   registration: '',
   typeDesignator: '',
@@ -78,6 +80,7 @@ const profileFormFromRecord = (profile: AircraftProfile): ProfileForm => ({
   fuelArmM: String(profile.planning.fuelArmM),
   fuelBurnLitresPerHour: String(profile.planning.fuelBurnLitresPerHour),
   maximumMassKg: String(profile.planning.maximumMassKg),
+  notes: profile.notes,
   occupantArmM: String(profile.planning.occupantArmM),
   registration: profile.registration,
   typeDesignator: profile.typeDesignator,
@@ -252,7 +255,7 @@ export function AircraftWorkspace() {
           createdAt: now,
           displayName: profileForm.displayName,
           id: randomUUID(),
-          notes: '',
+          notes: profileForm.notes,
           planning,
           registration: profileForm.registration,
           revision: 1,
@@ -268,7 +271,7 @@ export function AircraftWorkspace() {
           editingProfile,
           {
             displayName: profileForm.displayName,
-            notes: editingProfile.notes,
+            notes: profileForm.notes,
             planning,
             registration: profileForm.registration,
             typeDesignator: profileForm.typeDesignator,
@@ -515,6 +518,13 @@ export function AircraftWorkspace() {
             name="cgEnvelope"
             onChange={setProfileForm}
           />
+          <ProfileInput
+            form={profileForm}
+            label="Profile notes · optional · unverified"
+            multiline
+            name="notes"
+            onChange={setProfileForm}
+          />
         </View>
         <Text style={[panelStyles.copy, styles.envelopeHelp, { color: theme.secondary }]}>
           Enter polygon vertices in perimeter order. Example: 0.80,600. Leave empty to keep CG
@@ -623,9 +633,12 @@ function ProfileInput({
       <Text style={[panelStyles.label, { color: theme.secondary }]}>{label}</Text>
       <TextInput
         accessibilityLabel={label}
-        autoCapitalize={name === 'displayName' ? 'words' : 'characters'}
+        autoCapitalize={
+          name === 'displayName' ? 'words' : name === 'notes' ? 'sentences' : 'characters'
+        }
         autoCorrect={false}
         keyboardType={numeric ? 'decimal-pad' : 'default'}
+        maxLength={name === 'notes' ? 5_000 : undefined}
         multiline={multiline}
         onChangeText={(value) => onChange({ ...form, [name]: value })}
         style={[
@@ -672,6 +685,11 @@ function SavedProfile({
           ? 'not provided'
           : `${profile.planning.cgEnvelope.length} user-entered points`}
       </Text>
+      {profile.notes.length > 0 && (
+        <Text selectable style={[panelStyles.copy, { color: theme.secondary }]}>
+          Notes: {profile.notes}
+        </Text>
+      )}
       <View style={styles.profileAction}>
         <Action
           disabled={selected}

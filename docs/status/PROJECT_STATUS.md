@@ -28,7 +28,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 322 passed across sixty-one test files.
+- Unit tests: 323 passed across sixty-one test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,202 modules, 5.7 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
@@ -127,7 +127,8 @@ performance data.
   stations/scenarios, graph rendering, and native recovery remain open. A session-only loading
   scenario can add up to eight bounded labelled mass/arm stations to the same total mass,
   moment, CG, and entered-envelope calculation; selecting another profile clears them, and they
-  are not persisted.
+  are not persisted. Optional 5,000-character multiline profile notes now create, display, and
+  revise through the same conflict-aware record boundary while rejecting unsafe controls.
 - An explicit user action can now select a foreground-only device-location source. Permission,
   service, provider-error, null-telemetry, and stale-sample states fail closed; metric provider
   values convert to cockpit units at a pure boundary, and source changes clear prior samples.

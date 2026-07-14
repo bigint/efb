@@ -10,6 +10,11 @@ const hasNoControlCharacters = (value: string): boolean =>
     const code = character.codePointAt(0) ?? 0;
     return code >= 32 && code !== 127;
   });
+const hasNoUnsafeNoteCharacters = (value: string): boolean =>
+  [...value].every((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code === 9 || code === 10 || code === 13 || (code >= 32 && code !== 127);
+  });
 
 export const aircraftProfileUnitsSchema = z
   .object({
@@ -81,7 +86,10 @@ export const aircraftProfileSchema = z
       .max(80)
       .refine(hasNoControlCharacters, 'Aircraft display name has control characters'),
     id: z.uuid(),
-    notes: z.string().max(5_000),
+    notes: z
+      .string()
+      .max(5_000)
+      .refine(hasNoUnsafeNoteCharacters, 'Aircraft notes have unsupported control characters'),
     planning: aircraftPlanningValuesSchema,
     registration: z
       .string()

@@ -107,6 +107,15 @@ describe('aircraft profile', () => {
     ).toThrow('control characters');
   });
 
+  it('allows multiline notes but rejects unsafe note controls', () => {
+    expect(
+      aircraftProfileSchema.parse({ ...fixture(), notes: 'Oil: 7 qt\nVerify POH.' }).notes,
+    ).toContain('\n');
+    expect(() =>
+      aircraftProfileSchema.parse({ ...fixture(), notes: 'Hidden\u0000text' }),
+    ).toThrow('unsupported control');
+  });
+
   it('revises user fields while preserving identity, provenance, and units', () => {
     const profile = aircraftProfileSchema.parse(fixture());
     expect(

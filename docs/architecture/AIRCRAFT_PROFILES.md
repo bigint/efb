@@ -15,7 +15,8 @@ User profiles live in the versioned user SQLite database. A profile records:
 - an explicit units object: kilograms, metres, litres, knots;
 - cruise speed, fuel capacity and burn, empty and maximum mass, station arms, and an optional
   user-entered CG polygon of 3 to 20 arm/mass points; and
-- optional notes reserved by the persistence model.
+- optional user-entered notes up to 5,000 characters, including ordinary multiline text but not
+  unsafe control characters.
 
 Migration v5 adds provenance and revision columns without reinterpreting legacy JSON. Reads
 parse both JSON documents and validate the complete profile before exposing any record. One
@@ -59,9 +60,9 @@ decision against user input, not a statement that the polygon came from an appro
 separate built-in polygon sandbox remains fictional.
 
 Profile deletion, revision history/rollback, durable loading-station authoring, scenario saving,
-envelope graph rendering, fuel-density conversion, take-off and landing models, source-document
-links, and editing profile notes remain open. Native persistence recovery and
-visual/accessibility validation are release blockers.
+envelope graph rendering, fuel-density conversion, take-off and landing models, and
+source-document links remain open. Native persistence recovery and visual/accessibility
+validation are release blockers.
 
 Checklist authoring can link a validated local profile UUID and derives the template label from
 its normalized registration. This is referential organization only; it does not verify the
