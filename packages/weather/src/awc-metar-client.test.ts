@@ -36,6 +36,33 @@ describe('AWC METAR client', () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+  it('retrieves one bounded multiline raw TAF without decoding forecast groups', async () => {
+    const fetcher = vi
+      .fn<(input: string, init: RequestInit) => Promise<Response>>()
+      .mockResolvedValue(
+        response('TAF KMCI 140520Z 1406/1506 VRB04KT P6SM SKC\n  TEMPO 1410/1412 4SM BR'),
+      );
+    const client = new AwcMetarClient(fetcher, () => now);
+    await expect(client.fetchLatestTaf('kmci')).resolves.toMatchObject({
+      product: 'TAF',
+      provenance: { verificationStatus: 'source-verified' },
+      station: 'KMCI',
+    });
+    expect(fetcher.mock.calls[0]?.[0]).toBe(
+      'https://aviationweather.gov/api/data/taf?format=raw&ids=KMCI',
+    );
+  });
+
+  it('shares one provider request gate across METAR and TAF', async () => {
+    const fetcher = vi
+      .fn<(input: string, init: RequestInit) => Promise<Response>>()
+      .mockResolvedValue(response('METAR KMCI 140753Z 11004KT 10SM CLR 24/19 A3019'));
+    const client = new AwcMetarClient(fetcher, () => now);
+    await client.fetchLatest('KMCI');
+    await expect(client.fetchLatestTaf('KMCI')).rejects.toMatchObject({ code: 'rate-limited' });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it('distinguishes no data, provider throttling, and station mismatch', async () => {
     const noData = new AwcMetarClient(
       () => Promise.resolve(response('', 204)),
@@ -68,6 +95,28 @@ describe('AWC METAR client', () => {
     );
     await expect(client.fetchLatest('../')).rejects.toBeInstanceOf(AwcMetarError);
     await expect(client.fetchLatest('KMCI')).rejects.toMatchObject({
+      code: 'response-invalid',
+    });
+  });
+
+  it('rejects a mismatched or multi-report TAF response', async () => {
+    const mismatch = new AwcMetarClient(
+      () => Promise.resolve(response('TAF KSEA 140520Z 1406/1506 VRB04KT P6SM SKC')),
+      () => now,
+    );
+    await expect(mismatch.fetchLatestTaf('KMCI')).rejects.toMatchObject({
+      code: 'station-mismatch',
+    });
+    const multiple = new AwcMetarClient(
+      () =>
+        Promise.resolve(
+          response(
+            'TAF KMCI 140520Z 1406/1506 VRB04KT P6SM SKC\nTAF KMCI 141120Z 1412/1512 VRB05KT P6SM SKC',
+          ),
+        ),
+      () => now,
+    );
+    await expect(multiple.fetchLatestTaf('KMCI')).rejects.toMatchObject({
       code: 'response-invalid',
     });
   });

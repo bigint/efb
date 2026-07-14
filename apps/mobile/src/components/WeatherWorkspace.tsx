@@ -7,6 +7,7 @@ import {
   awcMetarClient,
   evaluateMetarCurrency,
   parseMetar,
+  type AwcTafReport,
   type MetarObservation,
 } from '@driftline/weather';
 
@@ -21,6 +22,7 @@ interface DecoderForm {
 export function WeatherWorkspace() {
   const theme = useDriftlineTheme();
   const [observation, setObservation] = useState<MetarObservation | null>(null);
+  const [taf, setTaf] = useState<AwcTafReport | null>(null);
   const [station, setStation] = useState('');
   const [liveError, setLiveError] = useState<string | null>(null);
   const [loadingLive, setLoadingLive] = useState(false);
@@ -80,25 +82,38 @@ export function WeatherWorkspace() {
     }
   };
 
+  const fetchLiveTaf = async () => {
+    setLoadingLive(true);
+    try {
+      setTaf(await awcMetarClient.fetchLatestTaf(station));
+      setLiveError(null);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Live TAF lookup failed.';
+      setLiveError(taf === null ? message : `${message} Previous raw TAF retained.`);
+    } finally {
+      setLoadingLive(false);
+    }
+  };
+
   return (
     <ScrollView
       contentContainerStyle={styles.scroll}
       keyboardShouldPersistTaps="handled"
       style={[panelStyles.body, { backgroundColor: theme.background }]}
     >
-      <PanelHeader eyebrow="LIVE LOOKUP + MANUAL DECODER" title="Weather" />
+      <PanelHeader eyebrow="LIVE RAW LOOKUP + MANUAL DECODER" title="Weather" />
       <Card>
         <Text style={[styles.warning, { color: theme.attention }]}>
           NOAA/NWS AWC · SUPPLEMENTAL WEATHER ONLY
         </Text>
         <Text style={[panelStyles.copy, styles.intro, { color: theme.secondary }]}>
-          Retrieve one latest raw METAR by four-character station identifier. Requests are
-          foreground-only and locally limited to one per minute. This is not a complete weather
-          briefing and no offline cache is retained.
+          Retrieve one latest raw METAR or TAF by four-character station identifier. All AWC
+          products share one foreground-only request limit of once per minute. This is not a
+          complete weather briefing and no offline cache is retained.
         </Text>
         <View style={styles.liveRow}>
           <TextInput
-            accessibilityLabel="Live METAR station identifier"
+            accessibilityLabel="Live weather station identifier"
             autoCapitalize="characters"
             autoCorrect={false}
             maxLength={4}
@@ -122,6 +137,11 @@ export function WeatherWorkspace() {
             onPress={() => void fetchLive()}
             primary
           />
+          <Action
+            disabled={loadingLive}
+            label={loadingLive ? 'Retrieving…' : 'Get latest TAF'}
+            onPress={() => void fetchLiveTaf()}
+          />
         </View>
         {liveError !== null && (
           <Text accessibilityRole="alert" style={[styles.error, { color: theme.danger }]}>
@@ -129,6 +149,7 @@ export function WeatherWorkspace() {
           </Text>
         )}
       </Card>
+      {taf !== null && <RawTaf report={taf} />}
       <Text style={[panelStyles.sectionTitle, styles.section, { color: theme.primary }]}>
         Manual offline decoder
       </Text>
@@ -179,6 +200,31 @@ export function WeatherWorkspace() {
 
       {observation !== null && <DecodedObservation observation={observation} />}
     </ScrollView>
+  );
+}
+
+function RawTaf({ report }: { readonly report: AwcTafReport }) {
+  const theme = useDriftlineTheme();
+  return (
+    <View style={styles.decoded}>
+      <View>
+        <Text style={[styles.station, { color: theme.primary }]}>
+          {report.station} · RAW TAF
+        </Text>
+        <Text style={[styles.sourceState, { color: theme.attention }]}>
+          VALIDITY NOT EVALUATED · GROUPS NOT DECODED
+        </Text>
+      </View>
+      <Card>
+        <Text selectable style={[styles.rawReport, { color: theme.primary }]}>
+          {report.raw}
+        </Text>
+      </Card>
+      <Card>
+        <Fact label="Source" value={report.provenance.source} />
+        <Fact label="Retrieved UTC" value={report.receivedAt} />
+      </Card>
+    </View>
   );
 }
 
@@ -307,6 +353,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
   },
+  rawReport: { fontFamily: typography.mono, fontSize: 13, lineHeight: 20 },
   scroll: { paddingBottom: spacing.xxl },
   section: { marginTop: spacing.xl },
   sourceState: {

@@ -14,5 +14,8 @@ operational value.
 
 The raw report and provenance remain attached. Observation day resolution requires a trusted
 receipt timestamp and considers adjacent UTC months. Weather retrieval, caching, expiry,
-flight-category classification, TAF, runway visual range, international metre visibility,
-weather-code semantics, and UI are not yet credited as implemented.
+flight-category classification, TAF decoding, runway visual range, international metre
+visibility, weather-code semantics, and complete briefing UI are not yet credited as
+implemented. The mobile workspace can retrieve a single bounded raw TAF from AWC, but it does
+not parse or evaluate any forecast group, issue time, validity window, amendment, or currency
+state.
