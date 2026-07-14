@@ -247,7 +247,12 @@ export type TafValidity =
   | {
       readonly kind: 'unavailable';
       readonly reason:
-        'clock-invalid' | 'not-yet-valid' | 'receipt-future' | 'validity-expired';
+        | 'clock-invalid'
+        | 'not-yet-valid'
+        | 'provenance-non-real'
+        | 'provenance-unverified'
+        | 'receipt-future'
+        | 'validity-expired';
     };
 
 export const evaluateTafValidity = (report: TafReport, now: Date): TafValidity => {
@@ -257,6 +262,15 @@ export const evaluateTafValidity = (report: TafReport, now: Date): TafValidity =
   }
   if (Date.parse(report.receivedAt) > nowMilliseconds) {
     return { kind: 'unavailable', reason: 'receipt-future' };
+  }
+  if (
+    report.provenance.verificationStatus !== 'source-verified' &&
+    report.provenance.verificationStatus !== 'cross-checked'
+  ) {
+    return { kind: 'unavailable', reason: 'provenance-unverified' };
+  }
+  if (report.provenance.origin !== 'real') {
+    return { kind: 'unavailable', reason: 'provenance-non-real' };
   }
   if (Date.parse(report.validFrom) > nowMilliseconds) {
     return { kind: 'unavailable', reason: 'not-yet-valid' };

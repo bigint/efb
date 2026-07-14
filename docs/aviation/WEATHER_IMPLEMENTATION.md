@@ -25,9 +25,9 @@ raw text. It does not interpret wind, visibility, weather, or cloud meaning insi
 and malformed/out-of-window markers make the timeline unavailable while the complete raw TAF
 remains visible.
 
-Weather currency fails closed unless provenance is source-verified or cross-checked and the
-origin is real. A time-bounded but unverified or simulated report therefore cannot acquire the
-same `CURRENT` state as retrieved source weather.
+METAR currency and TAF validity fail closed unless provenance is source-verified or
+cross-checked and the origin is real. A time-bounded but unverified or simulated report
+therefore cannot acquire the same `CURRENT` state as retrieved source weather.
 
 Decoded METAR output may also derive a display-only flight category using the published U.S. NWS
 ceiling and statute-mile visibility thresholds. The classifier uses the worse of the lowest

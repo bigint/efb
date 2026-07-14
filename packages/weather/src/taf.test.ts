@@ -66,6 +66,27 @@ describe('TAF header boundary', () => {
       reason: 'validity-expired',
     });
   });
+
+  it('does not label unverified or simulated provenance as currently valid weather', () => {
+    const report = parseTafHeader({
+      provenance,
+      raw: 'TAF TEST 311700Z 3118/3124 18008KT P6SM SKC',
+      receivedAt: '2026-07-31T17:10:00.000Z',
+    });
+    const now = new Date('2026-07-31T19:00:00.000Z');
+    expect(
+      evaluateTafValidity(
+        { ...report, provenance: { ...report.provenance, verificationStatus: 'unverified' } },
+        now,
+      ),
+    ).toEqual({ kind: 'unavailable', reason: 'provenance-unverified' });
+    expect(
+      evaluateTafValidity(
+        { ...report, provenance: { ...report.provenance, origin: 'simulated' } },
+        now,
+      ),
+    ).toEqual({ kind: 'unavailable', reason: 'provenance-non-real' });
+  });
 });
 
 describe('TAF change-marker timeline', () => {
