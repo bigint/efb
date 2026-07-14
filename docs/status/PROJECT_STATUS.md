@@ -40,6 +40,10 @@ performance data.
   uncompressed bundle artifact). Android production JavaScript/Hermes export passed (2,299
   modules, 5.9 MB uncompressed bundle artifact). Pinned CI now compiles both exports after the
   audit/test gate; native simulator and physical builds are not yet recorded.
+- Final Hermes SHA-256 evidence: iOS
+  `b1dd1a9f4b812c518a32d7f6ce948fb0f2a57cd568eb3b0ee28b971767184e0e`; Android
+  `090bf6a84474059706986d0ef4029c334cb9999ba2f6033a50fa04d5762e64a4`. Export trees contain no
+  source maps, absolute workspace paths, or secret-pattern matches.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
   generic typed weight-and-balance core. Independent re-review keeps Phase 1 blocked.
