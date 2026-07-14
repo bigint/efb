@@ -505,6 +505,12 @@ function RawTaf({
         <Fact label="Valid from UTC" value={report.validFrom} />
         <Fact label="Valid to UTC" value={report.validTo} />
         <Fact label="Source" value={report.provenance.source} />
+        <Fact
+          label="Verification / origin"
+          value={`${report.provenance.verificationStatus.toUpperCase()} · ${report.provenance.origin.toUpperCase()}`}
+        />
+        <Fact label="Dataset version" value={report.provenance.datasetVersion} />
+        <Fact label="Jurisdiction" value={report.provenance.jurisdiction} />
         <Fact label="Retrieved UTC" value={report.receivedAt} />
       </Card>
       <Card>
@@ -643,6 +649,12 @@ function DecodedObservation({
       />
       <Card>
         <Fact label="Source" value={observation.provenance.source} />
+        <Fact
+          label="Verification / origin"
+          value={`${observation.provenance.verificationStatus.toUpperCase()} · ${observation.provenance.origin.toUpperCase()}`}
+        />
+        <Fact label="Dataset version" value={observation.provenance.datasetVersion} />
+        <Fact label="Jurisdiction" value={observation.provenance.jurisdiction} />
         <Fact label="Retrieved UTC" value={observation.receivedAt} />
         <Fact
           label="Present-weather codes (not interpreted)"

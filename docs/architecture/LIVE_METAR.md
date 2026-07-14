@@ -55,6 +55,10 @@ version, worldwide jurisdiction, real origin, and source-verified status. Produc
 the observation time and a one-hour validity limit. A future or stale observation renders
 unavailable even when the network request itself succeeded.
 
+The rendered provenance card exposes source, verification status, origin, dataset version,
+jurisdiction, and retrieval UTC for both METAR and raw TAF products; these trust facts are not
+hidden behind the current/validity label.
+
 A failed refresh does not erase the prior decoded observation. Its original retrieval and
 currency metadata remain visible while the new failure is reported, so update failure cannot be
 mistaken for successful replacement.
