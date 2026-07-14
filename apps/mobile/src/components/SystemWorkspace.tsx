@@ -45,6 +45,7 @@ export function SystemWorkspace() {
       <Card>
         <Status label="Airport dataset" value="demo-2026-07-14 · unverified" />
         <Status label="Map base" value="offline graticule · no chart data" />
+        <Status label="Simulation profile" value="118 KT · 068° TRUE · lifecycle gaps pause" />
         <Status label="Weather" value="unavailable · no provider configured" />
         <Status
           label="Position"

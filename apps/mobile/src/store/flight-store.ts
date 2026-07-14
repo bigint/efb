@@ -9,7 +9,11 @@ import {
   sanitisePersistedJson,
   type Workspace,
 } from '@/domain/persisted-flight';
-import type { PositionScenario, SimulationSample } from '@/domain/position-source';
+import {
+  advanceSimulationSample,
+  type PositionScenario,
+  type SimulationSample,
+} from '@/domain/position-source';
 
 export type { Workspace } from '@/domain/persisted-flight';
 
@@ -90,17 +94,21 @@ export const useFlightStore = create<FlightState>()(
           ) {
             return state.positionSample === null ? state : { positionSample: null };
           }
-          return {
-            positionSample: {
-              altitudeFeet: 4_500,
-              groundspeedKnots: 118,
-              horizontalAccuracyMetres: 50,
-              latitude: initialPosition.latitude,
-              longitude: initialPosition.longitude,
-              sampledAt,
-              trackTrueDegrees: null,
-            },
-          };
+          try {
+            return {
+              positionSample: advanceSimulationSample({
+                altitudeFeet: 4_500,
+                groundspeedKnots: 118,
+                horizontalAccuracyMetres: 50,
+                origin: initialPosition,
+                previous: state.positionSample,
+                sampledAt,
+                trackTrueDegrees: 68,
+              }),
+            };
+          } catch {
+            return state.positionSample === null ? state : { positionSample: null };
+          }
         }),
       workspace: 'map',
     }),

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { evaluatePosition, type SimulationSample } from './position-source';
+import { greatCircleDistance, position } from '@driftline/geospatial';
+
+import {
+  advanceSimulationSample,
+  evaluatePosition,
+  type SimulationSample,
+} from './position-source';
 
 const sample: SimulationSample = {
   altitudeFeet: 4_500,
@@ -13,6 +19,76 @@ const sample: SimulationSample = {
 };
 
 describe('position source evaluation', () => {
+  it('advances a deterministic true-track simulation by elapsed time', () => {
+    const origin = position(0, 0);
+    const first = advanceSimulationSample({
+      altitudeFeet: 4_500,
+      groundspeedKnots: 120,
+      horizontalAccuracyMetres: 50,
+      origin,
+      previous: null,
+      sampledAt: 10_000,
+      trackTrueDegrees: 90,
+    });
+    const second = advanceSimulationSample({
+      altitudeFeet: 4_500,
+      groundspeedKnots: 120,
+      horizontalAccuracyMetres: 50,
+      origin,
+      previous: first,
+      sampledAt: 11_000,
+      trackTrueDegrees: 90,
+    });
+    expect(second.latitude).toBeCloseTo(0, 10);
+    expect(second.longitude).toBeGreaterThan(first.longitude);
+    expect(
+      greatCircleDistance(
+        position(first.latitude, first.longitude),
+        position(second.latitude, second.longitude),
+      ),
+    ).toBeCloseTo(120 / 3_600, 10);
+    expect(second.trackTrueDegrees).toBe(90);
+  });
+
+  it('pauses movement across long lifecycle gaps and rejects clock reversal', () => {
+    const origin = position(12, 77);
+    const first = advanceSimulationSample({
+      altitudeFeet: 4_500,
+      groundspeedKnots: 120,
+      horizontalAccuracyMetres: 50,
+      origin,
+      previous: null,
+      sampledAt: 10_000,
+      trackTrueDegrees: 90,
+    });
+    expect(
+      advanceSimulationSample({
+        altitudeFeet: 4_500,
+        groundspeedKnots: 120,
+        horizontalAccuracyMetres: 50,
+        origin,
+        previous: first,
+        sampledAt: 20_000,
+        trackTrueDegrees: 90,
+      }),
+    ).toMatchObject({
+      latitude: first.latitude,
+      longitude: first.longitude,
+      sampledAt: 20_000,
+    });
+    expect(() =>
+      advanceSimulationSample({
+        altitudeFeet: 4_500,
+        groundspeedKnots: 120,
+        horizontalAccuracyMetres: 50,
+        origin,
+        previous: first,
+        sampledAt: 9_999,
+        trackTrueDegrees: 90,
+      }),
+    ).toThrow('backwards');
+  });
+
   it('exposes a fresh simulated sample with age and origin', () => {
     expect(evaluatePosition({ gpsAvailable: true, kind: 'simulated' }, sample, 10_500)).toEqual(
       {
@@ -40,6 +116,7 @@ describe('position source evaluation', () => {
     [{ ...sample, horizontalAccuracyMetres: -1 }, 10_500],
     [{ ...sample, latitude: 91 }, 10_500],
     [{ ...sample, groundspeedKnots: -1 }, 10_500],
+    [{ ...sample, trackTrueDegrees: 360 }, 10_500],
   ] as const)('rejects a non-finite or out-of-domain sample %#', (value, now) => {
     expect(evaluatePosition({ gpsAvailable: true, kind: 'simulated' }, value, now)).toEqual({
       kind: 'unavailable',
