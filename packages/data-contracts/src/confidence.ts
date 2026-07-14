@@ -42,25 +42,37 @@ export const dataProvenanceSchema = z
 
 export type DataProvenance = z.infer<typeof dataProvenanceSchema>;
 
-export const isTrustedRealProvenance = (provenance: DataProvenance): boolean =>
-  provenance.origin === 'real' &&
-  (provenance.verificationStatus === 'source-verified' ||
-    provenance.verificationStatus === 'cross-checked');
+export const isTrustedRealProvenance = (provenance: DataProvenance): boolean => {
+  const parsed = dataProvenanceSchema.safeParse(provenance);
+  return (
+    parsed.success &&
+    parsed.data.origin === 'real' &&
+    (parsed.data.verificationStatus === 'source-verified' ||
+      parsed.data.verificationStatus === 'cross-checked')
+  );
+};
 
 export type DataCurrency = 'current' | 'expired' | 'invalid' | 'not-effective' | 'unknown';
 
 export const classifyDataCurrency = (provenance: DataProvenance, now: Date): DataCurrency => {
-  if (!Number.isFinite(now.getTime()) || provenance.verificationStatus === 'invalid') {
+  const parsed = dataProvenanceSchema.safeParse(provenance);
+  const nowMs = now.getTime();
+  if (
+    !parsed.success ||
+    !Number.isFinite(nowMs) ||
+    parsed.data.verificationStatus === 'invalid' ||
+    Date.parse(parsed.data.retrievedAt) > nowMs
+  ) {
     return 'invalid';
   }
-  if (provenance.effectiveAt === null || provenance.expiresAt === null) return 'unknown';
-  const effectiveAt = Date.parse(provenance.effectiveAt);
-  const expiresAt = Date.parse(provenance.expiresAt);
-  if (expiresAt <= effectiveAt || Date.parse(provenance.retrievedAt) > now.getTime()) {
-    return 'invalid';
-  }
-  if (effectiveAt > now.getTime()) return 'not-effective';
-  if (expiresAt <= now.getTime()) return 'expired';
+  const { effectiveAt: effectiveSource, expiresAt: expirySource } = parsed.data;
+  if (effectiveSource === null && expirySource === null) return 'unknown';
+  if (effectiveSource === null || expirySource === null) return 'invalid';
+  const effectiveAt = Date.parse(effectiveSource);
+  const expiresAt = Date.parse(expirySource);
+  if (expiresAt <= effectiveAt) return 'invalid';
+  if (effectiveAt > nowMs) return 'not-effective';
+  if (expiresAt <= nowMs) return 'expired';
   return 'current';
 };
 

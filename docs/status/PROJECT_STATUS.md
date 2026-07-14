@@ -39,6 +39,9 @@ performance data.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
   generic typed weight-and-balance core. Independent re-review keeps Phase 1 blocked.
+- Provenance trust and currency helpers reparse the complete bounded contract at point of use,
+  reject future retrieval, malformed values, and one-sided currency intervals, and reserve
+  `unknown` for an explicitly absent effective/expiry pair.
 - Independent QA found malformed-JSON, non-finite-position, and duplicate-route recovery
   defects; all three now have fail-closed boundaries, permanent regression tests, and an
   independent targeted closure review.

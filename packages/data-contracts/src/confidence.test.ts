@@ -31,6 +31,7 @@ describe('data currency classification', () => {
     expect(isTrustedRealProvenance({ ...provenance, verificationStatus: 'unverified' })).toBe(
       false,
     );
+    expect(isTrustedRealProvenance({ ...provenance, source: 'Unsafe\nsource' })).toBe(false);
   });
 
   it('bounds provenance text before it reaches operational displays', () => {
@@ -60,6 +61,18 @@ describe('data currency classification', () => {
       'unknown',
     );
     expect(isStale(unbounded, new Date('2026-07-14T12:00:00.000Z'))).toBe(true);
+    expect(
+      classifyDataCurrency(
+        { ...unbounded, retrievedAt: '2026-07-16T00:00:00.000Z' },
+        new Date('2026-07-14T12:00:00.000Z'),
+      ),
+    ).toBe('invalid');
+    expect(
+      classifyDataCurrency(
+        { ...provenance, expiresAt: null },
+        new Date('2026-07-14T12:00:00.000Z'),
+      ),
+    ).toBe('invalid');
   });
 
   it('rejects future, invalid, and invalid-clock states', () => {
@@ -93,5 +106,8 @@ describe('data currency classification', () => {
     expect(
       classifyDataCurrency({ ...provenance, retrievedAt: '2026-07-16T00:00:00.000Z' }, now),
     ).toBe('invalid');
+    expect(classifyDataCurrency({ ...provenance, effectiveAt: 'not-a-timestamp' }, now)).toBe(
+      'invalid',
+    );
   });
 });
