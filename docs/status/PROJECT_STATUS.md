@@ -28,8 +28,8 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 184 passed across twenty-nine test files.
-- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,160 modules, 5.4 MB
+- Unit tests: 185 passed across twenty-nine test files.
+- iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,160 modules, 5.5 MB
   uncompressed bundle artifact); native simulator and physical builds are not yet recorded.
 - The first remediation candidate adds an atomic fail-closed simulated position source, route
   resolution blocking, explicit data-currency classification, semantic airport validation, and a
@@ -67,7 +67,9 @@ performance data.
 - PDF-only document import now validates UUID paths, MIME and bounded container markers; copies
   into app-private storage; verifies SHA-256 after the copy; and persists revalidated metadata
   and bookmark relations. The reader is explicitly disabled pending native malformed-file,
-  accessibility, memory, and offline QA, and orphan-file reconciliation remains open.
+  accessibility, memory, and offline QA, and orphan-file reconciliation remains open. Favourite,
+  folder, and manual bookmark metadata can now be edited with validated labels and
+  conflict-aware writes without enabling the reader.
 - The development simulator now advances a constant 118-knot profile on an explicitly true
   068-degree great-circle track. Updates are bounded to five-second ticks, longer lifecycle gaps
   pause in place, and invalid time or track data fails closed. Native timer, lifecycle, and

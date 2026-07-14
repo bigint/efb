@@ -3,10 +3,15 @@ import { spacing, typography } from '@driftline/design-system';
 import { randomUUID } from 'expo-crypto';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { pickAndImportPdf } from '@/database/document-import';
-import { listDocuments } from '@/database/document-repository';
+import {
+  insertDocumentBookmark,
+  listDocuments,
+  setDocumentFavourite,
+  setDocumentFolder,
+} from '@/database/document-repository';
 import { useDriftlineTheme } from '@/theme';
 
 import { Action, Card, panelStyles } from './PanelPrimitives';
@@ -18,6 +23,10 @@ export function DocumentsPanel() {
   const [documents, setDocuments] = useState<readonly DocumentRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [readBlocked, setReadBlocked] = useState(false);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [folder, setFolder] = useState('');
+  const [bookmarkLabel, setBookmarkLabel] = useState('');
+  const [bookmarkPage, setBookmarkPage] = useState('');
 
   const reload = useCallback(async () => {
     try {
@@ -47,6 +56,64 @@ export function DocumentsPanel() {
     }
   };
 
+  const toggleFavourite = async (document: DocumentRecord) => {
+    setBusy(true);
+    try {
+      await setDocumentFavourite(database, document, !document.isFavourite);
+      await reload();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to update favourite.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveFolder = async (document: DocumentRecord) => {
+    setBusy(true);
+    try {
+      await setDocumentFolder(database, document, folder);
+      await reload();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to update folder.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addBookmark = async (document: DocumentRecord) => {
+    setBusy(true);
+    try {
+      if (!/^\d{1,5}$/u.test(bookmarkPage)) throw new Error('Page must be a whole number.');
+      const pageNumber = Number(bookmarkPage);
+      if (pageNumber < 1) throw new Error('Page numbering starts at 1.');
+      await insertDocumentBookmark(
+        database,
+        document,
+        pageNumber - 1,
+        bookmarkLabel,
+        new Date().toISOString(),
+      );
+      setBookmarkLabel('');
+      setBookmarkPage('');
+      await reload();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to add bookmark.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleOrganizer = (document: DocumentRecord) => {
+    if (selectedDocumentId === document.id) {
+      setSelectedDocumentId(null);
+      return;
+    }
+    setSelectedDocumentId(document.id);
+    setFolder(document.folder);
+    setBookmarkLabel('');
+    setBookmarkPage('');
+  };
+
   return (
     <View>
       <Text style={[panelStyles.sectionTitle, { color: theme.primary }]}>Documents</Text>
@@ -70,16 +137,74 @@ export function DocumentsPanel() {
       </Card>
       {documents.map((document) => (
         <View key={document.id} style={[styles.document, { borderColor: theme.separator }]}>
-          <View style={styles.documentCopy}>
-            <Text style={[styles.name, { color: theme.primary }]}>{document.displayName}</Text>
-            <Text style={[panelStyles.copy, { color: theme.secondary }]}>
-              {(document.byteLength / 1_000_000).toFixed(1)} MB · {document.folder} ·{' '}
-              {document.sha256.slice(0, 10)}…
+          <View style={styles.documentHeading}>
+            <View style={styles.documentCopy}>
+              <Text style={[styles.name, { color: theme.primary }]}>
+                {document.isFavourite ? '★ ' : ''}
+                {document.displayName}
+              </Text>
+              <Text style={[panelStyles.copy, { color: theme.secondary }]}>
+                {(document.byteLength / 1_000_000).toFixed(1)} MB · {document.folder} ·{' '}
+                {document.sha256.slice(0, 10)}…
+              </Text>
+            </View>
+            <Text style={[styles.readerState, { color: theme.secondary }]}>
+              READER NOT VERIFIED
             </Text>
           </View>
-          <Text style={[styles.readerState, { color: theme.secondary }]}>
-            READER NOT VERIFIED
-          </Text>
+          <View style={styles.rowActions}>
+            <Action
+              disabled={busy || readBlocked}
+              label={document.isFavourite ? 'Unfavourite' : 'Favourite'}
+              onPress={() => void toggleFavourite(document)}
+            />
+            <Action
+              disabled={busy || readBlocked}
+              label={selectedDocumentId === document.id ? 'Close organizer' : 'Organize'}
+              onPress={() => toggleOrganizer(document)}
+            />
+          </View>
+          {selectedDocumentId === document.id && (
+            <View style={[styles.organizer, { backgroundColor: theme.panelRaised }]}>
+              <Text style={[styles.status, { color: theme.attention }]}>
+                METADATA ONLY · READER REMAINS DISABLED
+              </Text>
+              <View style={styles.editorRow}>
+                <MetadataInput label="Folder" onChange={setFolder} value={folder} />
+                <Action
+                  disabled={busy || readBlocked}
+                  label="Save folder"
+                  onPress={() => void saveFolder(document)}
+                />
+              </View>
+              <View style={styles.editorRow}>
+                <MetadataInput
+                  label="Bookmark page · 1-based"
+                  numeric
+                  onChange={setBookmarkPage}
+                  value={bookmarkPage}
+                />
+                <MetadataInput
+                  label="Bookmark label"
+                  onChange={setBookmarkLabel}
+                  value={bookmarkLabel}
+                />
+                <Action
+                  disabled={busy || readBlocked}
+                  label="Add bookmark"
+                  onPress={() => void addBookmark(document)}
+                />
+              </View>
+              {document.bookmarks.map((bookmark) => (
+                <Text
+                  key={`${bookmark.pageIndex}-${bookmark.label}`}
+                  style={[panelStyles.copy, { color: theme.secondary }]}
+                >
+                  Page {bookmark.pageIndex + 1} · {bookmark.label}
+                </Text>
+              ))}
+            </View>
+          )}
         </View>
       ))}
       {documents.length === 0 && error === null && (
@@ -92,20 +217,70 @@ export function DocumentsPanel() {
   );
 }
 
+function MetadataInput({
+  label,
+  numeric = false,
+  onChange,
+  value,
+}: {
+  readonly label: string;
+  readonly numeric?: boolean;
+  readonly onChange: (value: string) => void;
+  readonly value: string;
+}) {
+  const theme = useDriftlineTheme();
+  return (
+    <View style={styles.metadataField}>
+      <Text style={[panelStyles.label, { color: theme.secondary }]}>{label}</Text>
+      <TextInput
+        accessibilityLabel={label}
+        autoCorrect={false}
+        keyboardType={numeric ? 'number-pad' : 'default'}
+        onChangeText={onChange}
+        style={[
+          styles.metadataInput,
+          {
+            backgroundColor: theme.background,
+            borderColor: theme.separator,
+            color: theme.primary,
+          },
+        ]}
+        value={value}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   action: { alignItems: 'flex-start', marginTop: spacing.md },
   copy: { marginTop: spacing.xs },
   document: {
-    alignItems: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
     gap: spacing.md,
     paddingVertical: spacing.md,
   },
   documentCopy: { flex: 1 },
+  documentHeading: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
+  editorRow: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
   empty: { marginTop: spacing.md },
   error: { fontFamily: typography.body, fontSize: 13, marginTop: spacing.md },
+  metadataField: { flex: 1, gap: spacing.xs, minWidth: 160 },
+  metadataInput: {
+    borderRadius: 8,
+    borderWidth: 1,
+    fontFamily: typography.mono,
+    fontSize: 14,
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+  },
   name: { fontFamily: typography.display, fontSize: 17, fontWeight: '700' },
+  organizer: { borderRadius: 10, gap: spacing.md, padding: spacing.md },
   readerState: { fontFamily: typography.mono, fontSize: 9, fontWeight: '800' },
+  rowActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   status: { fontFamily: typography.mono, fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
 });

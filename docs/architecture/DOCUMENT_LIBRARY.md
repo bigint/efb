@@ -22,13 +22,24 @@ metadata, optional page count, text-index state, and relational bookmarks. Every
 bookmark is revalidated on read; corrupt metadata blocks the library instead of disappearing
 from results.
 
+## Organization metadata
+
+The Library can now mark a document favourite, assign a bounded folder label, and add manual
+one-based page bookmarks without opening the PDF. Favourite and folder changes include the
+previous value in the update predicate; a concurrent change produces an explicit conflict
+instead of blind last-write-wins. Bookmark creation revalidates the complete document, rejects
+duplicates and out-of-range pages when page count is known, and relies on the relational unique
+key for cross-writer conflicts. Folder and bookmark labels reject control characters.
+
+These actions update metadata only. They do not assert that a page exists when page count is
+unknown and do not mark the document recently opened.
+
 ## Deliberately unavailable
 
-Native PDF rendering, text extraction/search, page-count discovery, annotations, bookmark UI,
-sharing/export, deletion/reconciliation, malicious-PDF sandboxing, and backup/restore are not
-enabled. The mobile surface says `READER NOT VERIFIED` and does not open imported bytes. A
-container marker and digest make a file identifiable and complete; they do not make its content
-trusted.
+Native PDF rendering, text extraction/search, page-count discovery, annotations, sharing/export,
+deletion/reconciliation, malicious-PDF sandboxing, and backup/restore are not enabled. The
+mobile surface says `READER NOT VERIFIED` and does not open imported bytes. A container marker
+and digest make a file identifiable and complete; they do not make its content trusted.
 
 Implementation follows the Expo DocumentPicker immediate-read pattern, Expo FileSystem's
 app-local `File`/`Directory` APIs, and Expo Crypto SHA-256. Native malformed-file, memory,

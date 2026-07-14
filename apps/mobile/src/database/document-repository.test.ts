@@ -56,4 +56,23 @@ describe('document SQLite read boundary', () => {
       ),
     ).toThrow('unavailable document');
   });
+
+  it('rejects control characters in persisted organization metadata', () => {
+    expect(() => decodeDocumentRows([{ ...row, folder: 'Bad\nFolder' }], [])).toThrow(
+      'control characters',
+    );
+    expect(() =>
+      decodeDocumentRows(
+        [row],
+        [
+          {
+            created_at: '2026-07-14T11:00:00.000Z',
+            document_id: row.id,
+            label: 'Bad\u0000Label',
+            page_index: 0,
+          },
+        ],
+      ),
+    ).toThrow('control characters');
+  });
 });

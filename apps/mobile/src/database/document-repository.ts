@@ -1,4 +1,8 @@
-import { documentRecordSchema, type DocumentRecord } from '@driftline/aviation-domain';
+import {
+  addDocumentBookmark,
+  documentRecordSchema,
+  type DocumentRecord,
+} from '@driftline/aviation-domain';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 interface DocumentRow {
@@ -117,5 +121,65 @@ export const insertDocument = async (
     document.lastOpenedAt,
     document.pageCount,
     document.textIndexStatus,
+  );
+};
+
+const requireOneChange = (changes: number): void => {
+  if (changes !== 1) throw new Error('Document metadata changed on another writer.');
+};
+
+export const setDocumentFavourite = async (
+  database: SQLiteDatabase,
+  source: DocumentRecord,
+  favourite: boolean,
+): Promise<void> => {
+  const document = documentRecordSchema.parse(source);
+  if (document.isFavourite === favourite) return;
+  const result = await database.runAsync(
+    `UPDATE documents SET is_favourite = ?
+     WHERE id = ? AND is_favourite = ? AND deleted_at IS NULL`,
+    favourite ? 1 : 0,
+    document.id,
+    document.isFavourite ? 1 : 0,
+  );
+  requireOneChange(result.changes);
+};
+
+export const setDocumentFolder = async (
+  database: SQLiteDatabase,
+  source: DocumentRecord,
+  folderInput: string,
+): Promise<void> => {
+  const document = documentRecordSchema.parse(source);
+  const next = documentRecordSchema.parse({ ...document, folder: folderInput });
+  if (next.folder === document.folder) return;
+  const result = await database.runAsync(
+    `UPDATE documents SET folder = ?
+     WHERE id = ? AND folder = ? AND deleted_at IS NULL`,
+    next.folder,
+    document.id,
+    document.folder,
+  );
+  requireOneChange(result.changes);
+};
+
+export const insertDocumentBookmark = async (
+  database: SQLiteDatabase,
+  source: DocumentRecord,
+  pageIndex: number,
+  label: string,
+  createdAt: string,
+): Promise<void> => {
+  const document = documentRecordSchema.parse(source);
+  const next = addDocumentBookmark(document, pageIndex, label, createdAt);
+  const bookmark = next.bookmarks.at(-1);
+  if (bookmark === undefined) throw new Error('Bookmark validation did not produce a record.');
+  await database.runAsync(
+    `INSERT INTO document_bookmarks (document_id, page_index, label, created_at)
+     VALUES (?, ?, ?, ?)`,
+    document.id,
+    bookmark.pageIndex,
+    bookmark.label,
+    bookmark.createdAt,
   );
 };

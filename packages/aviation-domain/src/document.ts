@@ -12,7 +12,12 @@ const hasNoControlCharacters = (value: string): boolean =>
 const documentBookmarkSchema = z
   .object({
     createdAt: z.iso.datetime(),
-    label: z.string().trim().min(1).max(120),
+    label: z
+      .string()
+      .trim()
+      .min(1)
+      .max(120)
+      .refine(hasNoControlCharacters, 'Bookmark label has control characters'),
     pageIndex: z.number().int().min(0).max(99_999),
   })
   .strict();
@@ -28,7 +33,12 @@ export const documentRecordSchema = z
       .min(1)
       .max(240)
       .refine(hasNoControlCharacters, 'Display name has control characters'),
-    folder: z.string().trim().min(1).max(120),
+    folder: z
+      .string()
+      .trim()
+      .min(1)
+      .max(120)
+      .refine(hasNoControlCharacters, 'Folder has control characters'),
     id: documentIdSchema,
     importedAt: z.iso.datetime(),
     isFavourite: z.boolean(),
