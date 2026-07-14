@@ -36,6 +36,8 @@ performance data.
 - The complete suite also passes under `Pacific/Kiritimati`, `America/Adak`, and a Turkish
   process locale to exercise date/UTC and locale-sensitive boundaries.
 - Twenty-five consecutive complete-suite soak runs passed without a flaky failure.
+- All 51 tracked Markdown files have resolvable local links; all 21 tracked JSON files and three
+  YAML files parse successfully.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,207 modules, 5.7 MB
   uncompressed bundle artifact). Android production JavaScript/Hermes export passed (2,299
   modules, 5.9 MB uncompressed bundle artifact). Pinned CI now compiles both exports after the
