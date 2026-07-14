@@ -30,6 +30,9 @@ None found.
 
 ### SEC-001 — CI actions are not pinned to immutable commits
 
+- **Remediation status (2026-07-14):** Resolved after this review. All three actions are pinned
+  to full commit SHAs with their major release tags retained in comments.
+
 - **Rule:** supply-chain reproducibility
 - **Severity:** Medium
 - **Location:** `.github/workflows/ci.yml:16-21`
