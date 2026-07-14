@@ -101,6 +101,8 @@ performance data.
   reject duplicate jurisdictions and totals that contradict per-entry time invariants.
 - Document, aircraft-profile, and airport-favourite decoders enforce collection limits and
   reject duplicate parent identities even when called outside their normal bounded query path.
+- Checklist template/history decoders apply the same direct-call collection limits and reject
+  duplicate parent rows before grouping relational items or completions.
 - Separate versioned user and control SQLite schemas now migrate before app render. Executable
   schema tests enforce key relational constraints, and the pure offline-region lifecycle keeps
   active data independent from update failure while rejecting cross-attempt, incomplete,

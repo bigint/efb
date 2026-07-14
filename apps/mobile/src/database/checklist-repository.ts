@@ -8,6 +8,8 @@ import {
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 const MAX_CHECKLIST_ITEMS = 100;
+const MAX_CHECKLIST_TEMPLATES = 100;
+const MAX_CHECKLIST_HISTORY_RUNS = 50;
 
 export interface ChecklistTemplateRow {
   readonly aircraft_id: string | null;
@@ -54,7 +56,14 @@ export const decodeChecklistRuns = (
   rows: readonly ChecklistRunRow[],
   completionRows: readonly ChecklistRunCompletionRow[],
 ): readonly ChecklistRun[] => {
+  if (
+    rows.length > MAX_CHECKLIST_HISTORY_RUNS ||
+    completionRows.length > MAX_CHECKLIST_HISTORY_RUNS * MAX_CHECKLIST_ITEMS
+  ) {
+    throw new Error('Checklist history collection exceeds supported limits');
+  }
   const runIds = new Set(rows.map(({ id }) => id));
+  if (runIds.size !== rows.length) throw new Error('Checklist history contains duplicate runs');
   const completionsByRun = new Map<string, ChecklistCompletionRow[]>();
   for (const completion of completionRows) {
     if (!runIds.has(completion.run_id)) {
@@ -71,7 +80,16 @@ export const decodeChecklistTemplates = (
   rows: readonly ChecklistTemplateRow[],
   itemRows: readonly ChecklistItemRow[],
 ): readonly ChecklistTemplate[] => {
+  if (
+    rows.length > MAX_CHECKLIST_TEMPLATES ||
+    itemRows.length > MAX_CHECKLIST_TEMPLATES * MAX_CHECKLIST_ITEMS
+  ) {
+    throw new Error('Checklist template collection exceeds supported limits');
+  }
   const templateIds = new Set(rows.map(({ id }) => id));
+  if (templateIds.size !== rows.length) {
+    throw new Error('Checklist template collection contains duplicate templates');
+  }
   const itemsByTemplate = new Map<string, ChecklistItemRow[]>();
   for (const item of itemRows) {
     if (!templateIds.has(item.template_id)) {
@@ -135,7 +153,7 @@ export const decodeChecklistRun = (
 export const listChecklistTemplates = async (
   database: SQLiteDatabase,
 ): Promise<readonly ChecklistTemplate[]> => {
-  const templateLimit = 100;
+  const templateLimit = MAX_CHECKLIST_TEMPLATES;
   const itemLimit = templateLimit * 100;
   const result: { templates?: readonly ChecklistTemplate[] } = {};
   await database.withExclusiveTransactionAsync(async (transaction) => {

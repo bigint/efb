@@ -83,6 +83,9 @@ describe('checklist SQLite read boundary', () => {
     expect(() =>
       decodeChecklistTemplates([templateRow], [{ ...itemRow, is_critical: 2 }]),
     ).toThrow('critical flag');
+    expect(() => decodeChecklistTemplates([templateRow, templateRow], [itemRow])).toThrow(
+      'duplicate templates',
+    );
   });
 
   it('fails closed on malformed run snapshots', () => {
@@ -143,6 +146,19 @@ describe('checklist SQLite read boundary', () => {
         [{ item_sequence: 0, run_id: '019f5f42-a146-7c00-861d-7ad2313bbbd5' }],
       ),
     ).toThrow('unavailable run');
+    const snapshot = JSON.stringify({});
+    const duplicate = {
+      abandoned_at: null,
+      completed_at: null,
+      id: '019f5f42-a146-7c00-861d-7ad2313bbbd5',
+      item_count: 1,
+      started_at: '2026-07-14T11:00:00.000Z',
+      state_revision: 1,
+      template_id: templateRow.id,
+      template_revision: 1,
+      template_snapshot_json: snapshot,
+    };
+    expect(() => decodeChecklistRuns([duplicate, duplicate], [])).toThrow('duplicate runs');
   });
 
   it('replaces template fields and items in one compare-and-swap transaction', async () => {
