@@ -27,6 +27,11 @@ export const dataProvenanceSchema = z
 
 export type DataProvenance = z.infer<typeof dataProvenanceSchema>;
 
+export const isTrustedRealProvenance = (provenance: DataProvenance): boolean =>
+  provenance.origin === 'real' &&
+  (provenance.verificationStatus === 'source-verified' ||
+    provenance.verificationStatus === 'cross-checked');
+
 export type DataCurrency = 'current' | 'expired' | 'invalid' | 'not-effective' | 'unknown';
 
 export const classifyDataCurrency = (provenance: DataProvenance, now: Date): DataCurrency => {

@@ -1,6 +1,6 @@
 import { radii, spacing, typography } from '@driftline/design-system';
 import { estimateDensityAltitude } from '@driftline/aircraft-performance';
-import { feet } from '@driftline/data-contracts';
+import { feet, isTrustedRealProvenance } from '@driftline/data-contracts';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -636,10 +636,8 @@ function DecodedObservation({
         </View>
       </Card>
       <DensityAltitudeTool
-        sourceVerifiedCurrent={
-          currency.kind === 'current' &&
-          observation.provenance.origin === 'real' &&
-          observation.provenance.verificationStatus === 'source-verified'
+        trustedCurrent={
+          currency.kind === 'current' && isTrustedRealProvenance(observation.provenance)
         }
         observation={observation}
       />
@@ -662,10 +660,10 @@ function DecodedObservation({
 
 function DensityAltitudeTool({
   observation,
-  sourceVerifiedCurrent,
+  trustedCurrent,
 }: {
   readonly observation: MetarObservation;
-  readonly sourceVerifiedCurrent: boolean;
+  readonly trustedCurrent: boolean;
 }) {
   const theme = useDriftlineTheme();
   const [expanded, setExpanded] = useState(false);
@@ -674,7 +672,7 @@ function DensityAltitudeTool({
   const elevationValid = /^-?\d{1,5}$/u.test(trimmedElevation);
   const elevation = elevationValid ? Number(trimmedElevation) : null;
   const estimate =
-    sourceVerifiedCurrent &&
+    trustedCurrent &&
     elevation !== null &&
     observation.altimeter !== null &&
     observation.temperature !== null
@@ -685,7 +683,7 @@ function DensityAltitudeTool({
         })
       : null;
   const inputAvailable =
-    sourceVerifiedCurrent && observation.altimeter !== null && observation.temperature !== null;
+    trustedCurrent && observation.altimeter !== null && observation.temperature !== null;
 
   return (
     <View style={styles.densityTool}>
@@ -708,7 +706,7 @@ function DensityAltitudeTool({
             </Text>
             {!inputAvailable ? (
               <Text accessibilityRole="alert" style={[styles.error, { color: theme.danger }]}>
-                Unavailable: a current source-verified report with parsed temperature and
+                Unavailable: a current trusted real-source report with parsed temperature and
                 altimeter setting is required.
               </Text>
             ) : (

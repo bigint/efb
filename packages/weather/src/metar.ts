@@ -6,6 +6,7 @@ import {
   dataProvenanceSchema,
   feet,
   hectopascals,
+  isTrustedRealProvenance,
   knots,
   metres,
   trueDegrees,
@@ -106,12 +107,12 @@ export const evaluateMetarCurrency = (
     return { kind: 'unavailable', reason: 'provenance-invalid' };
   }
   if (
-    observation.provenance.verificationStatus !== 'source-verified' &&
-    observation.provenance.verificationStatus !== 'cross-checked'
+    observation.provenance.origin === 'real' &&
+    !isTrustedRealProvenance(observation.provenance)
   ) {
     return { kind: 'unavailable', reason: 'provenance-unverified' };
   }
-  if (observation.provenance.origin !== 'real') {
+  if (!isTrustedRealProvenance(observation.provenance)) {
     return { kind: 'unavailable', reason: 'provenance-non-real' };
   }
   const provenanceCurrency = classifyDataCurrency(observation.provenance, now);

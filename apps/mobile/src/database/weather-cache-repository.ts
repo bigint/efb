@@ -1,4 +1,8 @@
-import { dataProvenanceSchema, type DataProvenance } from '@driftline/data-contracts';
+import {
+  dataProvenanceSchema,
+  isTrustedRealProvenance,
+  type DataProvenance,
+} from '@driftline/data-contracts';
 import {
   parseMetar,
   parseTafHeader,
@@ -46,11 +50,7 @@ export type CachedWeather =
   | { readonly product: 'TAF'; readonly report: AwcTafReport };
 
 const requireCacheableProvenance = (provenance: DataProvenance): void => {
-  if (
-    provenance.origin !== 'real' ||
-    (provenance.verificationStatus !== 'source-verified' &&
-      provenance.verificationStatus !== 'cross-checked')
-  ) {
+  if (!isTrustedRealProvenance(provenance)) {
     throw new Error('Only trusted real-source weather can enter the live-product cache');
   }
 };

@@ -4,9 +4,9 @@
 
 Driftline exposes a deliberately bounded density-altitude rule-of-thumb calculator beside a
 decoded METAR. The user supplies field elevation; temperature and altimeter setting come from
-the visibly identified decoded report. It is an educational planning estimate, not approved
-aircraft performance data, and it does not determine take-off, landing, climb, loading, or
-runway suitability.
+the visibly identified current trusted real-source report. It is an educational planning
+estimate, not approved aircraft performance data, and it does not determine take-off, landing,
+climb, loading, or runway suitability.
 
 ## Formula and units
 

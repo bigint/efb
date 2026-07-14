@@ -31,7 +31,7 @@ performance data.
 - Expo Doctor: 20/20 checks passed on 2026-07-14 after the safety-remediation changes.
 - Strict TypeScript: passed across nine implementation packages/apps.
 - ESLint and Prettier: passed.
-- Unit tests: 352 passed across sixty-four test files.
+- Unit tests: 353 passed across sixty-four test files.
 - iOS production JavaScript/Hermes bundle export passed on 2026-07-14 (2,206 modules, 5.7 MB
   uncompressed bundle artifact). Android production JavaScript/Hermes export passed (2,298
   modules, 5.9 MB uncompressed bundle artifact). Pinned CI now compiles both exports after the
@@ -59,7 +59,7 @@ performance data.
   NWS display category from the worse parsed ceiling/visibility input, preserve threshold
   evidence, and fail closed on incomplete or ambiguous inputs. The category is not presented as
   worldwide or regulatory. A progressively disclosed FAA rule-of-thumb density-altitude estimate
-  accepts user-entered field elevation only alongside a current source-verified decoded
+  accepts user-entered field elevation only alongside a current trusted real-source decoded
   temperature and altimeter setting, exposes its intermediate approximations, and remains
   explicitly separate from aircraft performance or runway suitability. Native network/cache
   recovery QA and briefing completeness remain open.

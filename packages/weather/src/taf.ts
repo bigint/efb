@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-import { dataProvenanceSchema, type DataProvenance } from '@driftline/data-contracts';
+import {
+  dataProvenanceSchema,
+  isTrustedRealProvenance,
+  type DataProvenance,
+} from '@driftline/data-contracts';
 
 const tafInputSchema = z
   .object({
@@ -263,13 +267,10 @@ export const evaluateTafValidity = (report: TafReport, now: Date): TafValidity =
   if (Date.parse(report.receivedAt) > nowMilliseconds) {
     return { kind: 'unavailable', reason: 'receipt-future' };
   }
-  if (
-    report.provenance.verificationStatus !== 'source-verified' &&
-    report.provenance.verificationStatus !== 'cross-checked'
-  ) {
+  if (report.provenance.origin === 'real' && !isTrustedRealProvenance(report.provenance)) {
     return { kind: 'unavailable', reason: 'provenance-unverified' };
   }
-  if (report.provenance.origin !== 'real') {
+  if (!isTrustedRealProvenance(report.provenance)) {
     return { kind: 'unavailable', reason: 'provenance-non-real' };
   }
   if (Date.parse(report.validFrom) > nowMilliseconds) {

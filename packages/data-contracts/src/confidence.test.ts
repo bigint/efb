@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { classifyDataCurrency, isStale, type DataProvenance } from './confidence';
+import {
+  classifyDataCurrency,
+  isStale,
+  isTrustedRealProvenance,
+  type DataProvenance,
+} from './confidence';
 
 const provenance: DataProvenance = {
   confidence: 'high',
@@ -16,6 +21,17 @@ const provenance: DataProvenance = {
 };
 
 describe('data currency classification', () => {
+  it('requires a real source plus verified or cross-checked provenance for trust', () => {
+    expect(isTrustedRealProvenance(provenance)).toBe(true);
+    expect(
+      isTrustedRealProvenance({ ...provenance, verificationStatus: 'cross-checked' }),
+    ).toBe(true);
+    expect(isTrustedRealProvenance({ ...provenance, origin: 'simulated' })).toBe(false);
+    expect(isTrustedRealProvenance({ ...provenance, verificationStatus: 'unverified' })).toBe(
+      false,
+    );
+  });
+
   it('classifies a bounded effective interval', () => {
     expect(classifyDataCurrency(provenance, new Date('2026-07-14T12:00:00.000Z'))).toBe(
       'current',
